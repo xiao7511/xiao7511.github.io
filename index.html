@@ -5,72 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    // 1. 初始化 Supabase 客户端
-const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-// 2. 注册功能
-async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({
-    email: email,
-    password: password,
-  });
-  if (error) console.error('注册失败:', error.message);
-  else alert('注册成功！请查收验证邮件。');
-}
-// 3. 登录功能
-async function signIn(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: password,
-  });
-  if (error) console.error('登录失败:', error.message);
-  else {
-    console.log('登录成功:', data.user);
-    updateUI(data.user); // 登录后更新界面，比如显示用户名
-  }
-}
-// 4. 监听登录状态变化 (刷新页面也能保持登录)
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN') {
-    console.log('用户已在线:', session.user);
-    // 这里可以把“登录/注册”按钮变成“个人中心”或“退出”
-  }
-});
-// 找到页面上的“登录/注册”按钮
-// 它是导航栏里的最后一个 nav-item
-const loginBtn = document.querySelector('.nav-item:last-child');
-// 给它绑定点击事件
-loginBtn.onclick = async () => {
-    const email = prompt("请输入邮箱:");
-    const password = prompt("请输入密码 (至少6位):");
-
-    if (email && password) {
-        // 先尝试登录
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
-        if (signInError) {
-            // 如果登录失败（比如账号不存在），就尝试注册
-            alert("登录失败，正在为您尝试注册...");
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-            });
-
-            if (signUpError) {
-                alert("注册也失败了: " + signUpError.message);
-            } else {
-                alert("注册请求已发送！请去邮箱查收确认邮件（或去Supabase后台关闭邮箱验证）。");
-            }
-        } else {
-            alert("登录成功！欢迎回来，" + data.user.email);
-            loginBtn.innerText = "我的空间"; // 登录成功后修改按钮文字
-        }
+    // 使用统一的初始化逻辑
+    const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+    // 将实例挂载到 window 对象，防止重复声明错误
+    if (!window._supabase) {
+        window._supabase = supabase.createClient(supabaseUrl, supabaseKey);
     }
-};
+
+    window.addEventListener('load', () => {
+        const _supabase = window._supabase;
+        const loginBtn = document.querySelector('.nav-item:last-child');
+
+        // 1. 自动检查登录状态
+        async function checkUser() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user) {
+                loginBtn.innerText = "我的空间 (" + user.email.split('@')[0] + ")";
+            }
+        }
+        checkUser();
+
+        // 2. 绑定点击事件
+        loginBtn.onclick = async () => {
+            const email = prompt("请输入邮箱:");
+            const password = prompt("请输入密码 (至少6位):");
+
+            if (email && password) {
+                // 执行登录
+                const { data, error: signInError } = await _supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (signInError) {
+                    // 登录失败尝试注册
+                    alert("账号不存在或密码错误，尝试为您注册...");
+                    const { error: signUpError } = await _supabase.auth.signUp({
+                        email: email,
+                        password: password,
+                    });
+
+                    if (signUpError) {
+                        alert("注册失败: " + signUpError.message);
+                    } else {
+                        alert("注册请求已发送！请查收邮件确认，或直接刷新尝试登录。");
+                    }
+                } else {
+                    alert("登录成功！");
+                    loginBtn.innerText = "我的空间 (" + data.user.email.split('@')[0] + ")";
+                }
+            }
+        };
+    });
 </script>
 <title>二次元动漫首页</title>
 <!-- Google Fonts 可替换为本地中文字体 -->
