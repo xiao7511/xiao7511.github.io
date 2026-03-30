@@ -3,6 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // 1. 初始化 Supabase 客户端
+const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+// 2. 注册功能
+async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: password,
+  });
+  if (error) console.error('注册失败:', error.message);
+  else alert('注册成功！请查收验证邮件。');
+}
+// 3. 登录功能
+async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: password,
+  });
+  if (error) console.error('登录失败:', error.message);
+  else {
+    console.log('登录成功:', data.user);
+    updateUI(data.user); // 登录后更新界面，比如显示用户名
+  }
+}
+// 4. 监听登录状态变化 (刷新页面也能保持登录)
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN') {
+    console.log('用户已在线:', session.user);
+    // 这里可以把“登录/注册”按钮变成“个人中心”或“退出”
+  }
+});
+</script>
 <title>二次元动漫首页</title>
 <!-- Google Fonts 可替换为本地中文字体 -->
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
