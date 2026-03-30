@@ -83,6 +83,29 @@
     .section h2 { font-size: 22px; }
     .cards { grid-template-columns: repeat(2, 1fr); } /* 手机端每行强制显示两个卡片 */
   }
+  /* 默认样式：针对电脑端（大屏幕） */
+body {
+    font-size: 18px;
+}
+.container {
+    width: 80%; /* 居中显示，两边留白 */
+    margin: 0 auto;
+    display: flex; /* 电脑端左右排列 */
+}
+
+/* 响应式样式：针对手机端（屏幕宽度小于 768px） */
+@media (max-width: 768px) {
+    body {
+        font-size: 16px; /* 手机端字体稍微调小 */
+    }
+    .container {
+        width: 95%; /* 手机端占满屏幕，减少留白 */
+        flex-direction: column; /* 左右排列变为上下堆叠 */
+    }
+    .sidebar {
+        display: none; /* 手机端可以隐藏不重要的侧边栏 */
+    }
+}
 </style>
 </head>
 <body>
