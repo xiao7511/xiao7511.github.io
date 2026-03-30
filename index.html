@@ -37,6 +37,40 @@ supabase.auth.onAuthStateChange((event, session) => {
     // 这里可以把“登录/注册”按钮变成“个人中心”或“退出”
   }
 });
+// 找到页面上的“登录/注册”按钮
+// 它是导航栏里的最后一个 nav-item
+const loginBtn = document.querySelector('.nav-item:last-child');
+// 给它绑定点击事件
+loginBtn.onclick = async () => {
+    const email = prompt("请输入邮箱:");
+    const password = prompt("请输入密码 (至少6位):");
+
+    if (email && password) {
+        // 先尝试登录
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (signInError) {
+            // 如果登录失败（比如账号不存在），就尝试注册
+            alert("登录失败，正在为您尝试注册...");
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+            });
+
+            if (signUpError) {
+                alert("注册也失败了: " + signUpError.message);
+            } else {
+                alert("注册请求已发送！请去邮箱查收确认邮件（或去Supabase后台关闭邮箱验证）。");
+            }
+        } else {
+            alert("登录成功！欢迎回来，" + data.user.email);
+            loginBtn.innerText = "我的空间"; // 登录成功后修改按钮文字
+        }
+    }
+};
 </script>
 <title>二次元动漫首页</title>
 <!-- Google Fonts 可替换为本地中文字体 -->
