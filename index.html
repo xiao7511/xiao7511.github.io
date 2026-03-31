@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<title>DorisY二次元世界</title>
+<title>DorisY动漫世界</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
   /* --- 原有全局样式 --- */
@@ -21,6 +21,7 @@
     background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
     display: flex; align-items:center; justify-content:space-between;
     padding: 0 5%; z-index:1000;
+    flex-wrap: wrap; /* 允许手机端换行 */
   }
   .logo {font-size:20px; font-weight:bold; cursor:pointer;}
   .nav {display:flex; gap:20px;}
@@ -143,7 +144,7 @@ body {
 
 <!-- 导航 -->
 <div class="header">
-  <div class="logo">DorisY二次元世界</div>
+  <div class="logo">DorisY动漫世界</div>
   <div class="nav">
     <div class="nav-item">首页</div>
     <div class="nav-item">动漫推荐</div>
@@ -248,7 +249,7 @@ body {
   </div>
 </div>
 
-<footer>© 2026 二次元世界 | 联系方式：xiao.ye751111@outlook.com</footer>
+<footer>© 2026 动漫世界 | 动漫素材来源于独立创作 | 联系方式：xiao.ye751111@outlook.com</footer>
 
 <script>
     // 1. 初始化 Supabase
