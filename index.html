@@ -241,9 +241,13 @@ body {
     </div>
   </div>
 </div>
+<div id="post-area" style="display:none; margin-bottom: 30px;">
+  <textarea id="post-content" placeholder="分享你的二次元见闻..." style="width:100%; height:80px; border-radius:10px; padding:10px; background:#333; color:#fff; border:1px solid #FF6EC7;"></textarea>
+  <button onclick="publishPost()" style="margin-top:10px; padding:8px 20px; background:#FF6EC7; border:none; border-radius:5px; color:#fff; cursor:pointer;">发布动态</button>
+</div>
 <!-- 社区模块 -->
 <div class="section community">
-  <h2>二次元社区热帖</h2>
+  <h2>动漫社区热帖</h2>
   <div class="post">
     <img src="images/IMG_5607.jpeg" alt="用户头像">
     <div class="content">
@@ -367,6 +371,68 @@ body {
           location.reload(); // 刷新页面
       }
   };
+  async function checkSession() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        document.getElementById('post-area').style.display = 'block'; // 登录后显示发帖框
+        loadPosts(); // 加载帖子列表
+    }
+}
+async function publishPost() {
+    const content = document.getElementById('post-content').value;
+    if (!content) return alert("内容不能为空喵！");
+
+    const { data: { user } } = await _supabase.auth.getUser();
+    // 先获取当前用户的 Profile 信息（昵称和头像）
+    const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+
+    const { error } = await _supabase.from('posts').insert([
+        { 
+            content: content, 
+            user_id: user.id, 
+            nickname: profile.nickname, 
+            avatar_url: profile.avatar_url 
+        }
+    ]);
+
+    if (error) alert("发布失败: " + error.message);
+    else {
+        document.getElementById('post-content').value = '';
+        loadPosts(); // 刷新列表
+    }
+}
+async function loadPosts() {
+    const { data: posts, error } = await _supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false }); // 按时间倒序
+
+    if (posts) {
+        const communityDiv = document.querySelector('.community');
+        // 保留标题，清空旧帖子
+        const headerHtml = '<h2>二次元社区热帖</h2>';
+        const postAreaHtml = document.getElementById('post-area').outerHTML;
+        
+        let postsHtml = '';
+        posts.forEach(post => {
+            postsHtml += `
+                <div class="post">
+                    <img src="${post.avatar_url}" alt="头像">
+                    <div class="content">
+                        <div class="username">${post.nickname}</div>
+                        <div class="text">${post.content}</div>
+                        <div style="font-size:10px; color:#888; margin-top:5px;">${new Date(post.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        communityDiv.innerHTML = headerHtml + postAreaHtml + postsHtml;
+        // 重新显示发帖框（因为 innerHTML 会重置 DOM）
+        document.getElementById('post-area').style.display = 'block';
+    }
+}
+
     // 原有轮播逻辑
     let banners = document.querySelectorAll('.banner img');
     let idx = 0;
