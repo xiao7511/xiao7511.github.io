@@ -164,10 +164,22 @@ body {
         </div>
 
         <!-- 登录表单 -->
+       <!-- 修改后的登录表单 -->
         <form id="login-form">
-            <input type="email" placeholder="邮箱" required>
+            <input type="email" id="login-email" placeholder="邮箱" required>
             <input type="password" placeholder="密码" required>
+            <!-- 新增：忘记密码链接 -->
+            <p style="text-align: right; margin-top: -5px;">
+                <a href="javascript:void(0)" onclick="forgotPassword()" style="font-size: 12px; color: #FFE066;">忘记密码？</a>
+            </p>
             <button type="submit">进入异世界</button>
+        </form>
+        
+        <!-- 新增：重置密码表单 (默认隐藏) -->
+        <form id="reset-password-form" style="display:none;">
+            <p style="font-size: 14px; margin-bottom: 10px; color: #FFE066;">设置你的新密码</p>
+            <input type="password" id="new-password" placeholder="输入新密码 (至少6位)" required>
+            <button type="submit">确 认 修 改</button>
         </form>
 
         <!-- 注册表单 -->
@@ -229,7 +241,6 @@ body {
     </div>
   </div>
 </div>
-
 <!-- 社区模块 -->
 <div class="section community">
   <h2>二次元社区热帖</h2>
@@ -248,9 +259,7 @@ body {
     </div>
   </div>
 </div>
-
 <footer>© 2026 动漫世界 | 动漫素材来源于独立创作 | 联系方式：xiao.ye751111@outlook.com</footer>
-
 <script>
     // 1. 初始化 Supabase
     const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
@@ -270,7 +279,6 @@ body {
         }
     }
     checkSession();
-
     // 3. UI 交互逻辑
     userBtn.onclick = () => authModal.style.display = 'flex';
     document.getElementById('modal-close').onclick = () => authModal.style.display = 'none';
@@ -280,7 +288,6 @@ body {
         el.classList.add('selected');
         selectedAvatar = el.src;
     }
-
     // 切换登录/注册表单
     document.getElementById('tab-login').onclick = () => {
         document.getElementById('login-form').style.display = 'block';
@@ -294,7 +301,6 @@ body {
         document.getElementById('tab-reg').classList.add('active');
         document.getElementById('tab-login').classList.remove('active');
     }
-
     // 4. 注册逻辑
     document.getElementById('reg-form').onsubmit = async (e) => {
         e.preventDefault();
@@ -311,7 +317,6 @@ body {
             location.reload();
         }
     }
-
     // 5. 登录逻辑
     document.getElementById('login-form').onsubmit = async (e) => {
         e.preventDefault();
@@ -325,7 +330,43 @@ body {
             location.reload();
         }
     }
-
+  async function forgotPassword() {
+      const email = document.getElementById('login-email').value;
+      if (!email) {
+          alert("请先在邮箱框输入你的账号！");
+          return;
+      }
+      const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+          // 重置链接点击后跳转回来的地址（填你的 GitHub Pages 网址）
+          redirectTo: 'https://xiao7511.github.io/index.html', 
+      });
+  
+      if (error) alert("发送失败: " + error.message);
+      else alert("重置邮件已发送！请去邮箱查收链接。");
+  }
+  // 在页面加载时自动执行
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+          // 1. 自动打开模态框
+          document.getElementById('auth-modal').style.display = 'flex';
+          // 2. 隐藏登录/注册表单，显示重置密码表单
+          document.getElementById('login-form').style.display = 'none';
+          document.getElementById('reg-form').style.display = 'none';
+          document.getElementById('reset-password-form').style.display = 'block';
+          document.querySelector('.auth-tabs').style.display = 'none'; // 隐藏切换标签
+      }
+  });
+  document.getElementById('reset-password-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('new-password').value;
+      const { error } = await _supabase.auth.updateUser({ password: newPassword });  
+      if (error) {
+          alert("修改失败: " + error.message);
+      } else {
+          alert("密码修改成功！请重新登录。");
+          location.reload(); // 刷新页面
+      }
+  };
     // 原有轮播逻辑
     let banners = document.querySelectorAll('.banner img');
     let idx = 0;
