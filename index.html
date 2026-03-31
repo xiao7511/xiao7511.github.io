@@ -283,13 +283,35 @@ body {
     let selectedAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Neko";
 
     // 2. 检查登录状态并获取昵称
-    async function checkSession() {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (user) {
-            const { data: profile } = await _supabase.from('profiles').select('nickname').eq('id', user.id).single();
-            userBtn.innerText = profile ? profile.nickname : user.email.split('@')[0];
+   async function checkSession() {
+    // 1. 从 Supabase 获取当前登录的用户信息
+    const { data: { user } } = await _supabase.auth.getUser();    
+    // 定位导航栏上的那个“登录/注册”按钮
+    const userBtn = document.getElementById('user-btn'); 
+    if (user) {
+        // --- 已登录状态 ---
+        // 2. 去 profiles 表根据用户 ID 查找昵称
+        // 注意：这里需要确保你注册时已经把昵称存进了 profiles 表
+        const { data: profile, error } = await _supabase
+            .from('profiles')
+            .select('nickname')
+            .eq('id', user.id)
+            .single();
+        if (profile && profile.nickname) {
+            // 3. 将按钮文字修改为昵称
+            userBtn.innerText = "欢迎，" + profile.nickname;
+        } else {
+            // 如果没设昵称，显示邮箱前缀作为备选
+            userBtn.innerText = user.email.split('@')[0];
         }
+        // 顺便显示发帖区域
+        const postArea = document.getElementById('post-area');
+        if (postArea) postArea.style.display = 'block';
+    } else {
+        // --- 未登录状态 ---
+        userBtn.innerText = "登录/注册";
     }
+}
     checkSession();
     // 3. UI 交互逻辑
     userBtn.onclick = () => authModal.style.display = 'flex';
