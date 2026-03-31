@@ -401,13 +401,6 @@ body {
           location.reload(); // 刷新页面
       }
   };
-  async function checkSession() {
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (user) {
-        document.getElementById('post-area').style.display = 'block'; // 登录后显示发帖框
-        loadPosts(); // 加载帖子列表
-    }
-}
 async function publishPost() {
     const content = document.getElementById('post-content').value;
     if (!content) return alert("内容不能为空喵！");
