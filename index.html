@@ -7,25 +7,28 @@
 <title>DorisY动漫世界</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  /* --- 全局与导航 --- */
+  /* --- 原有全局样式 --- */
   * {margin:0; padding:0; box-sizing:border-box;}
   body {
     font-family: "Helvetica Neue", Helvetica, Arial, "Microsoft Yahei", sans-serif;
     background: linear-gradient(135deg, #FF6EC7 0%, #6EC1FF 100%);
     color: #fff; overflow-x: hidden; line-height: 1.6;
   }
+  
+  /* --- 导航栏 --- */
   .header {
     position: fixed; top:0; width:100%; min-height:70px;
     background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
     display: flex; align-items:center; justify-content:space-between;
-    padding: 0 5%; z-index:1000; flex-wrap: wrap;
+    padding: 0 5%; z-index:1000;
+    flex-wrap: wrap; /* 允许手机端换行 */
   }
   .logo {font-size:20px; font-weight:bold; cursor:pointer;}
   .nav {display:flex; gap:20px;}
   .nav-item {cursor:pointer; transition:0.3s; font-size: 14px;}
   .nav-item:hover {color:#FFE066;}
 
-  /* --- 模态框 --- */
+  /* --- 模态框 (Auth Modal) 样式 --- */
   .auth-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;
@@ -40,7 +43,7 @@
   .tab { cursor: pointer; font-size: 18px; padding-bottom: 5px; color: #888; }
   .tab.active { color: #FFE066; border-bottom: 2px solid #FFE066; }
 
-  form input, form textarea {
+  form input {
     width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; 
     border: 1px solid #333; background: #2b2b2b; color: #fff; outline: none;
   }
@@ -48,26 +51,98 @@
     width: 100%; padding: 12px; background: #FF6EC7; border: none; color: #fff; 
     border-radius: 10px; cursor: pointer; margin-top: 15px; font-weight: bold; font-size: 16px;
   }
-  .avatar-options img { width: 55px; height: 55px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: 0.3s; }
+  
+  /* 头像选择器 */
+  .avatar-selector { margin: 15px 0; }
+  .avatar-selector p { font-size: 13px; color: #FFE066; margin-bottom: 10px; }
+  .avatar-options { display: flex; gap: 15px; justify-content: center; }
+  .avatar-options img { 
+    width: 55px; height: 55px; border-radius: 50%; cursor: pointer; 
+    border: 3px solid transparent; background: #333; transition: 0.3s;
+  }
   .avatar-options img.selected { border-color: #FFE066; transform: scale(1.1); }
-/* --- 内容板块 --- */
+
+  /* --- 原有其他样式 (省略部分以节省篇幅，保持你的不变) --- */
+  /* Banner轮播 - 手机端高度调小 */
   .banner {position:relative; width:100%; height:50vh; min-height:300px; overflow:hidden; margin-top:70px;}
-  .banner img {width:100%; height:100%; object-fit:cover; position:absolute; opacity:0; transition:opacity 1s;}
+  .banner img {
+    width:100%; height:100%; object-fit:cover; position:absolute; top:0; left:0;
+    opacity:0; transition:opacity 1s ease-in-out;
+  }
   .banner img.active {opacity:1;}
+
+  /* 推荐模块 */
   .section {padding: 60px 5%;}
-  .cards {display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px;}
-  .card {border-radius: 12px; overflow:hidden; background:#222; transition:0.3s; cursor:pointer;}
+  .section h2 {font-size:28px; margin-bottom:25px; text-align: center; text-shadow:1px 1px 5px rgba(0,0,0,0.3);}
+  
+  /* 响应式卡片布局：使用 Grid 自动排列 */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+    gap: 20px;
+  }
+  .card {
+    border-radius: 12px; overflow:hidden;
+    box-shadow:0 5px 15px rgba(0,0,0,0.3); background:#222; transition:transform 0.3s;
+    cursor:pointer; display: flex; flex-direction: column;
+  }
   .card:hover {transform: translateY(-5px);}
   .card img {width:100%; aspect-ratio: 3/4; object-fit:cover;}
   .card .info {padding:12px;}
+  .card .title {font-size:16px; font-weight:bold; margin-bottom:5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .card .tags {font-size:12px; color:#FFE066;}
+  /* 社区模块 */
   .community {background:rgba(0,0,0,0.2); border-radius:12px; padding:20px; margin-top:30px;}
   .post {display:flex; align-items:flex-start; gap:15px; margin-bottom:20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;}
-  .post img {width:45px; height:45px; border-radius:50%;}
-  footer {padding:30px 20px; text-align:center; font-size: 12px; background: rgba(0,0,0,0.3); margin-top:50px;}
+  .post img {width:45px; height:45px; border-radius:50%; flex-shrink: 0;}
+  .post .content {flex:1;}
+  .post .username {font-weight:bold; margin-bottom:5px; color: #FFE066;}
+  .post .text {font-size:14px; line-height:1.5;}
+  /* 页脚 */
+  footer {
+    padding:30px 20px; text-align:center; font-size: 12px;
+    background: rgba(0,0,0,0.3); margin-top:50px; opacity: 0.8;
+  }
+  /* 核心响应式调整 */
+  @media(max-width:768px){
+    .header { justify-content: center; padding: 5px 10px; }
+    .logo { width: 100%; text-align: center; font-size: 18px; }
+    .nav { gap: 10px; padding-bottom: 10px; }
+    .nav-item { font-size: 12px; }
+    
+    .banner { height: 250px; margin-top: 100px; } /* 手机端导航变高了，Banner下移更多 */
+    
+    .section h2 { font-size: 22px; }
+    .cards { grid-template-columns: repeat(2, 1fr); } /* 手机端每行强制显示两个卡片 */
+  }
+  /* 默认样式：针对电脑端（大屏幕） */
+body {
+    font-size: 18px;
+}
+.container {
+    width: 80%; /* 居中显示，两边留白 */
+    margin: 0 auto;
+    display: flex; /* 电脑端左右排列 */
+}
+
+/* 响应式样式：针对手机端（屏幕宽度小于 768px） */
+@media (max-width: 768px) {
+    body {
+        font-size: 16px; /* 手机端字体稍微调小 */
+    }
+    .container {
+        width: 95%; /* 手机端占满屏幕，减少留白 */
+        flex-direction: column; /* 左右排列变为上下堆叠 */
+    }
+    .sidebar {
+        display: none; /* 手机端可以隐藏不重要的侧边栏 */
+    }
+}
 </style>
 </head>
 <body>
 
+<!-- 导航 -->
 <div class="header">
   <div class="logo">DorisY动漫世界</div>
   <div class="nav">
@@ -79,6 +154,7 @@
   </div>
 </div>
 
+<!-- 登录注册模态框 -->
 <div id="auth-modal" class="auth-overlay">
     <div class="auth-box">
         <span class="close-btn" id="modal-close">&times;</span>
@@ -87,19 +163,26 @@
             <div class="tab" id="tab-reg">注册</div>
         </div>
 
+        <!-- 登录表单 -->
+       <!-- 修改后的登录表单 -->
         <form id="login-form">
             <input type="email" id="login-email" placeholder="邮箱" required>
-            <input type="password" id="login-pass" placeholder="密码" required>
-            <p style="text-align: right;"><a href="javascript:void(0)" onclick="forgotPassword()" style="font-size: 12px; color: #FFE066;">忘记密码？</a></p>
+            <input type="password" placeholder="密码" required>
+            <!-- 新增：忘记密码链接 -->
+            <p style="text-align: right; margin-top: -5px;">
+                <a href="javascript:void(0)" onclick="forgotPassword()" style="font-size: 12px; color: #FFE066;">忘记密码？</a>
+            </p>
             <button type="submit">进入异世界</button>
         </form>
         
+        <!-- 新增：重置密码表单 (默认隐藏) -->
         <form id="reset-password-form" style="display:none;">
-            <p style="color:#FFE066">设置新密码</p>
-            <input type="password" id="new-password" placeholder="新密码 (至少6位)" required>
-            <button type="submit">确认修改</button>
+            <p style="font-size: 14px; margin-bottom: 10px; color: #FFE066;">设置你的新密码</p>
+            <input type="password" id="new-password" placeholder="输入新密码 (至少6位)" required>
+            <button type="submit">确 认 修 改</button>
         </form>
 
+        <!-- 注册表单 -->
         <form id="reg-form" style="display:none;">
             <div class="avatar-selector">
                 <p>选择你的萌系头像</p>
@@ -117,33 +200,80 @@
     </div>
 </div>
 
+<!-- 原有内容 (Banner, Cards等) -->
 <div class="banner">
   <img src="images/IMG_4822.jpeg" class="active">
   <img src="images/IMG_4873.png">
   <img src="images/IMG_4886.png">
 </div>
 
+<!-- 动漫推荐 -->
 <div class="section">
   <h2>热门动漫推荐</h2>
   <div class="cards">
-    <div class="card"><img src="images/IMG_4893.png"><div class="info"><b>魔法少女</b><br><small>魔法 / 冒险</small></div></div>
-    <div class="card"><img src="images/IMG_4896.png"><div class="info"><b>校园恋爱</b><br><small>恋爱 / 校园</small></div></div>
-    <div class="card"><img src="images/IMG_4907.png"><div class="info"><b>战斗冒险</b><br><small>热血 / 冒险</small></div></div>
-    <div class="card"><img src="images/IMG_5606.jpeg"><div class="info"><b>异世界</b><br><small>幻想 / 冒险</small></div></div>
+    <div class="card">
+      <img src="images/IMG_4893.png" alt="动漫1">
+      <div class="info">
+        <div class="title">魔法少女</div>
+        <div class="tags">魔法 / 冒险</div>
+      </div>
+    </div>
+    <div class="card">
+      <img src="images/IMG_4896.png" alt="动漫2">
+      <div class="info">
+        <div class="title">校园恋爱</div>
+        <div class="tags">恋爱 / 校园</div>
+      </div>
+    </div>
+    <div class="card">
+      <img src="images/IMG_4907.png" alt="动漫3">
+      <div class="info">
+        <div class="title">战斗冒险</div>
+        <div class="tags">热血 / 冒险</div>
+      </div>
+    </div>
+    <div class="card">
+      <img src="images/IMG_5606.jpeg" alt="动漫4">
+      <div class="info">
+        <div class="title">异世界</div>
+        <div class="tags">幻想 / 冒险</div>
+      </div>
+    </div>
   </div>
 </div>
 <div class="section community">
   <h2>动漫社区热帖</h2>
-  <div id="post-area" style="display:none; margin-top:20px;">
-    <textarea id="post-content" placeholder="分享你的二次元见闻..."></textarea>
-    <button onclick="publishPost()">发布动态</button>
+  <!-- 发帖栏：保持唯一，不要动它 -->
+  <div id="post-area" style="display:none; margin-bottom: 30px;">
+    <textarea id="post-content" placeholder="分享你的二次元见闻..." style="width:100%; height:80px; border-radius:10px; padding:10px; background:#333; color:#fff; border:1px solid #FF6EC7;"></textarea>
+    <button onclick="publishPost()" style="margin-top:10px; padding:8px 20px; background:#FF6EC7; border:none; border-radius:5px; color:#fff; cursor:pointer;">发布动态</button>
   </div>
-  <div id="posts-list" style="margin-top:20px;"></div>
+  <!-- 帖子列表：JS 只刷新这里的内容 -->
+  <div id="posts-list">
+    <!-- 这里的动态内容会被 JS 填充 -->
+  </div>
 </div>
-
-<footer>© 2026 动漫世界 | 联系方式：xiao.ye751111@outlook.com</footer>
-
+<!-- 社区模块 
+<div class="section community">
+  <h2>动漫社区热帖</h2>
+  <div class="post">
+    <img src="images/IMG_5607.jpeg" alt="用户头像">
+    <div class="content">
+      <div class="username">小樱酱</div>
+      <div class="text">刚看完最新一集，剧情太精彩了！大家怎么看？</div>
+    </div>
+  </div>
+  <div class="post">
+    <img src="images/IMG_5608.jpeg" alt="用户头像">
+    <div class="content">
+      <div class="username">黑崎一护</div>
+      <div class="text">推荐大家看《魔法少女》，画风超萌！</div>
+    </div>
+  </div>-->
+</div>
+<footer>© 2026 动漫世界 | 动漫素材来源于独立创作 | 联系方式：xiao.ye751111@outlook.com</footer>
 <script>
+    // 1. 初始化 Supabase
     const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
     const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -152,28 +282,25 @@
     const userBtn = document.getElementById('user-btn');
     let selectedAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Neko";
 
-    // --- 核心状态检查 ---
+    // 2. 检查登录状态并获取昵称
     async function checkSession() {
         const { data: { user } } = await _supabase.auth.getUser();
         if (user) {
-            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
-            userBtn.innerText = profile ? "欢迎，" + profile.nickname : "我的主页";
-            document.getElementById('post-area').style.display = 'block';
-            loadPosts();
-        } else {
-            loadPosts(); // 游客也能看帖
+            const { data: profile } = await _supabase.from('profiles').select('nickname').eq('id', user.id).single();
+            userBtn.innerText = profile ? profile.nickname : user.email.split('@')[0];
         }
     }
-    // --- UI 逻辑 ---
+    checkSession();
+    // 3. UI 交互逻辑
     userBtn.onclick = () => authModal.style.display = 'flex';
     document.getElementById('modal-close').onclick = () => authModal.style.display = 'none';
-    
+
     function selAvatar(el) {
         document.querySelectorAll('.avatar-options img').forEach(img => img.classList.remove('selected'));
         el.classList.add('selected');
         selectedAvatar = el.src;
     }
-
+    // 切换登录/注册表单
     document.getElementById('tab-login').onclick = () => {
         document.getElementById('login-form').style.display = 'block';
         document.getElementById('reg-form').style.display = 'none';
@@ -186,90 +313,134 @@
         document.getElementById('tab-reg').classList.add('active');
         document.getElementById('tab-login').classList.remove('active');
     }
-
-    // --- Auth 逻辑 ---
+    // 4. 注册逻辑
     document.getElementById('reg-form').onsubmit = async (e) => {
         e.preventDefault();
         const nick = document.getElementById('reg-nickname').value;
         const email = document.getElementById('reg-email').value;
         const pass = document.getElementById('reg-password').value;
+
         const { data, error } = await _supabase.auth.signUp({ email, password: pass });
         if (error) alert("注册失败: " + error.message);
         else {
+            // 写入关联表 profiles
             await _supabase.from('profiles').insert([{ id: data.user.id, nickname: nick, avatar_url: selectedAvatar }]);
-            alert("注册成功！");
+            alert("注册成功！请刷新页面登录");
             location.reload();
         }
     }
-
+    // 5. 登录逻辑
     document.getElementById('login-form').onsubmit = async (e) => {
         e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-pass').value;
+        const email = e.target[0].value;
+        const pass = e.target[1].value;
+
         const { error } = await _supabase.auth.signInWithPassword({ email, password: pass });
         if (error) alert("登录失败: " + error.message);
-        else location.reload();
-    }
-
-    async function forgotPassword() {
-        const email = document.getElementById('login-email').value;
-        if (!email) return alert("请先输入邮箱！");
-        const { error } = await _supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
-        if (error) alert("发送失败: " + error.message);
-        else alert("邮件已发送，请查收！");
-    }
-
-    _supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY") {
-            authModal.style.display = 'flex';
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('reg-form').style.display = 'none';
-            document.getElementById('reset-password-form').style.display = 'block';
+        else {
+            alert("欢迎来到二次元世界！");
+            location.reload();
         }
-    });
+    }
+  async function forgotPassword() {
+      const email = document.getElementById('login-email').value;
+      if (!email) {
+          alert("请先在邮箱框输入你的账号！");
+          return;
+      }
+      const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+          // 重置链接点击后跳转回来的地址（填你的 GitHub Pages 网址）
+          redirectTo: 'https://xiao7511.github.io/index.html', 
+      });
+  
+      if (error) alert("发送失败: " + error.message);
+      else alert("重置邮件已发送！请去邮箱查收链接。");
+  }
+  // 在页面加载时自动执行
+  _supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+          // 1. 自动打开模态框
+          document.getElementById('auth-modal').style.display = 'flex';
+          // 2. 隐藏登录/注册表单，显示重置密码表单
+          document.getElementById('login-form').style.display = 'none';
+          document.getElementById('reg-form').style.display = 'none';
+          document.getElementById('reset-password-form').style.display = 'block';
+          document.querySelector('.auth-tabs').style.display = 'none'; // 隐藏切换标签
+      }
+  });
+  document.getElementById('reset-password-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('new-password').value;
+      const { error } = await _supabase.auth.updateUser({ password: newPassword });  
+      if (error) {
+          alert("修改失败: " + error.message);
+      } else {
+          alert("密码修改成功！请重新登录。");
+          location.reload(); // 刷新页面
+      }
+  };
+  async function checkSession() {
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        document.getElementById('post-area').style.display = 'block'; // 登录后显示发帖框
+        loadPosts(); // 加载帖子列表
+    }
+}
+async function publishPost() {
+    const content = document.getElementById('post-content').value;
+    if (!content) return alert("内容不能为空喵！");
 
-    document.getElementById('reset-password-form').onsubmit = async (e) => {
-        e.preventDefault();
-        const newPassword = document.getElementById('new-password').value;
-        const { error } = await _supabase.auth.updateUser({ password: newPassword });
-        if (error) alert("失败: " + error.message);
-        else { alert("成功！"); location.reload(); }
-    };
-    // --- BBS 逻辑 ---
-    async function publishPost() {
-        const content = document.getElementById('post-content').value;
-        if (!content) return;
-        const { data: { user } } = await _supabase.auth.getUser();
-        const { data: p } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
-        
-        // 兼容拼写错误 avator_url 或 avatar_url
-        const { error } = await _supabase.from('posts').insert([{ 
+    const { data: { user } } = await _supabase.auth.getUser();
+    // 先获取当前用户的 Profile 信息（昵称和头像）
+    const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+
+    const { error } = await _supabase.from('posts').insert([
+        { 
             content: content, 
             user_id: user.id, 
-            nickname: p.nickname, 
-            avatar_url: p.avatar_url || p.avator_url 
-        }]);
+            nickname: profile.nickname, 
+            avatar_url: profile.avatar_url 
+        }
+    ]);
 
-        if (error) alert("发布失败: " + error.message);
-        else { document.getElementById('post-content').value = ''; loadPosts(); }
+    if (error) alert("发布失败: " + error.message);
+    else {
+        document.getElementById('post-content').value = '';
+        loadPosts(); // 刷新列表
     }
+}
+async function loadPosts() {
+    // 1. 获取数据
+    const { data: posts, error } = await _supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    async function loadPosts() {
-        const { data: posts } = await _supabase.from('posts').select('*').order('created_at', { ascending: false });
-        const listDiv = document.getElementById('posts-list');
-        listDiv.innerHTML = posts ? posts.map(p => `
+    if (error) return console.error("加载失败:", error);
+
+    // 2. 锁定专门存帖子的容器
+    const listDiv = document.getElementById('posts-list');
+    
+    let html = '';
+    posts.forEach(post => {
+        html += `
             <div class="post">
-                <img src="${p.avatar_url || p.avator_url || ''}">
+                <img src="${post.avatar_url}" alt="头像">
                 <div class="content">
-                    <div class="username">${p.nickname}</div>
-                    <div class="text">${p.content}</div>
-                    <small style="color:#888">${new Date(p.created_at).toLocaleString()}</small>
+                    <div class="username">${post.nickname}</div>
+                    <div class="text">${post.content}</div>
+                    <div style="font-size:10px; color:#888; margin-top:5px;">
+                        ${new Date(post.created_at).toLocaleString()}
+                    </div>
                 </div>
             </div>
-        `).join('') : '暂无帖子';
-    }
+        `;
+    });
 
-    // --- 轮播与启动 ---
+    // 3. 只更新列表部分，发帖栏在外面不受影响
+    listDiv.innerHTML = html;
+}
+    // 原有轮播逻辑
     let banners = document.querySelectorAll('.banner img');
     let idx = 0;
     setInterval(() => {
@@ -277,8 +448,6 @@
         idx = (idx + 1) % banners.length;
         banners[idx].classList.add('active');
     }, 4000);
-
-    window.onload = checkSession;
 </script>
 </body>
 </html>
