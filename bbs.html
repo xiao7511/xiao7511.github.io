@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交流区 - DorisY动漫世界</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-pink: #FF6EC7;
+            --primary-blue: #6EC1FF;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft Yahei", sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff; min-height: 100vh;
+        }
+
+        /* 导航栏 */
+        .header {
+            height: 70px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 5%; position: fixed; top: 0; width: 100%; z-index: 1000;
+        }
+        .logo { font-size: 22px; font-weight: bold; color: var(--primary-pink); text-decoration: none; }
+        .user-nav { display: flex; align-items: center; gap: 15px; }
+
+        /* 主体布局 */
+        .bbs-container {
+            max-width: 1200px; margin: 90px auto 50px;
+            display: grid; grid-template-columns: 250px 1fr; gap: 20px; padding: 0 20px;
+        }
+
+        /* 左侧边栏 */
+        .sidebar { position: sticky; top: 90px; height: fit-content; }
+        .glass-card {
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px; padding: 20px; backdrop-filter: blur(5px);
+        }
+        .forum-menu { list-style: none; margin-top: 15px; }
+        .forum-menu li {
+            padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.3s;
+            margin-bottom: 5px; color: #ccc;
+        }
+        .forum-menu li:hover, .forum-menu li.active {
+            background: var(--primary-pink); color: #fff;
+        }
+/* 右侧内容区 */
+        .main-content { min-height: 600px; }
+        #list-view, #detail-view { display: none; }
+        .show { display: block !important; }
+
+        /* 帖子列表样式 */
+        .post-row {
+            display: flex; align-items: center; padding: 15px;
+            background: rgba(0,0,0,0.2); border-radius: 10px; margin-bottom: 10px;
+            transition: 0.3s; cursor: pointer; border-left: 4px solid transparent;
+        }
+        .post-row:hover { border-left-color: var(--primary-pink); background: rgba(255,255,255,0.05); }
+        .post-info { flex: 1; }
+        .post-info h3 { font-size: 16px; margin-bottom: 5px; color: #FFE066; }
+        .post-meta { font-size: 12px; color: #888; display: flex; gap: 15px; }
+
+        /* 楼层模式样式 */
+        .floor {
+            display: grid; grid-template-columns: 140px 1fr;
+            background: rgba(0,0,0,0.3); border-radius: 12px; margin-bottom: 15px; overflow: hidden;
+        }
+        .floor-user {
+            background: rgba(255,255,255,0.03); padding: 20px; text-align: center;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .floor-user img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--primary-pink); }
+        .floor-content { padding: 25px; position: relative; }
+        .floor-content h2 { color: var(--primary-pink); margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        /* 输入框样式 */
+        textarea, input {
+            width: 100%; background: #222; border: 1px solid #444; color: #fff;
+            padding: 12px; border-radius: 8px; outline: none; margin-bottom: 10px;
+        }
+        .btn {
+            background: var(--primary-pink); color: #fff; border: none;
+            padding: 10px 25px; border-radius: 20px; cursor: pointer; font-weight: bold;
+        }
+
+        .reply-box { margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.4); border-radius: 15px; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <a href="index.html" class="logo">DorisY BBS</a>
+        <div class="user-nav" id="nav-user">
+            <button class="btn" onclick="location.href='index.html'">返回首页</button>
+        </div>
+    </header>
+
+    <div class="bbs-container">
+        <aside class="sidebar">
+            <div class="glass-card">
+                <div id="user-profile">登录解锁更多功能</div>
+                <ul class="forum-menu">
+                    <li class="active" onclick="switchCategory('all', this)">📍 全部讨论</li>
+                    <li onclick="switchCategory('anime', this)">📺 追番专区</li>
+                    <li onclick="switchCategory('manga', this)">📖 漫画推介</li>
+                    <li onclick="switchCategory('daily', this)">☕ 日常水贴</li>
+                </ul>
+            </div>
+            <button class="btn" style="width:100%; margin-top:20px;" onclick="openPostForm()">+ 发起话题</button>
+        </aside>
+
+        <main class="main-content">
+            <section id="list-view" class="show">
+                <div id="posts-render">加载中...</div>
+            </section>
+
+            <section id="detail-view">
+                <button onclick="goBack()" style="color:var(--primary-blue); cursor:pointer; margin-bottom:15px; background:none; border:none;">← 返回列表</button>
+                <div id="floors-render"></div>
+                <div class="reply-box" id="reply-area" style="display:none;">
+                    <textarea id="reply-text" placeholder="我也来跟贴回复..."></textarea>
+                    <button class="btn" onclick="submitReply()">发表回帖</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="post-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+        <div class="glass-card" style="width:500px;">
+            <h3>发起新话题</h3><br>
+            <input type="text" id="new-title" placeholder="输入标题 (10-30字)">
+            <textarea id="new-content" placeholder="正文内容..." style="height:150px;"></textarea>
+            <button class="btn" onclick="submitTopic()">发布</button>
+            <button class="btn" style="background:#444;" onclick="document.getElementById('post-modal').style.display='none'">取消</button>
+        </div>
+    </div>
+<script>
+    const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
+    const supabaseKey = 'YOUR_KEY_HERE'; // 请确保填入你自己的 Key
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let currentPostId = null;
+    let currentCategory = 'all';
+
+    // 1. 初始化检查登录状态
+    async function init() {
+        const { data: { user } } = await _supabase.auth.getUser();
+        if (user) {
+            const { data: p } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+            document.getElementById('user-profile').innerHTML = `
+                <img src="${p.avatar_url}" style="width:50px; border-radius:50%; margin-bottom:10px;"><br>
+                <b>${p.nickname}</b><br><small>异世界等级：Lv.1</small>
+            `;
+            document.getElementById('reply-area').style.display = 'block';
+        }
+        loadList();
+    }
+
+    // 2. 加载列表
+    async function loadList() {
+        let query = _supabase.from('posts').select('*, profiles(nickname)').is('parent_id', null);
+        if(currentCategory !== 'all') query = query.eq('category', currentCategory);
+        
+        const { data: posts } = await query.order('created_at', { ascending: false });
+        
+        const render = document.getElementById('posts-render');
+        render.innerHTML = posts.map(p => `
+            <div class="post-row" onclick="viewDetail('${p.id}')">
+                <div class="post-info">
+                    <h3>【${p.category || '综合'}】${p.title || p.content.slice(0,20)}</h3>
+                    <div class="post-meta">
+                        <span>楼主：${p.profiles.nickname}</span>
+                        <span>时间：${new Date(p.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('') || '这一片荒芜，快来发第一帖吧！';
+    }
+
+    // 3. 查看详情
+    async function viewDetail(postId) {
+        currentPostId = postId;
+        document.getElementById('list-view').classList.remove('show');
+        document.getElementById('detail-view').classList.add('show');
+
+        const { data: floors } = await _supabase
+            .from('posts')
+            .select('*, profiles(*)')
+            .or(`id.eq.${postId},parent_id.eq.${postId}`)
+            .order('created_at', { ascending: true });
+
+        const render = document.getElementById('floors-render');
+        render.innerHTML = floors.map((f, i) => `
+            <div class="floor">
+                <div class="floor-user">
+                    <img src="${f.profiles.avatar_url}">
+                    <p>${f.profiles.nickname}</p>
+                    <small>${i === 0 ? '楼主' : i+1 + '楼'}</small>
+                </div>
+                <div class="floor-content">
+                    ${i === 0 ? `<h2>${f.title}</h2>` : ''}
+                    <p>${f.content}</p>
+                    <div style="position:absolute; bottom:10px; right:15px; font-size:11px; color:#555;">发表于：${new Date(f.created_at).toLocaleString()}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+// 4. 发帖与回帖逻辑
+    async function submitTopic() {
+        const title = document.getElementById('new-title').value;
+        const content = document.getElementById('new-content').value;
+        const { data: { user } } = await _supabase.auth.getUser();
+
+        if(!user) return alert("请先登录！");
+        
+        const { error } = await _supabase.from('posts').insert([{
+            title, content, user_id: user.id, category: currentCategory === 'all' ? 'daily' : currentCategory
+        }]);
+
+        if(!error) {
+            alert("发布话题成功！");
+            location.reload();
+        }
+    }
+
+    async function submitReply() {
+        const content = document.getElementById('reply-text').value;
+        const { data: { user } } = await _supabase.auth.getUser();
+        
+        if(!content) return alert("内容不能为空");
+
+        const { error } = await _supabase.from('posts').insert([{
+            content, parent_id: currentPostId, user_id: user.id
+        }]);
+
+        if(!error) {
+            document.getElementById('reply-text').value = '';
+            viewDetail(currentPostId);
+        }
+    }
+
+    // UI 辅助
+    function switchCategory(cat, el) {
+        currentCategory = cat;
+        document.querySelectorAll('.forum-menu li').forEach(li => li.classList.remove('active'));
+        el.classList.add('active');
+        loadList();
+    }
+
+    function goBack() {
+        document.getElementById('detail-view').classList.remove('show');
+        document.getElementById('list-view').classList.add('show');
+    }
+
+    function openPostForm() {
+        document.getElementById('post-modal').style.display = 'flex';
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
