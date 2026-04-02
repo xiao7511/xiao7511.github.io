@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>漫友社区 - DorisY</title>
+    <style>
+        * {margin:0; padding:0; box-sizing:border-box;}
+        body { background: #121212; color: #eee; font-family: sans-serif; padding-top: 80px;}
+        .header { position: fixed; top:0; width:100%; height:70px; background: rgba(0,0,0,0.9); display: flex; align-items:center; justify-content:space-between; padding: 0 5%; z-index:1000;}
+        .nav-item {color: #fff; text-decoration: none; margin-left: 20px; font-size: 14px;}
+        
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .post-box { background: #1e1e1e; padding: 20px; border-radius: 15px; margin-bottom: 30px; border: 1px solid #333; }
+        textarea { width: 100%; height: 100px; background: #252525; border: 1px solid #444; border-radius: 10px; color: #fff; padding: 15px; resize: none; }
+        .pub-btn { background: #FF6EC7; color: #fff; border: none; padding: 10px 25px; border-radius: 20px; cursor: pointer; margin-top: 10px; font-weight: bold; float: right;}
+        
+        .post-card { background: #1e1e1e; padding: 20px; border-radius: 15px; margin-bottom: 15px; display: flex; gap: 15px;}
+        .user-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FF6EC7; }
+        .post-content { flex: 1; }
+        .post-user { font-weight: bold; color: #FFE066; margin-bottom: 5px; }
+        .post-time { font-size: 11px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="color:#FF6EC7; font-weight:bold;">DorisY社区</div>
+        <div class="nav">
+            <a href="index.html" class="nav-item">首页</a>
+            <a href="recommend.html" class="nav-item">动漫推荐</a>
+            <a href="manga.html" class="nav-item">漫画连载</a>
+            <a href="community.html" class="nav-item" style="color:#FFE066">社区</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="post-box" id="post-area" style="display:none;">
+            <textarea id="post-content" placeholder="此刻在想什么动漫？"></textarea>
+            <button class="pub-btn" onclick="publishPost()">发布动态</button>
+            <div style="clear:both;"></div>
+        </div>
+
+        <div id="posts-list">
+            <!-- 动态加载内容 -->
+            <p style="text-align:center; color:#666;">正在同步异世界信号...</p>
+        </div>
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://kogjjfccyncdszuuwlun.supabase.co';
+        const supabaseKey = '你的KEY'; // 请替换为你主页使用的那个KEY
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+       // 检查登录状态
+        async function init() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user) document.getElementById('post-area').style.display = 'block';
+            loadPosts();
+        }
+
+        async function loadPosts() {
+            const { data: posts } = await _supabase.from('posts').select('*').order('created_at', { ascending: false });
+            const listDiv = document.getElementById('posts-list');
+            listDiv.innerHTML = posts.map(p => `
+                <div class="post-card">
+                    <img src="${p.avatar_url}" class="user-avatar">
+                    <div class="post-content">
+                        <div class="post-user">${p.nickname}</div>
+                        <div>${p.content}</div>
+                        <div class="post-time">${new Date(p.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function publishPost() {
+            const content = document.getElementById('post-content').value;
+            if(!content) return alert("写点什么吧喵~");
+            const { data: { user } } = await _supabase.auth.getUser();
+            const { data: profile } = await _supabase.from('profiles').select('*').eq('id', user.id).single();
+            
+            await _supabase.from('posts').insert([{ 
+                content, user_id: user.id, nickname: profile.nickname, avatar_url: profile.avatar_url 
+            }]);
+            document.getElementById('post-content').value = '';
+            loadPosts();
+        }
+
+        init();
+    </script>
+</body>
+</html>
