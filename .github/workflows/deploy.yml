@@ -29,7 +29,9 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-
+      - name: Create CNAME
+        run: echo "nobistudio.com" > CNAME
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
