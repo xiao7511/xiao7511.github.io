@@ -1,6 +1,25 @@
 name: Deploy to GitHub Pages
-on:  push:    branches:      - main
-jobs:  deploy:    runs-on: ubuntu-latest    steps:      - name: Check out the repository        uses: actions/checkout@v2        with:          fetch-depth: 0
-- name: Set up Node.js        uses: actions/setup-node@v2        with:          node-version: '14'
-- name: Install dependencies        run: npm install
-- name: Build the project        run: npm run build
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # 关键修改：因为是纯静态项目，直接将当前根目录（.）下的文件部署上去
+          publish_dir: .
