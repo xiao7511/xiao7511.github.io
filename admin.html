@@ -51,8 +51,40 @@
     </div>
 
     <script>
-        // 初始化 Supabase 客户端
-        const supabase = getSupabase();
+    async function initSupabaseWithCloudflare() {
+    try {
+        // 💡 因为同源部署，直接请求相对路径即可，极其优雅
+        const response = await fetch('/config'); 
+        
+        if (!response.ok) throw new Error('Cloudflare 桥接失败');
+        const config = await response.json();
+        
+        if (typeof window.supabase === 'undefined') {
+        window.supabase = supabaseJs.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+        }
+        
+        console.log('🔗 Supabase 经由 Cloudflare Pages Functions 动态桥接成功！');
+        await checkAuthAndInit(); // 执行你的鉴权拦截
+
+    } catch (error) {
+        console.error('❌ 配置加载失败:', error);
+    }
+    }
+
+    // 鉴权拦截逻辑
+    async function checkAuthAndInit() {
+        const { data: { session }, error } = await window.supabase.auth.getSession();
+        if (error || !session) {
+        alert('未检测到登录状态，正在拦截并跳转回首页！');
+        window.location.href = 'index.html';
+        return;
+        }
+        console.log('验证成功，欢迎管理员：', session.user.email);
+        // 这里继续绑定你的上传、防盗链激活等逻辑...
+    }
+
+    // 统一由这个生命周期入口启动
+    document.addEventListener('DOMContentLoaded', initSupabaseWithCloudflare);
 
         // 鉴权检查
         async function checkAuth() {
