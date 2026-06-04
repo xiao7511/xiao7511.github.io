@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>内容管理后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        .upload-area {
+            margin-bottom: 20px;
+        }
+        input[type='file'] {
+            display: block;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>内容管理后台</h1>
+        <div class="upload-area">
+            <h2>上传新图片</h2>
+            <input type="file" id="file-input" multiple accept="image/*" />
+            <button id="upload-btn">上传</button>
+            <div id="upload-status"></div>
+        </div>
+        <div id="image-list"></div>
+    </div>
+
+    <script>
+        // 获取 Supabase 客户端实例
+        const supabase = getSupabase();
+
+        document.getElementById('upload-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('file-input');
+            const files = Array.from(fileInput.files);
+
+            if (files.length === 0) return;
+
+            for (const file of files) {
+                const { data, error } = await supabase.storage.from('your-bucket-name').upload(`images/${file.name}`, file);
+                if (error) {
+                    document.getElementById('upload-status').innerText = '上传失败: ' + error.message;
+                    continue;
+                }
+                const imageUrl = `https://your-supabase-url/storage/v1/object/public/your-bucket-name/images/${file.name}`;
+                // 将 URL 存储到数据库，例如 site_contents 表
+                await supabase.from('site_contents').insert([{ module: 'image-module', url: imageUrl }]);
+                document.getElementById('upload-status').innerText = '上传成功: ' + imageUrl;
+            }
+        });
+    </script>
+</body>
+</html>

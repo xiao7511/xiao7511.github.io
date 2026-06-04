@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f1720" />
+  <title>围棋 Pro - 在线对战</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="game.js"></script>
+  <script src="multiplayer-ext.js"></script>
+  <script src="guandan-game.js"></script>
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: rgba(17, 24, 39, 0.78);
+      --panel-strong: rgba(10, 15, 24, 0.92);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --text: #eef4fb;
+      --muted: rgba(238, 244, 251, 0.72);
+      --accent: #f6c453;
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius: 20px;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.36);
+      --wood-image: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.06)),
+        repeating-linear-gradient(90deg, rgba(96, 60, 25, 0.20) 0 18px, rgba(124, 84, 40, 0.12) 18px 36px),
+        linear-gradient(135deg, #8e6337 0%, #6f4827 48%, #8e6337 100%);
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: radial-gradient(circle at top, #1b2737 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    <div class="app">
+        <header class="topbar">
+            <div class="topbar-brand">
+                <strong>围棋 Pro</strong>
+                <span>在线对战 · 生产级布局</span>
+            </div>
+            <div class="topbar-center" aria-live="polite">
+                <span class="chip chip--muted">轮到：<b id="currentPlayer">黑子</b></span>
+                <span class="chip">黑提：<b id="blackCaptures">0</b></span>
+                <span class="chip">白提：<b id="whiteCaptures">0</b></span>
+            </div>
+            <div class="topbar-actions">
+                <button id="surrender-btn" class="btn btn-danger">认输</button>
+                <button id="quit-game-btn" class="btn btn-ghost">退出游戏</button>
+            </div>
+        </header>
+
+        <main class="layout">
+            <aside class="sidebar sidebar-left">
+                <section class="panel" id="local-player-panel">
+                    <div class="panel-header">
+                        <h2>本地玩家</h2>
+                        <span id="local-player-status" class="status-pill">在线</span>
+                    </div>
+                    <div class="panel-body player-card">
+                        <img id="user-avatar" class="player-avatar" src="" alt="玩家头像" />
+                        <div class="player-meta">
+                            <div class="name-row">
+                                <strong id="user-nickname">${JSON.parse(sessionStorage.getItem('userInfo')).nickname}</strong>
+                                <span id="user-rank" class="chip chip--muted" style="padding: 4px 8px; font-size: 12px;">未设置段位</span>
+                            </div>
+                            <div class="sub">
+                                <span id="local-player-side">执色：—</span>
+                                <span id="local-player-turn">状态：待进入对局</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </aside>
+        </main>
+    </div>
+</html>
