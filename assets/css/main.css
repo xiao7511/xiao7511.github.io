@@ -564,62 +564,70 @@ main {
 }
 
 /* ==========================================================
-   🔮 极致美观：高级流线型响应式轮播图重构样式（追加在底部）
+   🚀 终极精修：解决点击拦截、头像污染、以及社区版面空间紧凑化
    ========================================================== */
+
+/* 1. 修复轮播图物理遮挡，给上方导航栏留出绝对安全触控空间 */
 .hero {
+    margin-top: 16px; /* 与上方导航栏拉开间距，防止透明层阻挡登录点击 */
     position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: #000;
-    touch-action: pan-y; /* 💡 关键：允许手机端纵向正常滚动页面的同时，捕捉横向手势 */
+    z-index: 5; /* 确保不压过模态框和下拉导航 */
 }
 
-/* 强制给轮播图区域增加黄金移动端纵横比，高度不再写死，防止图片被大片切掉 */
-.hero__slides {
-    position: relative;
-    width: 100%;
-    height: 240px; /* 📱 手机端紧凑而精致的高度 */
+/* 2. 强力约束论坛头像尺寸，彻底解决“头像变大”的污染问题 */
+.post-item__avatar {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-.hero__slide {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    visibility: hidden;
-    /* 🌟 动效优化：加入 0.6 秒的淡入淡出高级视差，取代原来的生硬显隐 */
-    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
-    z-index: 1;
+/* 3. 紧凑化论坛社区空间布局，使其与版面高度协调 */
+.community-section {
+    margin-top: 24px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px !important; /* 缩小内边距，释放更多手机屏幕空间 */
 }
 
-.hero__slide.is-active {
-    opacity: 1;
-    visibility: visible;
-    z-index: 2;
+.post-item {
+    padding: 12px 8px !important; /* 收紧每个帖子之间的上下间距 */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    gap: 12px !important;
 }
 
-.hero__slide img {
-    width: 100%;
-    height: 100%;
-    /* 💡 核心自适应：使用 cover 结合 center 智能锚定，确保各种长短手机屏幕上图片永远不变形，呈现最佳构图 */
-    object-fit: cover;
-    object-position: center;
-    transform: scale(1.02); /* 微动的视觉纵深感 */
-    transition: transform 6s linear;
+.post-item__content {
+    font-size: 0.9rem !important; /* 微调字体大小，让手机端单屏容纳更多内容 */
+    line-height: 1.5 !important;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 6px 0 0 0 !important;
 }
 
-/* 当幻灯片处于激活状态时，图片进行轻微的视差舒展运动 */
-.hero__slide.is-active img {
-    transform: scale(1);
+.post-item__nickname {
+    font-size: 0.85rem !important;
+    color: var(--accent);
 }
 
-/* 🖥️ 电脑/平板等大屏幕设备的自适应拉伸延伸 */
-@media (min-width: 768px) {
-    .hero__slides {
-        height: 420px; /* 电脑端自动延展成宏大宏伟的大图视野 */
-    }
+.post-item__time {
+    font-size: 0.75rem !important;
+    color: var(--text-muted);
+}
+
+/* 优化发帖框的紧凑度 */
+#post-content {
+    border-radius: 10px;
+    padding: 10px !important;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#publish-btn {
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px;
 }
