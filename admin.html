@@ -53,20 +53,21 @@
     <script>
     async function initSupabaseWithCloudflare() {
     try {
-        // 💡 因为同源部署，直接请求相对路径即可，极其优雅
-       // const response = await fetch('/config.js'); 
-        // 修改 admin.html 第 59 行左右的 fetch 地址
-        const response = await fetch('/functions/config');
+        // 💡 关键修改：直接死死请求你刚刚创建的 Cloudflare Worker 绝对路径！
+        const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/'; 
         
-        if (!response.ok) throw new Error('Cloudflare 桥接失败');
+        console.log('正在从独立 Worker 获取配置...', workerUrl);
+        const response = await fetch(workerUrl);
+        
+        if (!response.ok) throw new Error('Cloudflare 独立 Worker 响应失败');
         const config = await response.json();
         
         if (typeof window.supabase === 'undefined') {
         window.supabase = supabaseJs.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
         }
         
-        console.log('🔗 Supabase 经由 Cloudflare Pages Functions 动态桥接成功！');
-        await checkAuthAndInit(); // 执行你的鉴权拦截
+        console.log('🔗 Supabase 经由独立 Worker 跨域桥接成功！');
+        await checkAuthAndInit(); // 顺畅执行后续的鉴权和管理逻辑
 
     } catch (error) {
         console.error('❌ 配置加载失败:', error);
