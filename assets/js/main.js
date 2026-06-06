@@ -26,48 +26,64 @@ document.addEventListener('DOMContentLoaded', () => {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ==========================================
-  // 🛡️ 核心引擎：运行时从 Cloudflare Worker 获取秘钥
+  // 🛡️ 核心引擎：运行时从 Cloudflare Worker 获取秘钥（带手机端超时兜底）
   // ==========================================
   async function initSecurityEngine() {
+    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+    
+    // 💡 针对手机端网络拦截的本地安全兜底钥匙（当 Worker 挂起时自动启用，确保 100% 能登入）
+    const BACKUP_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
+    const BACKUP_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+
     try {
-      // 1. 去你的独立 Worker 搬钥匙，代码里无痕隔离
-      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-      const response = await fetch(workerUrl);
-      if (!response.ok) throw new Error('Worker 响应失败');
+      console.log('正在构筑通信链路...');
+      
+      // 使用 AbortController 为手机端建立一个 2.5 秒的硬超时锁
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+      const response = await fetch(workerUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) throw new Error('Worker 状态异常');
       
       const config = await response.json();
-      
       window.sysConfig = {
         supabaseUrl: config.SUPABASE_URL.trim(),
         supabaseAnonKey: config.SUPABASE_ANON_KEY.trim()
       };
-
-      // 2. 注入创建全局唯一的安全通信客户端
-      window.supabaseClient = supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
-      console.log('🔐 安全通信实例成功构筑，前端硬编码已全面清除。');
-
-      // 3. 订阅密码重置等状态变更
-      window.supabaseClient.auth.onAuthStateChange((authEvent) => {
-        if (authEvent === 'PASSWORD_RECOVERY') {
-          openModal();
-          setTab('login');
-          if(loginForm) loginForm.hidden = true;
-          if(regForm) regForm.hidden = true;
-          if(resetForm) resetForm.hidden = false;
-        }
-      });
-
-      // 4. 按严格时序流水线激活业务
-      await refreshUserState();
-      await loadPosts();
-      await initAdminEntrance();
-      
-      // 动态获取并覆盖主页所有被部署版面的多图自动轮播
-      await renderDynamicLiveCarousels();
+      console.log('📡 成功通过 Cloudflare Worker 动态下发密钥。');
 
     } catch (error) {
-      console.error('❌ 安全流初始化断开:', error);
-      if (postsList) postsList.innerHTML = '<p class="loading-state">核心组件加载失败，请刷新或联系网管。</p>';
+      // 🌟 核心优化：一旦手机端 fetch 被断网、超时或跨域拦截，立刻降级到兜底通道，绝不卡死用户
+      console.warn('⚠️ Worker 链路在当前设备受阻或超时，启动移动端智能本能降级机制...', error.message);
+      window.sysConfig = {
+        supabaseUrl: BACKUP_URL,
+        supabaseAnonKey: BACKUP_KEY
+      };
+    } finally {
+      // 最终统一在此处进行安全客户端实例化，摘掉手机端的“系统正在建立安全连接”卡死锁
+      if (window.sysConfig && window.sysConfig.supabaseUrl) {
+        window.supabaseClient = supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
+        console.log('🔐 安全通信实例激活就绪。');
+
+        // 订阅状态变更
+        window.supabaseClient.auth.onAuthStateChange((authEvent) => {
+          if (authEvent === 'PASSWORD_RECOVERY') {
+            openModal();
+            setTab('login');
+            if(loginForm) loginForm.hidden = true;
+            if(regForm) regForm.hidden = true;
+            if(resetForm) resetForm.hidden = false;
+          }
+        });
+
+        // 依次异步唤醒流水线业务
+        refreshUserState().catch(e => console.log(e));
+        loadPosts().catch(e => console.log(e));
+        initAdminEntrance().catch(e => console.log(e));
+        renderDynamicLiveCarousels().catch(e => console.log(e));
+      }
     }
   }
 
@@ -76,12 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   async function initAdminEntrance() {
     try {
+        if (!window.supabaseClient) return;
         const isAdmin = await checkIsAdminSilent();
         if (isAdmin) {
             const entrance = document.getElementById('admin-entrance-wrapper');
             if (entrance) {
                 entrance.style.display = 'block'; 
-                console.log('❤️ 欢迎，超级管理员！新版磨砂胶囊控制台通道已安全挂载。');
+                console.log('❤️ 超级管理员入口已挂载。');
             }
         }
     } catch (error) {
@@ -139,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     } catch (err) {
-      console.log('配置库轮播流加载完毕。');
+      console.log('配置库轮播流装载。');
     }
   }
 
@@ -262,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================
-  // 🔘 用户事件处理绑定 (全面升级手机端防御)
+  // 🔘 用户事件处理绑定
   // ==========================================
   avatarOptions.forEach((button) => {
     button.addEventListener('click', () => {
@@ -295,11 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 📝 注册表单手机端适配优化
   if(regForm) {
     regForm.addEventListener('submit', async (event) => {
-      event.preventDefault(); // 🌟 必须置于首行，防止手机浏览器原生机制扰乱
-      if (!window.supabaseClient) { alert('系统正在建立安全连接，请稍候重试...'); return; }
+      event.preventDefault(); 
+      if (!window.supabaseClient) { alert('安全初始化未就绪，请等待一秒后重试...'); return; }
 
       const nick = document.getElementById('reg-nickname').value.trim();
       const email = document.getElementById('reg-email').value.trim();
@@ -324,11 +340,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 📝 登录表单手机端适配优化
   if(loginForm) {
     loginForm.addEventListener('submit', async (event) => {
-      event.preventDefault(); // 🌟 锁死第一行，拦截所有手机端原生刷新
-      if (!window.supabaseClient) { alert('系统正在建立安全连接，请稍候重试...'); return; }
+      event.preventDefault(); 
+      if (!window.supabaseClient) { alert('安全初始化未就绪，请等待一秒后重试...'); return; }
 
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
@@ -337,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         if (error) { alert(`登录失败: ${error.message}`); return; }
 
-        alert('欢迎回到游戏大厅！');
+        alert('欢迎回到动漫世界！');
         closeModal();
         window.location.reload();
       } catch (e) {
@@ -395,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setTab('login');
   initCarousel();
 
-  // 🚀 核心启动：加载秘钥并全面恢复状态
+  // 🚀 核心启动
   initSecurityEngine();
 
   window.addEventListener('beforeunload', () => {
