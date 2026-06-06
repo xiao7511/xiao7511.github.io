@@ -119,52 +119,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================================
-  // 🔐 APP 核心初始化（通过 onAuthStateChange 自动驱动 UI）
-  // ==========================================
+  // =========================================================
+  // 🔐 APP 核心初始化（UI 优先策略：秒级就绪，耗时网络请求后置）
+  // =========================================================
   async function initApp() {
+    // 1. 0毫秒本地核心同步：瞬间激活静态 UI 元素
     showSlide(0);
     startCarousel();
+    updateUserUI(null); // 先让按钮初始化为“✨ 登录 / 注册专区”，确保一进来就能点！
 
-    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-    try {
-      const response = await fetch(workerUrl);
-      if (!response.ok) throw new Error();
-      const config = await response.json();
-      window.sysConfig = config;
+    // 2. 核心直连实例化（不再等待 Cloudflare Worker 响应，直接建立基础客端，彻底防卡死）
+    if (typeof supabase !== 'undefined') {
+      window.supabaseClient = supabase.createClient(
+        'https://kogjjfccyncdszuuwlun.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
+      );
       
-      if (typeof window.supabase !== 'undefined') {
-        window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
-      }
-    } catch (error) {
-      console.log('网络降级，激活前端直连核心。');
-      if (typeof supabase !== 'undefined') {
-        window.supabaseClient = supabase.createClient(
-          'https://kogjjfccyncdszuuwlun.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
-        );
-      }
-    }
-
-    await syncLiveImagesFromDB();
-    await fetchPosts();
-
-    const isAdmin = await checkIsAdminSilent();
-    if (isAdmin) {
-      const entrance = document.getElementById('admin-entrance-wrapper');
-      if (entrance) entrance.style.display = 'block';
-    }
-
-    // 🌟 状态接管的核心：只要登录状态发生改变，100% 触发 updateUserUI
-    if (window.supabaseClient) {
+      // 瞬间绑定会话状态监听
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
       });
-      
-      // 首次加载安全获取一次状态兜底
+
+      // 瞬间获取一次本地会话缓存（通常为 0 毫秒响应）
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       updateUserUI(session?.user || null);
     }
+
+    // 3. 🗺️ 耗时异步拆弹区：将所有需要从远端慢网络拉取数据的网络请求，扔到后台静默运行
+    // 这样可以确保手机端即使网络再卡，首页的登录按钮在打开网页的瞬间就是百分之百可点击的！
+    setTimeout(async () => {
+      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+      try {
+        const response = await fetch(workerUrl);
+        if (response.ok) {
+          const config = await response.json();
+          window.sysConfig = config;
+          // 后台平滑更新最新的客户端配置
+          if (typeof window.supabase !== 'undefined') {
+            window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+          }
+        }
+      } catch (e) {
+        console.log('配置使用直连接管。');
+      }
+
+      // 后台加载图片和帖子
+      await syncLiveImagesFromDB();
+      await fetchPosts();
+
+      // 后台默默进行管理员鉴权
+      const isAdmin = await checkIsAdminSilent();
+      if (isAdmin) {
+        const entrance = document.getElementById('admin-entrance-wrapper');
+        if (entrance) entrance.style.display = 'block';
+      }
+    }, 20);
   }
 
   async function checkIsAdminSilent() {
@@ -180,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(mode) {
     if (!modal) return;
     modal.removeAttribute('hidden');
-    modal.style.setProperty('display', 'grid', 'important'); // 强行通过 CSS 铺开，防止隐藏冲突
+    modal.style.setProperty('display', 'grid', 'important'); 
     switchMode(mode);
   }
 
@@ -214,23 +223,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // ⚡ 核心收拢：唯一、安全的按钮点击事件（不依赖任何外部拦截器）
+  // ⚡ 核心收拢：唯一、安全的按钮点击事件
   // ==========================================
   if (userButton) {
-    // 兼容移动端快速触控响应，同时彻底防止冒泡冲突
     userButton.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      if (!window.supabaseClient) return;
+      // 如果由于某种极端原因客户端还未完全就绪，这里直接帮其强制初始化，彻底拒绝“点击无反应”
+      if (!window.supabaseClient && typeof supabase !== 'undefined') {
+        window.supabaseClient = supabase.createClient(
+          'https://kogjjfccyncdszuuwlun.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
+        );
+      }
 
-      // 根据当前按钮里面的文本来最快判断是该“退出”还是该“弹窗”，从而彻底绕开异步网络的等待卡顿
       const isLogged = userButton.textContent.includes('欢迎回来');
 
       if (isLogged) {
         if (confirm('确定要退出登录吗？')) {
-          await window.supabaseClient.auth.signOut();
-          updateUserUI(null); // 立刻清理本地状态
+          if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+          updateUserUI(null); 
           window.location.reload();
         }
       } else {
@@ -287,12 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         closeModal();
 
-        // 登录成功瞬间手动切状态，不需要等后台慢网络
         if (data && data.user) {
           updateUserUI(data.user);
         }
 
-        // 耗时较长的重载任务扔给下一帧，防止卡死 UI
         setTimeout(async () => {
           try {
             await syncLiveImagesFromDB();
