@@ -547,6 +547,10 @@ main {
   #user-btn, .nav__button {
     padding: 4px 12px !important;
     font-size: 0.82rem !important;
+    /* 强行告诉移动端浏览器：该按钮不需要任何双击缩放手势，直接触发点击！ */
+    touch-action: manipulation !important; 
+    /* 允许提升硬件加速，减少渲染层级计算时间 */
+    will-change: transform, opacity;
   }
 
   /* 让主页内容自适应下移，完美避开双行头部空间 */
