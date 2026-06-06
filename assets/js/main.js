@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function startCarousel() {
     if (prefersReducedMotion || carouselSlides.length <= 1) return;
     stopCarousel();
-    carouselTimer = setInterval(nextSlide, 5000); // 5秒平滑自动轮播
+    carouselTimer = setInterval(nextSlide, 5000); 
   }
 
   function stopCarousel() {
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     heroSection.addEventListener('touchstart', (e) => {
       touchStartX = e.changedTouches[0].screenX;
-      stopCarousel(); // 用户用手指触摸时，暂时悬停自动轮播
+      stopCarousel(); 
     }, { passive: true });
 
     heroSection.addEventListener('touchend', (e) => {
@@ -74,49 +74,47 @@ document.addEventListener('DOMContentLoaded', () => {
       const swipeDistance = touchEndX - touchStartX;
       
       if (swipeDistance > 50) {
-        prevSlide(); // 向右划，看上一张
+        prevSlide(); 
       } else if (swipeDistance < -50) {
-        nextSlide(); // 向左划，看下一张
+        nextSlide(); 
       }
-      startCarousel(); // 手指离开，恢复自动轮播
+      startCarousel(); 
     }, { passive: true });
   }
 
-  // 📡 从 Supabase 数据库动态抽取后台部署的最新图片数组，并进行覆盖替换
+  // 📡 核心修正：解耦鉴权锁，无论登不登录，任何人进站都能秒速加载线上/本地轮播图
   async function syncLiveImagesFromDB() {
-    if (!window.supabaseClient) return;
+    // 默认本地基础图库谱，随时准备为游客做无缝兜底
+    const fallbackImages = {
+      section_banner: [
+        'images/IMG_4822.jpeg',
+        'images/IMG_4823.jpeg',
+        'images/IMG_4824.jpeg',
+        'images/IMG_4825.jpeg',
+        'images/IMG_4826.jpeg'
+      ]
+    };
+
     try {
-      // 默认本地兜底图谱库（防万一后台没传图片，完美兼容原先默认外观）
-      const fallbackImages = {
-        section_banner: [
-          'images/IMG_4822.jpeg',
-          'images/IMG_4823.jpeg',
-          'images/IMG_4824.jpeg',
-          'images/IMG_4825.jpeg',
-          'images/IMG_4826.jpeg'
-        ]
-      };
-
-      // 从配置表一口气拉取 Banner 版面的配置数据
-      const { data, error } = await window.supabaseClient
-        .from('site_config')
-        .select('section, url')
-        .eq('section', 'section_banner')
-        .maybeSingle();
-
-      if (error) throw error;
-
       let liveUrls = [];
-      if (data && data.url) {
-        // 反序列化取出你在后台部署的图片 URL 数组
-        liveUrls = JSON.parse(data.url);
+      
+      // 只有在实例准备好的时候才向云端伸手拿数据
+      if (window.supabaseClient) {
+        const { data, error } = await window.supabaseClient
+          .from('site_config')
+          .select('section, url')
+          .eq('section', 'section_banner')
+          .maybeSingle();
+
+        if (!error && data && data.url) {
+          liveUrls = JSON.parse(data.url);
+        }
       }
 
-      // 遍历前台已有的 slide，执行实时高精度替换
+      // 执行渲染覆盖
       carouselSlides.forEach((slide, index) => {
         const imgElement = slide.querySelector('img');
         if (imgElement) {
-          // 如果后台有对应索引的新图片，就用新图加时间戳击穿缓存；否则使用原项目本地图兜底
           if (liveUrls && liveUrls[index]) {
             imgElement.src = liveUrls[index];
           } else {
@@ -124,59 +122,52 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      
-      console.log('✨ 线上实时发布图库流同步成功，已无缝覆盖旧画面。');
+      console.log('✨ 轮播图流就绪（支持游客免登录浏览）');
     } catch (err) {
-      console.warn('读取线上图库受阻，已安全转换为本地默认图流加载。', err);
+      console.warn('正在平滑切换回本地备份图层呈现。');
     }
   }
 
   // ==========================================
-  // 🔐 基础功能链条（无损保留原有全部业务逻辑）
+  // 🔐 基础解耦初始化
   // ==========================================
   async function initApp() {
+    // 无论如何先渲染出初始基础图层，让页面绝不留白
+    showSlide(0);
+    startCarousel();
+
     const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
     try {
       const response = await fetch(workerUrl);
-      if (!response.ok) throw new Error('Worker response check failed');
+      if (!response.ok) throw new Error();
       const config = await response.json();
       window.sysConfig = config;
       
       if (typeof window.supabase !== 'undefined') {
         window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
       }
-
-      // 🌟 核心：初始化完全配置后，立刻执行线上新图片流同步加载
-      await syncLiveImagesFromDB();
-
-      // 初始化启动轮播状态机
-      showSlide(0);
-      startCarousel();
-
-      // 执行原有的管理员隐藏入口检测
-      const isAdmin = await checkIsAdminSilent();
-      if (isAdmin) {
-        const entrance = document.getElementById('admin-entrance-wrapper');
-        if (entrance) entrance.style.display = 'block';
-      }
-
     } catch (error) {
-      console.log('基础网路握手降级，启用本地直连。');
-      // 本地直连通道备份
+      console.log('网路降级，激活前端直连核心。');
       if (typeof supabase !== 'undefined') {
         window.supabaseClient = supabase.createClient(
           'https://kogjjfccyncdszuuwlun.supabase.co',
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
         );
       }
-      await syncLiveImagesFromDB();
-      showSlide(0);
-      startCarousel();
     }
 
-    // 载入帖子流
+    // 🌟 无限极解耦：客户端初始化完后，立刻执行图库同步和帖子流抓取
+    await syncLiveImagesFromDB();
     await fetchPosts();
-    // 监听认证改变
+
+    // 检查管理员状态展示入口
+    const isAdmin = await checkIsAdminSilent();
+    if (isAdmin) {
+      const entrance = document.getElementById('admin-entrance-wrapper');
+      if (entrance) entrance.style.display = 'block';
+    }
+
+    // 监听全局认证改变状态
     if (window.supabaseClient) {
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
@@ -293,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
           { id: data.user.id, nickname, avatar_url: selectedAvatar }
         ]);
       }
-      alert('注册成功！请前往邮箱查收激活邮件（如未收到请检查垃圾箱）。');
+      alert('注册成功！请检查邮箱激活邮件。');
       closeModal();
     });
   }
@@ -391,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', async () => {
         if (!window.supabaseClient) return;
         const postId = btn.dataset.id;
-        if (hasLiked(postId)) { alert('你已经给这条发言点过赞啦喵~'); return; }
+        if (hasLiked(postId)) { alert('你已经给这条发言点过赞啦~'); return; }
 
         btn.disabled = true;
         const countEl = btn.querySelector('.like-count');
@@ -431,6 +422,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 启动核心流水线
   initApp();
 });
