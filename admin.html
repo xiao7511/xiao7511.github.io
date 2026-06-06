@@ -50,76 +50,120 @@
         <div id="image-list"></div>
     </div>
 
-    <script>
-    async function initSupabaseWithCloudflare() {
-    try {
-        // 💡 关键修改：直接死死请求你刚刚创建的 Cloudflare Worker 绝对路径！
-        const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/'; 
-        
-        console.log('正在从独立 Worker 获取配置...', workerUrl);
-        const response = await fetch(workerUrl);
-        
-        if (!response.ok) throw new Error('Cloudflare 独立 Worker 响应失败');
-        const config = await response.json();
-        
-        if (typeof window.supabase === 'undefined') {
-        window.supabase = supabaseJs.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
-        }
-        
-        console.log('🔗 Supabase 经由独立 Worker 跨域桥接成功！');
-        await checkAuthAndInit(); // 顺畅执行后续的鉴权和管理逻辑
-
-    } catch (error) {
-        console.error('❌ 配置加载失败:', error);
-    }
-    }
-
-    // 鉴权拦截逻辑
-    async function checkAuthAndInit() {
-        const { data: { session }, error } = await window.supabase.auth.getSession();
-        if (error || !session) {
-        alert('未检测到登录状态，正在拦截并跳转回首页！');
-        window.location.href = 'index.html';
-        return;
-        }
-        console.log('验证成功，欢迎管理员：', session.user.email);
-        // 这里继续绑定你的上传、防盗链激活等逻辑...
-    }
-
-    // 统一由这个生命周期入口启动
-    document.addEventListener('DOMContentLoaded', initSupabaseWithCloudflare);
-
-        // 鉴权检查
-        async function checkAuth() {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            if (!session || session.user.email !== 'your_owner_email@example.com') {
-                window.location.href = 'index.html';
+<script>
+    // 🌟 全局唯一的主火车头：严格控制异步流执行顺序
+    async function initWorkflow() {
+        try {
+            const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/'; 
+            console.log('正在从独立 Worker 获取配置...', workerUrl);
+            
+            const response = await fetch(workerUrl);
+            if (!response.ok) throw new Error('Cloudflare 独立 Worker 响应失败');
+            
+            const config = await response.json();
+            
+            // 1. 初始化全局安全实例
+            if (typeof window.supabase === 'undefined') {
+                window.supabase = supabaseJs.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
             }
+            console.log('🔗 Supabase 经由独立 Worker 跨域桥接成功！');
+            
+            // 2. 桥接成功后，立刻递推执行鉴权拦截，只有通过才能继续留在本页
+            const session = await verifyAdminAuth();
+            if (!session) return; // 未通过已被踢走，不再向下执行
+
+            // 3. 稳妥通关！此时安全激活页面上所有按钮的监听事件
+            activateUploadListener(config.SUPABASE_URL);
+
+        } catch (error) {
+            console.error('❌ 配置或系统流初始化失败:', error);
+            document.getElementById('upload-status').innerText = '系统加载失败，请联系管理员。';
+        }
+    }
+
+    // 🌟 专职权限拦截：检查登录状态并进行邮箱强校验
+    async function verifyAdminAuth() {
+        console.log('正在执行管理员会话安全扫描...');
+        
+        const { data: { session }, error } = await window.supabase.auth.getSession();
+        
+        // 💡 核心安全策略：替换为你自己真实的管理员登录邮箱（例如你注册 Supabase 时用的后台邮箱）
+        const OWNER_EMAIL = 'xiao.ye751111@outlook.com'; 
+
+        if (error || !session) {
+            alert('未检测到合法登录状态，正在强行驱逐！');
+            window.location.href = 'index.html';
+            return null;
         }
 
-        // 调用鉴权函数
-        checkAuth();
+        if (session.user.email !== OWNER_EMAIL) {
+            alert(`非法越权访问！账号 ${session.user.email} 无后台管理权限。`);
+            window.location.href = 'index.html';
+            return null;
+        }
 
-        document.getElementById('upload-btn').addEventListener('click', async () => {
+        console.log('❤️ 鉴权圆满通过！欢迎管理员：', session.user.email);
+        return session;
+    }
+
+    // 🌟 专职业务事件绑定：将按钮监听包裹起来，绝不给它提前抢跑的机会
+    function activateUploadListener(supabaseUrl) {
+        const uploadBtn = document.getElementById('upload-btn');
+        if (!uploadBtn) return;
+
+        // 解锁上传按钮
+        uploadBtn.disabled = false;
+
+        uploadBtn.addEventListener('click', async () => {
             const fileInput = document.getElementById('file-input');
             const files = Array.from(fileInput.files);
             const section = document.getElementById('page-section').value;
+            const statusElement = document.getElementById('upload-status');
 
-            if (files.length === 0) return;
+            if (files.length === 0) {
+                alert('请先选择要上传的图片文件！');
+                return;
+            }
+
+            statusElement.innerText = '正在上传中，请稍候...';
 
             for (const file of files) {
                 const fileName = `${section}.png`;
-                const { data, error } = await supabase.storage.from('your-bucket-name').upload(`images/${fileName}`, file, { upsert: true });
+                // 💡 规范桶（Bucket）名称：请确保你在 Supabase Storage 里面创建的桶名就是 'images' 
+                const bucketName = 'images'; 
+
+                // 核心更新：使用 window.supabase，并强行开启 upsert: true 进行覆盖更新
+                const { data, error } = await window.supabase.storage
+                    .from(bucketName)
+                    .upload(`images/${fileName}`, file, { upsert: true });
+
                 if (error) {
-                    document.getElementById('upload-status').innerText = '上传失败: ' + error.message;
+                    statusElement.innerText = '存储桶上传失败: ' + error.message;
                     continue;
                 }
-                const imageUrl = `https://your-supabase-url/storage/v1/object/public/your-bucket-name/images/${fileName}`;
-                // 将 URL 更新到 database
-                await supabase.from('site_config').upsert([{ section, url: imageUrl }]);
-                document.getElementById('upload-status').innerText = '上传成功: ' + imageUrl;
+
+                // 动态拼接图片的公共可访问 URL
+                const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/images/${fileName}`;
+                
+                try {
+                    // 同步将最新的图片 URL 强行覆盖（upsert）更新到数据库的配置表里
+                    const { error: dbError } = await window.supabase
+                        .from('site_config')
+                        .upsert([{ section: section, url: imageUrl }]);
+
+                    if (dbError) throw dbError;
+
+                    statusElement.innerText = `版面 [${section}] 更新成功！图片已全面覆盖。`;
+                    console.log('最新图片线上地址：', imageUrl);
+                } catch (dbErr) {
+                    statusElement.innerText = '数据库 URL 记录更新失败: ' + dbErr.message;
+                }
             }
         });
-    </script>
+    }
+
+    // 🌟 唯一起动阀：全页面仅保留这一个主事件监听，彻底消除 race condition 冲突
+    document.addEventListener('DOMContentLoaded', initWorkflow);
+</script>
 </body>
 </html>
