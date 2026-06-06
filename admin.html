@@ -62,9 +62,10 @@
             
             const config = await response.json();
             
-            // 1. 初始化全局安全实例
-            if (typeof window.supabase === 'undefined') {
-                window.supabase = supabaseJs.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+            // 🌟 只需要修改 initWorkflow 内部的这一小段初始化逻辑：
+            if (typeof window.supabase === 'undefined' || typeof window.supabase.auth === 'undefined') {
+                // 💡 关键更正：CDN 引入的类名就是 supabase，我们用它创建实例并挂载给 window.supabase
+                window.supabase = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
             }
             console.log('🔗 Supabase 经由独立 Worker 跨域桥接成功！');
             
