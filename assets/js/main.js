@@ -272,55 +272,60 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('login-password').value;
       const submitBtn = loginForm.querySelector('button[type="submit"]');
 
-      // 1. ⚡ 视觉即时反馈：立刻禁用按钮并改变文字，告诉用户已经在加载了
+      // 1. ⚡ 瞬间视觉反馈（降服移动端卡顿感）：
+      // 立刻禁用按钮，并显示动效文字，让用户知道系统正在全力以赴处理
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = '⏱️ 正在验证登录...';
+      submitBtn.innerHTML = `<span>⏱️ 正在安全登录...</span>`;
+      submitBtn.style.opacity = '0.7';
 
       try {
-        // 2. 向 Supabase 发起登录验证
+        // 2. 发起异步身份验证
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
+          // 登录失败反馈
           alert(`登录失败: ${error.message}`);
           submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
+          submitBtn.innerHTML = originalText;
+          submitBtn.style.opacity = '1';
           return;
         }
 
-        // 3. 🚀 核心提速：登录成功后立刻关闭弹窗，不给网络半点阻塞UI的机会
+        // 3. 🚀 移动端提速核心：登录验证通过后，0毫秒立刻关闭登录框，不让界面有半点卡顿
         if (typeof closeModal === 'function') {
           closeModal();
         } else {
-          // 兜底隐藏弹窗
           const authModal = document.getElementById('auth-modal');
           if (authModal) authModal.setAttribute('hidden', '');
         }
 
-        // 4. ✨ 核心干掉 reload：通过直接调用鉴权状态初始化函数，来实现 0 秒无缝切换
-        // 检查你的 main.js 内部，如果是用 initAuth() 或者是 checkUserStatus() 来判断登录状态的，直接调用它：
+        // 4. ✨ 无缝状态接管：直接调用初始化状态函数，通过代码本地切换登录状态
+        // 从而【彻底干掉 window.location.reload()】，免去重新载入网页文件的漫长等待！
         if (typeof initAuth === 'function') {
           await initAuth(); 
         } else if (typeof checkUserStatus === 'function') {
           await checkUserStatus();
         } else {
-          // 🛠️ 终极兜底：如果你没有封装状态函数，那我们使用轻量刷新，但加上微小延迟，让用户先看到弹窗消失
+          // 🛠️ 极其罕见的兜底：如果你没有封装局部鉴权函数，不得不刷新页面
+          // 我们也通过定时器，等弹窗完全关闭后，在后台静默刷新
           setTimeout(() => {
             window.location.reload();
-          }, 60);
+          }, 100);
           return;
         }
 
-        // 5. 无缝刷新下方的社区帖子列表（不需要重新加载整个网页）
+        // 5. 无缝刷新社区帖子列表
         if (typeof fetchPosts === 'function') {
           fetchPosts();
         }
 
       } catch (err) {
-        console.error('登录运行期错误:', err);
+        console.error('登录运行期异常:', err);
         alert('登录发生未知错误，请重试');
         submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        submitBtn.innerHTML = originalText;
+        submitBtn.style.opacity = '1';
       }
     });
   }

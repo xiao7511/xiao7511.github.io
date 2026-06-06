@@ -617,3 +617,18 @@ main {
     display: grid !important;
     z-index: 10000000 !important;
 }
+/* 📱 登录框防软键盘遮挡及触控加固 */
+.modal__panel {
+    max-height: 90vh !important; /* 确保在手机键盘弹起时，表单可以自适应滚动 */
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 让登录表单中的提交按钮在手机上更大、更容易被手指捕捉 */
+#login-form button[type="submit"] {
+    padding: 12px 20px !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em;
+    touch-action: manipulation !important;
+}
