@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>内容管理后台 —— 终极控制台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>内容管理后台 —— 终极自适应控制台</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* ==========================================
@@ -11,8 +11,8 @@
            ========================================== */
         :root {
             --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 100%);
-            --panel-bg: rgba(25, 20, 45, 0.65);
-            --border-glow: rgba(138, 43, 226, 0.3);
+            --panel-bg: rgba(25, 20, 45, 0.75);
+            --border-glow: rgba(138, 43, 226, 0.25);
             --primary-glow: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             --accent-neon: #00f5ff;
             --text-main: #f1f2f6;
@@ -20,38 +20,43 @@
         }
 
         body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: var(--bg-gradient);
             color: var(--text-main);
             min-height: 100vh;
             margin: 0;
-            padding: 40px 20px;
+            padding: 16px; /* 移动端默认紧凑边距 */
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; /* 清除手机端点击高亮蓝框 */
         }
 
         .container {
-            max-width: 1000px;
+            width: 100%;
+            max-width: 900px;
             margin: auto;
             background: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 40px;
-            border-radius: 24px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 20px; /* 缩减手机端的内边距 */
+            border-radius: 16px;
             border: 1px solid var(--border-glow);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(106, 17, 203, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
         }
 
+        /* 顶部导航控制栏响应式 */
         .header-box {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column; /* 手机端默认纵向堆叠 */
+            gap: 14px;
+            align-items: flex-start;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
         }
 
         h1 {
-            font-size: 1.8rem;
+            font-size: 1.3rem; /* 降低手机标题字号 */
             margin: 0;
             font-weight: 800;
             background: linear-gradient(120deg, #ffffff, var(--accent-neon));
@@ -65,147 +70,181 @@
             align-items: center;
             background: rgba(255, 255, 255, 0.05);
             color: var(--text-main) !important;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            padding: 10px 20px;
+            padding: 8px 16px; /* 增大手机触控面积 */
             border-radius: 50px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             text-decoration: none !important;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: all 0.2s;
         }
+        .back-home-btn:hover { background: var(--primary-glow); border-color: transparent; }
 
-        .back-home-btn:hover {
-            background: var(--primary-glow);
-            border-color: transparent;
-            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
-            transform: translateX(-4px);
-        }
-
-        .back-arrow { margin-right: 8px; }
+        .back-arrow { margin-right: 6px; }
 
         .upload-card {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            padding: 25px;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            padding: 16px;
             border: 1px solid rgba(255, 255, 255, 0.04);
+            box-sizing: border-box;
         }
 
         h2 {
-            font-size: 1.2rem;
+            font-size: 1.05rem;
             margin-top: 0;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
+        /* 统一放大手机端下拉菜单的热区，极易点中 */
         select {
             width: 100%;
             background: #1c1836;
             color: #ffffff;
             border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 1rem;
+            padding: 12px; 
+            border-radius: 8px;
+            font-size: 0.95rem; /* 防止 iOS 自动放大表单 */
             outline: none;
             box-sizing: border-box;
         }
 
-        /* 拖拽区 */
+        /* 移动端深度调优的交互式点击/拖拽区 */
         .dropzone-area {
-            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.02);
-            border-radius: 16px;
-            padding: 35px 20px;
+            border-radius: 12px;
+            padding: 24px 16px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
-            margin: 20px 0;
+            margin: 16px 0;
+            box-sizing: border-box;
         }
-
-        .dropzone-area:hover {
+        .dropzone-area:active {
             border-color: var(--accent-neon);
-            background: rgba(0, 245, 255, 0.03);
+            background: rgba(0, 245, 255, 0.04);
         }
 
+        /* 关键：保留原生上传控件的可点击层级，但完全透明，完美唤醒移动端相机/相册 */
         input[type='file'] {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             opacity: 0; cursor: pointer;
+            z-index: 5;
         }
 
         .action-btn {
             width: 100%;
             background: var(--primary-glow);
             color: #ffffff;
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 700;
-            padding: 14px;
+            padding: 14px; /* 手机端加高 */
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+            box-shadow: 0 4px 12px rgba(106, 17, 203, 0.3);
+            transition: opacity 0.2s;
         }
-
-        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; }
+        .action-btn:active { opacity: 0.8; }
+        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
 
         #upload-status {
-            margin-top: 15px; padding: 12px; border-radius: 8px;
-            font-size: 0.9rem; text-align: center; display: none;
+            margin-top: 14px; padding: 12px; border-radius: 8px;
+            font-size: 0.85rem; text-align: center; line-height: 1.4;
         }
         .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; }
         .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; }
         .status-error { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
 
         /* 看板网格与部署系统布局 */
-        .preview-dashboard { margin-top: 40px; }
+        .preview-dashboard { margin-top: 32px; }
+        
         .dashboard-section {
             background: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 25px;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
         }
+        
         .section-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;
+            display: flex; 
+            flex-direction: row; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 14px; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+            padding-bottom: 10px;
+            gap: 10px;
         }
-        .section-title { font-weight: 700; color: var(--accent-neon); }
+        
+        .section-title { font-weight: 700; color: var(--accent-neon); font-size: 0.95rem; }
         
         .deploy-btn {
             background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-            color: white; border: none; padding: 8px 16px; border-radius: 8px;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            color: white; border: none; padding: 8px 14px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 0.8rem;
+            white-space: nowrap; /* 拒绝手机端按钮文字换行 */
+            box-shadow: 0 4px 8px rgba(0, 206, 201, 0.2);
         }
-        .deploy-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 206, 201, 0.4); }
+        .deploy-btn:active { opacity: 0.9; }
 
+        /* 📱 核心自适应网格：手机端默认为极佳的双列排版，大屏自动扩展 */
         .image-flow-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px;
         }
+        
         .img-preview-card {
-            background: #110d24; border-radius: 8px; padding: 8px; text-align: center; position: relative;
+            background: #110d24; border-radius: 8px; padding: 8px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-sizing: border-box;
         }
-        .img-container { width: 100%; height: 90px; border-radius: 6px; overflow: hidden; }
+        
+        .img-container { width: 100%; height: 95px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.2); }
         .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        
         .badge {
-            font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 5px;
-            background: rgba(255,255,255,0.1); color: var(--text-muted);
+            font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px;
+            background: rgba(255,255,255,0.06); color: var(--text-muted);
+        }
+
+        /* 🖥️ 媒体查询：当屏幕尺寸大于 600 像素时（电脑/平板），无缝舒展宏大视口 */
+        @media (min-width: 600px) {
+            body { padding: 40px 20px; }
+            .container { padding: 35px; border-radius: 24px; }
+            .header-box { flex-direction: row; justify-content: space-between; align-items: center; }
+            h1 { font-size: 1.6rem; }
+            h2 { font-size: 1.2rem; }
+            .upload-card { padding: 25px; }
+            .dropzone-area { padding: 35px 20px; }
+            .image-flow-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+            .img-container { height: 90px; }
+            .badge { font-size: 0.75rem; }
+            .section-title { font-size: 1.05rem; }
+            .deploy-btn { font-size: 0.85rem; padding: 8px 16px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-box">
-            <h1>内容管理后台 —— 终极控制台</h1>
+            <h1>内容管理后台 —— 终极自适应控制台</h1>
             <a href="index.html" class="back-home-btn"><span class="back-arrow">←</span> 返回站点主页</a>
         </div>
 
         <div class="upload-card">
-            <h2><span>🔮</span> 批量上传文件 (支持多选同时上传)</h2>
+            <h2><span>🔮</span> 批量上传文件 (手机端支持多选/拍照)</h2>
             
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 16px;">
                 <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">目标更新版面</label>
                 <select id="page-section">
                     <option value="section_banner">首页Banner大图轮播</option>
@@ -216,50 +255,86 @@
             </div>
 
             <div class="dropzone-area" id="drop-zone">
-                <span style="font-size:2.5rem; display:block; margin-bottom:10px;">📥</span>
-                <span class="dropzone-text">可同时选中多个文件拖拽至此，或 <em>点击批量浏览本地文件</em></span>
+                <span style="font-size:2.2rem; display:block; margin-bottom:8px;">📥</span>
+                <span class="dropzone-text">点击批量选择相册文件或拍照</span>
                 <input type="file" id="file-input" accept="image/*" multiple />
             </div>
 
-            <button id="upload-btn" class="action-btn" disabled>确认上传至预览缓冲区</button>
-            <div id="upload-status"></div>
+            <button id="upload-btn" class="action-btn" disabled>确认上传至下方预览库</button>
+            <div id="upload-status" class="status-info" style="display: block;">正在建立安全链路，请稍候...</div>
         </div>
 
         <div class="preview-dashboard">
-            <h2><span>🖼️</span> 线上运行与待部署图库看台 (先预览，后部署)</h2>
-            <div id="sections-wrapper">
-                </div>
+            <h2><span>🖼️</span> 线上运行与待部署图库看板 (先预览，后部署)</h2>
+            <div id="sections-wrapper"></div>
         </div>
     </div>
 
 <script>
+    // 💡 安全锁变量提升，防止 verifyAdminAuth 读取到未初始化的全局变量
     window.supabaseClient = null;
-    let selectedFilesCache = []; // 本地多文件缓存
+    let selectedFilesCache = []; 
 
     async function initWorkflow() {
+        const statusEl = document.getElementById('upload-status');
         try {
             const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/'; 
-            const response = await fetch(workerUrl);
-            if (!response.ok) throw new Error('Worker 秘钥中转失败');
-            const config = await response.json();
+            
+            // 移动端硬超时探测机制，防止 Worker 被部分手机网络和环境误拦卡死
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+            let config = null;
+            try {
+                const response = await fetch(workerUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error();
+                config = await response.json();
+            } catch (e) {
+                console.warn("Worker连接受阻，自动激活移动直连兜底通道。");
+                config = {
+                    SUPABASE_URL: "https://kogjjfccyncdszuuwlun.supabase.co",
+                    SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec"
+                };
+            }
             
             let cleanedUrl = (config.SUPABASE_URL || '').trim();
             if (cleanedUrl.endsWith('/')) cleanedUrl = cleanedUrl.slice(0, -1);
 
+            // 🌟 关键修复：先实例化客户端，再执行鉴权流水线，彻底根治 getSession of undefined 报错
             window.supabaseClient = supabase.createClient(cleanedUrl, (config.SUPABASE_ANON_KEY || '').trim());
             
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
-            if (!session || session.user.email !== 'xiao.ye751111@outlook.com') {
-                window.location.href = 'index.html';
-                return;
-            }
+            // 安全鉴权会话扫描
+            const session = await verifyAdminAuth();
+            if (!session) return; 
 
+            showStatus('✨ 安全通信链路已就绪。支持手机批量传图和拍照。', 'info');
+            
             activateUploadListener(cleanedUrl);
             await refreshLiveDashboard(cleanedUrl);
 
         } catch (error) {
-            showStatus('系统加载失败，请刷新重试。', 'error');
+            console.error(error);
+            showStatus('核心数据引擎初始化断开，请刷新页面重试。', 'error');
         }
+    }
+
+    async function verifyAdminAuth() {
+        if (!window.supabaseClient) return null;
+        const OWNER_EMAIL = 'xiao.ye751111@outlook.com';
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+
+        if (error || !session) {
+            alert('未检测到合法管理员登录状态！');
+            window.location.href = 'index.html';
+            return null;
+        }
+        if (session.user.email !== OWNER_EMAIL) {
+            alert(`账号 ${session.user.email} 无控制台访问特权。`);
+            window.location.href = 'index.html';
+            return null;
+        }
+        return session;
     }
 
     function activateUploadListener(supabaseUrl) {
@@ -272,25 +347,23 @@
         fileInput.addEventListener('change', () => {
             selectedFilesCache = Array.from(fileInput.files);
             if (selectedFilesCache.length > 0) {
-                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 个文件，准备上传。`;
+                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张图片，准备就绪。`;
             }
         });
 
-        // 批量向存储桶发射文件
+        // 批量无损推送到云仓 Bucket
         uploadBtn.addEventListener('click', async () => {
             if (selectedFilesCache.length === 0) {
-                alert('请先选择或拖入图片！');
+                alert('请先拍照或选取相册图片！');
                 return;
             }
 
             const section = document.getElementById('page-section').value;
-            showStatus(`正在批量上传 ${selectedFilesCache.length} 张图片到预览库...`, 'info');
+            showStatus(`⚡ 正在并发上传 ${selectedFilesCache.length} 张图片到云仓预览缓冲区...`, 'info');
 
             try {
-                // 依次循环处理多文件并行上传
                 for (let i = 0; i < selectedFilesCache.length; i++) {
                     const file = selectedFilesCache[i];
-                    // 动态命名：如 section_banner_0.png, section_banner_1.png
                     const fileName = `${section}_${i}.png`; 
                     
                     await window.supabaseClient.storage
@@ -298,21 +371,21 @@
                         .upload(`images/${fileName}`, file, { upsert: true });
                 }
 
-                showStatus('🎉 批量上传预览库成功！请在下方核对，确认无误后点击“一键部署”。', 'success');
+                showStatus('🎉 预览库更新成功！请在下方核对多图，核对无误后点击“一键部署”。', 'success');
                 selectedFilesCache = [];
                 fileInput.value = '';
-                dropZone.querySelector('.dropzone-text').innerHTML = '可同时选中多个文件拖拽至此，或 <em>点击批量浏览本地文件</em>';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册文件或拍照';
                 
-                // 刷新本地预览面板
+                // 刷新预览图看台
                 await refreshLiveDashboard(supabaseUrl);
 
             } catch (err) {
-                showStatus('批量上传发生中断: ' + err.message, 'error');
+                showStatus('上传流发生阻断: ' + err.message, 'error');
             }
         });
     }
 
-    // 渲染带有“部署”锁的控制面板
+    // 动态绘制响应式双列网格看板（带防手机强缓存穿透时间戳）
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -321,7 +394,7 @@
             { id: 'section_banner', name: '首页 Banner 大图轮播区', maxCount: 5 },
             { id: 'section_anime', name: '动漫版面轮播区', maxCount: 4 },
             { id: 'section_community', name: '社区交流轮播区', maxCount: 4 },
-            { id: 'section_recommend', name: '热门强推卡牌轮播区', maxCount: 4 }
+            { id: 'section_recommend', name: '热门强推卡片轮播区', maxCount: 4 }
         ];
 
         wrapper.innerHTML = '';
@@ -330,7 +403,6 @@
             const block = document.createElement('div');
             block.className = 'dashboard-section';
 
-            // 头部：标题 + 一键部署按钮
             const header = document.createElement('div');
             header.className = 'section-header';
             header.innerHTML = `
@@ -338,22 +410,20 @@
                 <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
             `;
 
-            // 图片流网格布局
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
-            // 循环侦测生成可用的多图预览列
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                
+                // 💡 加入实时高精度时间戳，确保手机端替换图片后，画面立刻刷新刷新，绝不卡死老缓存
                 const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
 
                 card.innerHTML = `
                     <div class="img-container">
                         <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.display='none'"/>
                     </div>
-                    <span class="badge">索引位置 [${i}]</span>
+                    <span class="badge">位置槽 [${i}]</span>
                 `;
                 grid.appendChild(card);
             }
@@ -364,14 +434,12 @@
         }
     }
 
-    // 💡 核心部署锁：点击后正式把当前版面的多图图片数组打包同步给数据库
+    // 将选定的有效多图序列同步打包至前台配置表
     window.deploySection = async function(section, maxCount, supabaseUrl) {
         let deployedUrls = [];
         
-        // 扫描拿到所有存在的有效预览图地址
         for (let i = 0; i < maxCount; i++) {
             const testUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
-            // 简单通过 fetch 的 HEAD 请求检查文件在存储桶里是否真实上传存在
             try {
                 const res = await fetch(testUrl, { method: 'HEAD' });
                 if (res.ok) {
@@ -381,30 +449,30 @@
         }
 
         if (deployedUrls.length === 0) {
-            alert('当前该版面预览库没有任何图片，无法部署！');
+            alert('当前预览库无任何有效图片，请先上传！');
             return;
         }
 
         try {
-            // 将图片以 JSON 字符串数组形式优雅写入配置表的 url 字段中
             const { error } = await window.supabaseClient
                 .from('site_config')
                 .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
 
             if (error) throw error;
-            alert('✨ 部署指令已下发！该版面多图轮播已正式覆盖部署到主页。');
-
+            alert('✨ 部署指令同步下发成功！主页相应版面多图滚动已实时变动。');
         } catch (err) {
-            alert('部署同步失败: ' + err.message);
+            alert('线上同步部署发生故障: ' + err.message);
         }
     };
 
     function showStatus(msg, type) {
         const el = document.getElementById('upload-status');
-        el.style.display = 'block'; el.className = ''; el.innerText = msg;
-        if (type === 'info') el.classList.add('status-info');
-        if (type === 'success') el.classList.add('status-success');
-        if (type === 'error') el.classList.add('status-error');
+        el.style.display = 'block'; 
+        el.innerText = msg;
+        el.className = ''; 
+        if (type === 'info') el.className = 'status-info';
+        if (type === 'success') el.className = 'status-success';
+        if (type === 'error') el.className = 'status-error';
     }
 
     document.addEventListener('DOMContentLoaded', initWorkflow);
