@@ -246,6 +246,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 🎯 核心优化：高容错登录表单监听流
   // ==========================================
+  // ==========================================
+  // 🎯 终极优化：高响应、防阻塞移动端登录监听流
+  // ==========================================
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -260,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 1. ✨ 瞬间触觉反馈
+      // 1. ✨ 瞬间触觉反馈：禁用按钮防止重复提交
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
       submitBtn.textContent = '⏱️ 正在安全登录...';
@@ -278,20 +281,28 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        console.log('Supabase 验证通过，登录成功！关闭模态框...');
+        console.log('Supabase 验证通过，登录成功！立刻关闭模态框清场...');
+        
+        // 2. ⚡ 核心提速修改：手机端 0 毫秒强制关闭弹窗，不给网络请求阻塞 UI 的机会
         closeModal();
 
-        // 2. 🛡️ 核心修正：对齐应用真正的初始化接管函数 initApp()，并杜绝 reload 卡死
-        try {
-          if (typeof initApp === 'function') {
-            await initApp(); 
-          } else {
-            setTimeout(() => { window.location.reload(); }, 50);
+        // 3. 🛡️ 终极拆弹：绝不在主线程中直接 await initApp()！
+        // 用 setTimeout(..., 0) 把耗时的后台网络请求移出当前的提交事件作用域
+        // 这样可以确保当前的点击与弹窗关闭动画瞬间完成，绝不卡死
+        setTimeout(async () => {
+          try {
+            if (typeof initApp === 'function') {
+              // 在后台静默执行界面和数据更新
+              await initApp(); 
+              console.log('✨ 后台状态更新成功！');
+            } else {
+              window.location.reload();
+            }
+          } catch (authError) {
+            console.error('后台状态接管失败，执行降级静默刷新：', authError);
+            window.location.reload();
           }
-        } catch (authError) {
-          console.error('状态接管失败，执行静默降级刷新：', authError);
-          setTimeout(() => { window.location.reload(); }, 100);
-        }
+        }, 10);
 
       } catch (err) {
         console.error('🚨 登录重大异常:', err);
