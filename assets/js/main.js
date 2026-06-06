@@ -38,22 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const config = await response.json();
       
       window.sysConfig = {
-        supabaseUrl: config.SUPABASE_URL,
-        supabaseAnonKey: config.SUPABASE_ANON_KEY
+        supabaseUrl: config.SUPABASE_URL.trim(),
+        supabaseAnonKey: config.SUPABASE_ANON_KEY.trim()
       };
 
       // 2. 注入创建全局唯一的安全通信客户端
       window.supabaseClient = supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
       console.log('🔐 安全通信实例成功构筑，前端硬编码已全面清除。');
 
-      // 3. 订阅密码重置等状态变更（使用修复后的安全实例）
+      // 3. 订阅密码重置等状态变更
       window.supabaseClient.auth.onAuthStateChange((authEvent) => {
         if (authEvent === 'PASSWORD_RECOVERY') {
           openModal();
           setTab('login');
-          loginForm.hidden = true;
-          regForm.hidden = true;
-          resetForm.hidden = false;
+          if(loginForm) loginForm.hidden = true;
+          if(regForm) regForm.hidden = true;
+          if(resetForm) resetForm.hidden = false;
         }
       });
 
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await loadPosts();
       await initAdminEntrance();
       
-      // 🌟 动态获取并覆盖主页所有被部署版面的多图自动轮播
+      // 动态获取并覆盖主页所有被部署版面的多图自动轮播
       await renderDynamicLiveCarousels();
 
     } catch (error) {
@@ -77,8 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
   async function initAdminEntrance() {
     try {
         const isAdmin = await checkIsAdminSilent();
-        
-        // 如果是在线管理员，让主页导航栏里重构后的精美圆角胶囊按钮安全显形
         if (isAdmin) {
             const entrance = document.getElementById('admin-entrance-wrapper');
             if (entrance) {
@@ -91,9 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 静默检查（不弹窗、不打扰普通用户）
   async function checkIsAdminSilent() {
     try {
+        if (!window.supabaseClient) return false;
         const { data: { session }, error } = await window.supabaseClient.auth.getSession();
         if (error || !session) return false;
 
@@ -111,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       if (!window.supabaseClient) return;
 
-      // 从配置表拿取最新正式部署的打包数据
       const { data: records, error } = await window.supabaseClient
         .from('site_config')
         .select('*');
@@ -121,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
       records.forEach(config => {
         let domElement = null;
 
-        // 根据后台对应的模块名，无缝匹配主页 HTML 对应的容器或背景元素
         if (config.section === 'section_banner') domElement = document.querySelector('.hero') || document.getElementById('hero-banner-container');
         if (config.section === 'section_anime') domElement = document.getElementById('anime-section-bg') || document.querySelector('.anime-section');
         if (config.section === 'section_community') domElement = document.getElementById('community-section-bg') || document.querySelector('.community-section');
@@ -130,19 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!domElement) return;
 
         try {
-          // 尝试解析后台传过来的多图 JSON 数组
           const imageList = JSON.parse(config.url);
-          
           if (Array.isArray(imageList) && imageList.length > 0) {
             if (imageList.length === 1) {
               domElement.style.backgroundImage = `url('${imageList[0]}')`;
             } else {
-              // 🌟 多张图状况下，激活全自动缓动轮播
               startCustomBackgroundLoop(domElement, imageList);
             }
           }
         } catch (jsonErr) {
-          // 优雅兜底：如果是历史留存的旧单图字符串链接，则直接平铺展示
           domElement.style.backgroundImage = `url('${config.url}')`;
         }
       });
@@ -151,13 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 原生背景图平滑自动轮播调度器
   function startCustomBackgroundLoop(element, urls) {
     let cursor = 0;
     element.style.backgroundImage = `url('${urls[cursor]}')`;
-    element.style.transition = "background-image 0.8s ease-in-out"; // 产生顺滑淡入淡出效果
+    element.style.transition = "background-image 0.8s ease-in-out";
 
-    // 每 5000 毫秒（5秒）自动向后平滑滚动切换
     setInterval(() => {
       cursor = (cursor + 1) % urls.length;
       element.style.backgroundImage = `url('${urls[cursor]}')`;
@@ -165,18 +155,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 📝 社区互动业务函数（全量接入全局安全实例）
+  // 📝 社区互动业务功能
   // ==========================================
-  const openModal = () => { modal.hidden = false; };
-  const closeModal = () => { modal.hidden = true; };
+  const openModal = () => { if(modal) modal.hidden = false; };
+  const closeModal = () => { if(modal) modal.hidden = true; };
 
   const setTab = (target) => {
+    if (!tabLogin || !tabReg) return;
     const loginVisible = target === 'login';
     tabLogin.classList.toggle('is-active', loginVisible);
     tabReg.classList.toggle('is-active', !loginVisible);
-    loginForm.hidden = !loginVisible;
-    regForm.hidden = loginVisible;
-    resetForm.hidden = true;
+    if(loginForm) loginForm.hidden = !loginVisible;
+    if(regForm) regForm.hidden = loginVisible;
+    if(resetForm) resetForm.hidden = true;
   };
 
   const escapeText = (value) => {
@@ -186,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const renderPosts = (posts) => {
+    if (!postsList) return;
     postsList.replaceChildren();
     if (!posts || !posts.length) {
       const emptyState = document.createElement('p');
@@ -226,6 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const loadPosts = async () => {
+    if (!window.supabaseClient) return;
     const { data, error } = await window.supabaseClient
       .from('posts')
       .select('*')
@@ -233,17 +226,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (error) {
       console.error('加载帖子失败:', error);
-      postsList.innerHTML = '<p class="loading-state">帖子加载失败，请稍后重试。</p>';
+      if(postsList) postsList.innerHTML = '<p class="loading-state">帖子加载失败，请稍后重试。</p>';
       return;
     }
     renderPosts(data || []);
   };
 
   const refreshUserState = async () => {
+    if (!window.supabaseClient || !userButton) return;
     const { data: { user } } = await window.supabaseClient.auth.getUser();
     if (!user) {
       userButton.textContent = '登录/注册';
-      postArea.hidden = true;
+      if(postArea) postArea.hidden = true;
       return;
     }
 
@@ -254,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .maybeSingle();
 
     userButton.textContent = profile?.nickname ? `欢迎，${profile.nickname}` : (user.email?.split('@')[0] || '已登录');
-    postArea.hidden = false;
+    if(postArea) postArea.hidden = false;
   };
 
   const initCarousel = () => {
@@ -268,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================
-  // 🔘 用户事件处理绑定
+  // 🔘 用户事件处理绑定 (全面升级手机端防御)
   // ==========================================
   avatarOptions.forEach((button) => {
     button.addEventListener('click', () => {
@@ -278,127 +272,130 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  userButton.addEventListener('click', openModal);
-  modalClose.addEventListener('click', closeModal);
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) closeModal();
-  });
-
-  tabLogin.addEventListener('click', () => setTab('login'));
-  tabReg.addEventListener('click', () => setTab('reg'));
-
-  forgotPasswordBtn.addEventListener('click', async () => {
-    const email = document.getElementById('login-email').value.trim();
-    if (!email) {
-      alert('请先输入邮箱');
-      return;
-    }
-    const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: REDIRECT_URL,
+  if(userButton) userButton.addEventListener('click', openModal);
+  if(modalClose) modalClose.addEventListener('click', closeModal);
+  if(modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) closeModal();
     });
+  }
 
-    if (error) {
-      alert(`发送失败: ${error.message}`);
-      return;
-    }
-    alert('重置邮件已发送，请检查邮箱。');
-  });
+  if(tabLogin) tabLogin.addEventListener('click', () => setTab('login'));
+  if(tabReg) tabReg.addEventListener('click', () => setTab('reg'));
 
-  regForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const nick = document.getElementById('reg-nickname').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
+  if(forgotPasswordBtn) {
+    forgotPasswordBtn.addEventListener('click', async () => {
+      if (!window.supabaseClient) { alert('安全组件正在初始化，请稍候点击...'); return; }
+      const email = document.getElementById('login-email').value.trim();
+      if (!email) { alert('请先输入邮箱'); return; }
+      
+      const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: REDIRECT_URL });
+      if (error) { alert(`发送失败: ${error.message}`); return; }
+      alert('重置邮件已发送，请检查邮箱。');
+    });
+  }
 
-    const { data, error } = await window.supabaseClient.auth.signUp({ email, password });
-    if (error) {
-      alert(`注册失败: ${error.message}`);
-      return;
-    }
+  // 📝 注册表单手机端适配优化
+  if(regForm) {
+    regForm.addEventListener('submit', async (event) => {
+      event.preventDefault(); // 🌟 必须置于首行，防止手机浏览器原生机制扰乱
+      if (!window.supabaseClient) { alert('系统正在建立安全连接，请稍候重试...'); return; }
 
-    if (data.user) {
-      await window.supabaseClient.from('profiles').insert([
-        { id: data.user.id, nickname: nick, avatar_url: selectedAvatar },
+      const nick = document.getElementById('reg-nickname').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      try {
+        const { data, error } = await window.supabaseClient.auth.signUp({ email, password });
+        if (error) { alert(`注册失败: ${error.message}`); return; }
+
+        if (data.user) {
+          await window.supabaseClient.from('profiles').insert([
+            { id: data.user.id, nickname: nick, avatar_url: selectedAvatar },
+          ]);
+        }
+
+        alert('注册成功，请刷新后登录。');
+        closeModal();
+        window.location.reload();
+      } catch (e) {
+        alert('提交遇到错误: ' + e.message);
+      }
+    });
+  }
+
+  // 📝 登录表单手机端适配优化
+  if(loginForm) {
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault(); // 🌟 锁死第一行，拦截所有手机端原生刷新
+      if (!window.supabaseClient) { alert('系统正在建立安全连接，请稍候重试...'); return; }
+
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) { alert(`登录失败: ${error.message}`); return; }
+
+        alert('欢迎回到游戏大厅！');
+        closeModal();
+        window.location.reload();
+      } catch (e) {
+        alert('登录处理中断: ' + e.message);
+      }
+    });
+  }
+
+  if(resetForm) {
+    resetForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!window.supabaseClient) return;
+      const password = document.getElementById('new-password').value;
+      const { error } = await window.supabaseClient.auth.updateUser({ password });
+      if (error) { alert(`修改失败: ${error.message}`); return; }
+
+      alert('密码修改成功，请重新登录。');
+      closeModal();
+      window.location.reload();
+    });
+  }
+
+  if(publishBtn) {
+    publishBtn.addEventListener('click', async () => {
+      if (!window.supabaseClient) return;
+      const content = postContent.value.trim();
+      if (!content) { alert('内容不能为空喵！'); return; }
+
+      const { data: { user } } = await window.supabaseClient.auth.getUser();
+      if (!user) { alert('请先登录后再发帖。'); return; }
+
+      const { data: profile } = await window.supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const { error } = await window.supabaseClient.from('posts').insert([
+        {
+          content,
+          user_id: user.id,
+          nickname: profile?.nickname || user.email?.split('@')[0] || '匿名用户',
+          avatar_url: profile?.avatar_url || selectedAvatar,
+        },
       ]);
-    }
 
-    alert('注册成功，请刷新后登录。');
-    closeModal();
-    window.location.reload();
-  });
+      if (error) { alert(`发布失败: ${error.message}`); return; }
 
-  loginForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-
-    const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert(`登录失败: ${error.message}`);
-      return;
-    }
-
-    alert('欢迎来到二次元世界！');
-    closeModal();
-    window.location.reload();
-  });
-
-  resetForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const password = document.getElementById('new-password').value;
-    const { error } = await window.supabaseClient.auth.updateUser({ password });
-    if (error) {
-      alert(`修改失败: ${error.message}`);
-      return;
-    }
-
-    alert('密码修改成功，请重新登录。');
-    closeModal();
-    window.location.reload();
-  });
-
-  publishBtn.addEventListener('click', async () => {
-    const content = postContent.value.trim();
-    if (!content) {
-      alert('内容不能为空喵！');
-      return;
-    }
-
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
-    if (!user) {
-      alert('请先登录后再发帖。');
-      return;
-    }
-
-    const { data: profile } = await window.supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const { error } = await window.supabaseClient.from('posts').insert([
-      {
-        content,
-        user_id: user.id,
-        nickname: profile?.nickname || user.email?.split('@')[0] || '匿名用户',
-        avatar_url: profile?.avatar_url || selectedAvatar,
-      },
-    ]);
-
-    if (error) {
-      alert(`发布失败: ${error.message}`);
-      return;
-    }
-
-    postContent.value = '';
-    await loadPosts();
-  });
+      postContent.value = '';
+      await loadPosts();
+    });
+  }
 
   // 初始化基础状态与轮播
   setTab('login');
   initCarousel();
 
-  // 🔥 核心点火启动器：获取秘钥 -> 初始化客户端 -> 恢复状态与挂载入口 -> 绑定大图轮播
+  // 🚀 核心启动：加载秘钥并全面恢复状态
   initSecurityEngine();
 
   window.addEventListener('beforeunload', () => {
