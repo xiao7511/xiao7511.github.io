@@ -348,20 +348,19 @@ document.addEventListener('DOMContentLoaded', () => {
         : '';
 
       posts.forEach(post => {
-        const li = document.createElement('li');
-        li.className = 'post-item';
+        const li = document.createElement('div'); // 统一变更为 div 弹性容器
+        li.className = 'post'; // ⚙️ 修正核心：对齐原生 .post 架构
         const formattedTime = new Date(post.created_at).toLocaleString('zh-CN', { hour12: false });
         
+        // ⚙️ 头像 class 修正为 post__avatar，并追加包裹层 post__body 隔离版面
         li.innerHTML = `
-          <img class="post-item__avatar" src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" alt="头像" loading="lazy">
-          <div class="post-item__body">
-            <div class="post-item__header">
-              <span class="post-item__nickname">${escapeHtml(post.nickname)}</span>
-              <span class="post-item__time">${formattedTime}</span>
-            </div>
-            <p class="post-item__content">${escapeHtml(post.content)}</p>
-            <div class="post-item__actions">
-              <button class="like-btn ${hasLiked(post.id) ? 'has-liked' : ''}" data-id="${post.id}">
+          <img class="post__avatar" src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" alt="头像" loading="lazy">
+          <div class="post__body">
+            <div class="post__name">${escapeHtml(post.nickname)}</div>
+            <p class="post__content">${escapeHtml(post.content)}</p>
+            <div class="post__meta">
+              <span>⏱️ ${formattedTime}</span>
+              <button class="like-btn ${hasLiked(post.id) ? 'has-liked' : ''}" data-id="${post.id}" style="background:transparent; border:0; margin-left:12px; padding:0; color:inherit;">
                 <span class="like-icon">❤️</span> <span class="like-count">${post.likes || 0}</span>
               </button>
             </div>

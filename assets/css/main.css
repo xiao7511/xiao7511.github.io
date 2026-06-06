@@ -45,17 +45,18 @@ button {
   cursor: pointer;
 }
 
+/* 📱 完美避开手机端双行导航栏，防止阻挡点击 */
 main {
-  padding-top: 84px;
+  padding-top: 140px !important;
 }
 
 /* ==========================================================
-   🧱 1. 顶部导航区域安全加固（彻底解决手机端无法点击登录问题）
+   🧱 1. 顶部导航安全加固（确保按钮可以被点击）
    ========================================================== */
 .site-header {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 10000 !important; /* 提到绝对最高的图层 */
+  z-index: 99999 !important; /* 提到最高层 */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -99,33 +100,35 @@ main {
   background: var(--accent);
 }
 
-/* 强力激活登录按钮在手机端的热区与层级 */
 .nav__button, #user-btn {
   background: rgba(255, 255, 255, 0.12);
   position: relative !important;
-  z-index: 10001 !important;
-  touch-action: manipulation !important; /* 消除手机端点击延迟 */
+  z-index: 100000 !important;
+  touch-action: manipulation !important;
 }
 
 /* ==========================================================
-   📺 2. 轮播图区域自适应极致精修
+   📺 2. 轮播图与文字悬浮重构（核心修改点）
    ========================================================== */
 .hero {
   position: relative !important;
-  z-index: 10 !important; /* 降低层级，绝不遮挡顶部导航 */
+  z-index: 10 !important;
   overflow: hidden !important;
   border-radius: 20px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: #000;
-  touch-action: pan-y; /* 允许手机端纵向滚动的同时捕捉横向手势 */
-  margin: 16px 5% 0; /* 左右收窄，更具卡片高级感 */
+  touch-action: pan-y;
+  margin: 10px 5% 0;
+  height: 280px; /* 统高度占位 */
 }
 
 .hero__slides {
-  position: relative;
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 240px; /* 📱 手机端紧凑而精致的高度 */
+  height: 100%;
+  z-index: 1;
 }
 
 .hero__slide {
@@ -136,109 +139,102 @@ main {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
-  z-index: 1;
 }
 
 .hero__slide.is-active {
   opacity: 1;
   visibility: visible;
-  z-index: 2;
 }
 
 .hero__slide img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* 保证铺满且不变形 */
+  object-fit: cover;
   object-position: center;
-  transform: scale(1.02);
-  transition: transform 6s linear;
 }
 
-.hero__slide.is-active img {
-  transform: scale(1);
-}
-
+/* 暗色渐变遮罩，确保悬浮白字能看清 */
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 3;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.4));
-  pointer-events: none; /* 防止遮罩层拦截点击 */
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.6));
+  pointer-events: none;
 }
 
+/* 🎯 让文字绝对定位，悬浮在图片上方 */
 .hero__content {
-  position: relative;
-  z-index: 4;
-  max-width: 720px;
-  padding: 24px 20px;
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 3; /* 压在图片和遮罩上方 */
+  padding: 20px !important;
+  background: transparent !important; /* 背景完全透明 */
+  pointer-events: none; /* 防止拦截轮播图手势 */
 }
 
 .eyebrow {
   display: inline-flex;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.4);
   color: var(--accent);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(1.6rem, 4vw, 3rem);
+  font-size: clamp(1.3rem, 4vw, 2.5rem);
   line-height: 1.2;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 .hero__text {
   max-width: 60ch;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
 /* ==========================================================
    🖼️ 3. 推荐卡牌流
    ========================================================== */
 .section {
-  padding: 40px 5%;
+  padding: 30px 5%;
 }
 
 .section__head {
-  margin-bottom: 22px;
+  margin-bottom: 16px;
   text-align: center;
 }
 
 .section__head h2 {
   margin: 0;
-  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
 }
 
 .section__head p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--text-muted);
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
 }
 
 .card {
   overflow: hidden;
   border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(0, 0, 0, 0.24);
   box-shadow: var(--shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
 }
 
 .card img {
@@ -249,22 +245,22 @@ main {
 }
 
 .card__body {
-  padding: 12px;
+  padding: 10px;
 }
 
 .card__title {
   margin: 0 0 4px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .card__tag {
   margin: 0;
   color: var(--accent);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 /* ==========================================================
-   💬 4. 论坛社区区域紧凑化与头像污染修复
+   💬 4. 动漫社区版面精修与头像大小强力规范
    ========================================================== */
 .section--community {
   padding-top: 10px;
@@ -277,12 +273,11 @@ main {
 }
 
 .post-box {
-  margin-bottom: 20px;
-  padding: 16px;
-  border-radius: 16px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 12px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
-  box-shadow: var(--shadow);
 }
 
 .post-box textarea,
@@ -290,60 +285,54 @@ main {
 .form textarea {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 14px;
+  border-radius: 10px;
   color: var(--text-main);
   background: rgba(0, 0, 0, 0.28);
   outline: none;
 }
 
 .post-box textarea {
-  min-height: 80px;
-  resize: vertical;
-  padding: 12px;
-  font-size: 0.9rem;
+  min-height: 70px;
+  padding: 10px;
+  font-size: 0.88rem;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .primary-btn {
   border: 0;
   border-radius: 999px;
-  padding: 9px 18px;
+  padding: 8px 16px;
   font-weight: 700;
   color: #222;
   background: linear-gradient(135deg, #ffe066, #fff2a5);
-  transition: transform 0.2s ease, filter 0.2s ease;
-  font-size: 0.88rem;
-}
-
-.primary-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.02);
+  font-size: 0.85rem;
 }
 
 .posts {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .post {
   display: flex;
-  gap: 14px;
-  padding: 14px !important; /* 缩小内边距 */
+  gap: 12px;
+  padding: 12px !important;
   border: 1px solid var(--panel-border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--panel-bg);
   box-shadow: var(--shadow);
+  align-items: flex-start;
 }
 
-/* 🎯 强力靶向重置：彻底根治论坛头像变大问题 */
+/* 🎯 极致靶向：严密锁死头像尺寸，拒绝变大 */
 .post__avatar,
-.posts .post__avatar,
-#posts-list .post__avatar {
+.post img,
+#posts-list img {
   width: 42px !important;
   height: 42px !important;
   min-width: 42px !important;
@@ -354,32 +343,38 @@ main {
   object-fit: cover !important;
   flex-shrink: 0 !important;
   border: 2px solid rgba(255, 255, 255, 0.15);
+  display: block !important;
+}
+
+.post__body {
+  flex: 1;
+  min-width: 0;
 }
 
 .post__name {
   margin: 0 0 2px;
   color: var(--accent);
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .post__content {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.4;
   color: rgba(255, 255, 255, 0.95);
 }
 
 .post__meta {
-  margin-top: 6px;
+  margin-top: 4px;
   color: rgba(255, 255, 255, 0.45);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
 /* ==========================================================
-   🔒 5. 其他基础组件（保留原有功能）
+   🔒 5. 模态框与基础组件
    ========================================================== */
 .loading-state {
   margin: 0;
@@ -388,17 +383,17 @@ main {
 }
 
 .site-footer {
-  padding: 28px 20px 34px;
+  padding: 24px 20px;
   text-align: center;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
   background: rgba(0, 0, 0, 0.22);
 }
 
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 20000 !important; /* 确保遮罩在最顶层 */
+  z-index: 200000 !important;
   display: grid;
   place-items: center;
   padding: 20px;
@@ -416,12 +411,6 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 20px;
   background: #1b1b1b;
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.45);
-}
-
-.modal__title {
-  margin: 0 0 16px;
-  text-align: center;
 }
 
 .modal__close {
@@ -533,7 +522,7 @@ main {
 }
 
 /* ==========================================================
-   📱 6. 响应式移动端深度适配（防重叠、撑开安全点击距）
+   📱 6. 响应式移动端深度适配
    ========================================================== */
 @media (max-width: 768px) {
   .site-header {
@@ -548,54 +537,36 @@ main {
     margin-top: 4px;
   }
 
-  /* 📱 核心：由于顶部导航栏在手机端变成了双行，这里将上方间距推开到 144px，留下绝对安全的物理空白，不给轮播图任何拦截点击的机会！ */
   main {
-    padding-top: 144px !important;
+    padding-top: 136px !important;
   }
 
   .hero {
-    margin-top: 8px !important;
-  }
-
-  .hero__slides {
-    height: 200px; /* 移动端稍稍收紧高度，更符合手机纵向视觉 */
+    margin-top: 4px !important;
+    height: 210px; /* 手机端精致扁平化比例 */
   }
 
   .hero__content {
-    padding-top: 24px;
+    padding: 12px 16px !important;
   }
 
   .section {
-    padding-inline: 14px;
-    padding-top: 32px;
-    padding-bottom: 32px;
+    padding-inline: 12px;
+    padding-top: 24px;
+    padding-bottom: 24px;
   }
 
-  /* 手机端帖子保持优雅横向排列，不强制变纵向，省出空间 */
   .post {
     flex-direction: row !important;
-    align-items: flex-start;
   }
 }
 
 @media (min-width: 769px) {
-  .hero__slides {
-    height: 420px; /* 电脑端宏大视野 */
+  .hero {
+    height: 400px;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* 后台管理员快捷通道 */
 #admin-entrance-wrapper {
     display: none;
     margin-left: 12px;
@@ -616,30 +587,10 @@ main {
     font-weight: 500;
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.admin-entrance-btn:hover {
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(236, 72, 153, 0.2) 100%);
-    border-color: rgba(168, 85, 247, 0.5);
-    color: #fff;
-    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
-    transform: translateY(-1px);
-}
-
-.admin-entrance-btn:active {
-    transform: translateY(0);
 }
 
 .admin-icon {
     width: 14px;
     height: 14px;
     fill: currentColor;
-    animation: spinSlow 8s linear infinite;
-}
-
-@keyframes spinSlow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
 }
