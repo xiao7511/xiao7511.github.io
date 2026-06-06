@@ -603,3 +603,17 @@ main {
     height: 13px;
     fill: currentColor;
 }
+/* 🚨 触控热区绝对加固 */
+#user-btn, .nav__button {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important; /* 彻底抹除双击等待延迟 */
+    position: relative !important;
+    z-index: 9999999 !important; /* 提到全站最高物理层 */
+}
+
+/* 确保模态弹窗一旦激活，必须盖在最上面 */
+#auth-modal:not([hidden]) {
+    display: grid !important;
+    z-index: 10000000 !important;
+}
