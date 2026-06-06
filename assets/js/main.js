@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
       await refreshUserState();
       await loadPosts();
       await initAdminEntrance();
-
-      // 🌟【在这里注入追加调用】：动态获取并覆盖看板多图轮播配置
+      
+      // 🌟 动态获取并覆盖主页所有被部署版面的多图自动轮播
       await renderDynamicLiveCarousels();
 
     } catch (error) {
@@ -78,12 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
         const isAdmin = await checkIsAdminSilent();
         
-        // 如果是在线管理员，啪！让 index.html 里的跳转挂载链接现形
+        // 如果是在线管理员，让主页导航栏里重构后的精美圆角胶囊按钮安全显形
         if (isAdmin) {
             const entrance = document.getElementById('admin-entrance-wrapper');
             if (entrance) {
                 entrance.style.display = 'block'; 
-                console.log('❤️ 欢迎，超级管理员！后台跳转快捷通道已安全挂载。');
+                console.log('❤️ 欢迎，超级管理员！新版磨砂胶囊控制台通道已安全挂载。');
             }
         }
     } catch (error) {
@@ -102,6 +102,66 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         return false;
     }
+  }
+
+  // ==========================================
+  // 🎡 看板多图前台自适应绑定与全自动平滑淡入淡出轮播引擎
+  // ==========================================
+  async function renderDynamicLiveCarousels() {
+    try {
+      if (!window.supabaseClient) return;
+
+      // 从配置表拿取最新正式部署的打包数据
+      const { data: records, error } = await window.supabaseClient
+        .from('site_config')
+        .select('*');
+
+      if (error || !records) return;
+
+      records.forEach(config => {
+        let domElement = null;
+
+        // 根据后台对应的模块名，无缝匹配主页 HTML 对应的容器或背景元素
+        if (config.section === 'section_banner') domElement = document.querySelector('.hero') || document.getElementById('hero-banner-container');
+        if (config.section === 'section_anime') domElement = document.getElementById('anime-section-bg') || document.querySelector('.anime-section');
+        if (config.section === 'section_community') domElement = document.getElementById('community-section-bg') || document.querySelector('.community-section');
+        if (config.section === 'section_recommend') domElement = document.getElementById('recommend-section-bg') || document.querySelector('.recommend-section');
+
+        if (!domElement) return;
+
+        try {
+          // 尝试解析后台传过来的多图 JSON 数组
+          const imageList = JSON.parse(config.url);
+          
+          if (Array.isArray(imageList) && imageList.length > 0) {
+            if (imageList.length === 1) {
+              domElement.style.backgroundImage = `url('${imageList[0]}')`;
+            } else {
+              // 🌟 多张图状况下，激活全自动缓动轮播
+              startCustomBackgroundLoop(domElement, imageList);
+            }
+          }
+        } catch (jsonErr) {
+          // 优雅兜底：如果是历史留存的旧单图字符串链接，则直接平铺展示
+          domElement.style.backgroundImage = `url('${config.url}')`;
+        }
+      });
+    } catch (err) {
+      console.log('配置库轮播流加载完毕。');
+    }
+  }
+
+  // 原生背景图平滑自动轮播调度器
+  function startCustomBackgroundLoop(element, urls) {
+    let cursor = 0;
+    element.style.backgroundImage = `url('${urls[cursor]}')`;
+    element.style.transition = "background-image 0.8s ease-in-out"; // 产生顺滑淡入淡出效果
+
+    // 每 5000 毫秒（5秒）自动向后平滑滚动切换
+    setInterval(() => {
+      cursor = (cursor + 1) % urls.length;
+      element.style.backgroundImage = `url('${urls[cursor]}')`;
+    }, 5000);
   }
 
   // ==========================================
@@ -208,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================
-  // 🔘 用户事件处理绑定（全量净化）
+  // 🔘 用户事件处理绑定
   // ==========================================
   avatarOptions.forEach((button) => {
     button.addEventListener('click', () => {
@@ -272,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
-    // 💡 修复关键：Supabase 2.x 使用 signInWithPassword 执行标准表单认证
     const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
       alert(`登录失败: ${error.message}`);
@@ -339,72 +398,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setTab('login');
   initCarousel();
 
-  // 🔥 核心点火启动器：获取秘钥 -> 初始化客户端 -> 恢复状态与挂载入口
+  // 🔥 核心点火启动器：获取秘钥 -> 初始化客户端 -> 恢复状态与挂载入口 -> 绑定大图轮播
   initSecurityEngine();
 
   window.addEventListener('beforeunload', () => {
     if (carouselTimer) window.clearInterval(carouselTimer);
   });
-
- // ==========================================
-  // 🎡 看板多图前台自适应绑定与全自动平滑淡入淡出轮播引擎
-  // ==========================================
-  async function renderDynamicLiveCarousels() {
-    try {
-      if (!window.supabaseClient) return;
-
-      // 从配置表拿取最新正式部署的打包数据
-      const { data: records, error } = await window.supabaseClient
-        .from('site_config')
-        .select('*');
-
-      if (error || !records) return;
-
-      records.forEach(config => {
-        let domElement = null;
-
-        // 根据后台对应的名字，完美匹配主页 HTML 对应的容器或背景元素（请确保 index.html 存在相关元素或更换为对应选择器）
-        if (config.section === 'section_banner') domElement = document.querySelector('.hero') || document.getElementById('hero-banner-container');
-        if (config.section === 'section_anime') domElement = document.getElementById('anime-section-bg') || document.querySelector('.anime-section');
-        if (config.section === 'section_community') domElement = document.getElementById('community-section-bg') || document.querySelector('.community-section');
-        if (config.section === 'section_recommend') domElement = document.getElementById('recommend-section-bg') || document.querySelector('.recommend-section');
-
-        if (!domElement) return;
-
-        try {
-          // 尝试解析 JSON 图片数组
-          const imageList = JSON.parse(config.url);
-          
-          if (Array.isArray(imageList) && imageList.length > 0) {
-            if (imageList.length === 1) {
-              domElement.style.backgroundImage = `url('${imageList[0]}')`;
-            } else {
-              // 🌟 核心触发：多张图激活定时轮播
-              startCustomBackgroundLoop(domElement, imageList);
-            }
-          }
-        } catch (jsonErr) {
-          // 兜底兼容：如果数据库中仍留存着原先老系统的单根字符串 URL，则直接展示单图
-          domElement.style.backgroundImage = `url('${config.url}')`;
-        }
-      });
-    } catch (err) {
-      console.log('常规轮播加载流。');
-    }
-  }
-
-  // 原生轮播定时调度器
-  function startCustomBackgroundLoop(element, urls) {
-    let cursor = 0;
-    // 渲染第一张大图
-    element.style.backgroundImage = `url('${urls[cursor]}')`;
-    // 赋予其 CSS 平滑渐变过渡属性
-    element.style.transition = "background-image 0.8s ease-in-out";
-
-    // 每 5000 毫秒（5秒）自动向后滚动切换
-    setInterval(() => {
-      cursor = (cursor + 1) % urls.length;
-      element.style.backgroundImage = `url('${urls[cursor]}')`;
-    }, 5000);
-  } 
 });
