@@ -1,9 +1,7 @@
-// 🌟 1. 声明全局配置、客户端以及业务相关状态变量（开局为 null）
-window.sysConfig = null;
-window.supabaseClient = null; // 全站唯一的、安全的 Supabase 业务实例
-
 document.addEventListener('DOMContentLoaded', () => {
-  // 从 HTML 中抓取页面交互所需的 DOM 元素
+  const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+  const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
   const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
   const userButton = document.getElementById('user-btn');
   const modal = document.getElementById('auth-modal');
@@ -20,91 +18,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const postsList = document.getElementById('posts-list');
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
 
-  const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
+  if (!window.supabase) {
+    console.error('Supabase SDK 未加载');
+    return;
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let selectedAvatar = avatarOptions[0]?.dataset.avatar || '';
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ==========================================
-  // 🛡️ 核心安全引擎：通过 Cloudflare 异步加载配置
-  // ==========================================
-  async function initSecurityEngine() {
-    try {
-      // 检查全局 SDK 是否就绪
-      if (!window.supabase) {
-        console.error('Supabase SDK 未加载');
-        return;
-      }
+  const openModal = () => {
+    modal.hidden = false;
+  };
 
-      // 1. 去你的独立 Worker 搬钥匙，绝不暴露在前端代码
-      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-      console.log('正在动态请求安全秘钥凭证...');
-      const response = await fetch(workerUrl);
-      if (!response.ok) throw new Error('Cloudflare 独立 Worker 响应失败');
-      
-      const config = await response.json();
-      
-      // 2. 挂载到全局变量，方便后续上传或登录校验时共享
-      window.sysConfig = {
-        supabaseUrl: config.SUPABASE_URL,
-        supabaseAnonKey: config.SUPABASE_ANON_KEY
-      };
-
-      // 3. 锁死全站唯一的全局安全业务实例
-      window.supabaseClient = window.supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
-      console.log('🔐 全局安全通信实例初始化成功，秘钥无痕隔离。');
-
-      // 4. 通道完美就绪！按顺序依次解锁首页动态、用户状态以及管理员专属入口
-      await refreshUserState();
-      await loadPosts();
-      await initAdminEntrance();
-
-    } catch (error) {
-      console.error('❌ 安全流初始化断开:', error);
-      if (postsList) postsList.innerHTML = '<p class="loading-state">系统核心加载失败，请联系网管。</p>';
-    }
-  }
-
-  // ==========================================
-  // 🛡️ 管理员专属隐藏入口校验
-  // ==========================================
-  async function initAdminEntrance() {
-    try {
-        // 静默扫描当前在线用户身份
-        const isAdmin = await checkIsAdminSilent();
-        
-        // 如果是管理员，啪！让 index.html 里的隐藏跳转链接现形
-        if (isAdmin) {
-            const entrance = document.getElementById('admin-entrance-wrapper');
-            if (entrance) {
-                entrance.style.display = 'block'; 
-                console.log('❤️ 尊贵的管理员，欢迎回来！管理后台隐藏挂载链接已激活。');
-            }
-        }
-    } catch (error) {
-        console.log('常规前台加载，隐藏入口保持隔离状态。');
-    }
-  }
-
-  // 纯净的静默权限检查（不弹窗、不打扰普通用户）
-  async function checkIsAdminSilent() {
-    try {
-        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
-        if (error || !session) return false;
-
-        // 锁定你的管理员唯一邮箱
-        const OWNER_EMAIL = 'xiao.ye751111@outlook.com';
-        return session.user.email === OWNER_EMAIL;
-    } catch (e) {
-        return false;
-    }
-  }
-
-  // ==========================================
-  // 📝 互动社区原有业务函数（全部接入安全实例）
-  // ==========================================
-  const openModal = () => { modal.hidden = false; };
-  const closeModal = () => { modal.hidden = true; };
+  const closeModal = () => {
+    modal.hidden = true;
+  };
 
   const setTab = (target) => {
     const loginVisible = target === 'login';
@@ -123,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const renderPosts = (posts) => {
     postsList.replaceChildren();
+
     if (!posts || !posts.length) {
       const emptyState = document.createElement('p');
       emptyState.className = 'loading-state';
@@ -144,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.decoding = 'async';
 
       const content = document.createElement('div');
+
       const name = document.createElement('p');
       name.className = 'post__name';
       name.textContent = escapeText(post.nickname || '匿名用户');
@@ -160,12 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
       article.append(avatar, content);
       fragment.appendChild(article);
     });
+
     postsList.appendChild(fragment);
   };
 
   const loadPosts = async () => {
-    // 使用全站共享的安全变量执行操作，防止冲突崩溃
-    const { data, error } = await window.supabaseClient
+    const { data, error } = await supabaseClient
       .from('posts')
       .select('*')
       .order('created_at', { ascending: false });
@@ -175,18 +107,19 @@ document.addEventListener('DOMContentLoaded', () => {
       postsList.innerHTML = '<p class="loading-state">帖子加载失败，请稍后重试。</p>';
       return;
     }
+
     renderPosts(data || []);
   };
 
   const refreshUserState = async () => {
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
       userButton.textContent = '登录/注册';
       postArea.hidden = true;
       return;
     }
 
-    const { data: profile } = await window.supabaseClient
+    const { data: profile } = await supabaseClient
       .from('profiles')
       .select('nickname')
       .eq('id', user.id)
@@ -198,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const initCarousel = () => {
     if (prefersReducedMotion || carouselSlides.length <= 1) return;
+
     let activeIndex = 0;
     carouselTimer = window.setInterval(() => {
       carouselSlides[activeIndex].classList.remove('is-active');
@@ -206,9 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 4000);
   };
 
-  // ==========================================
-  // 🔘 事件监听器绑定
-  // ==========================================
   avatarOptions.forEach((button) => {
     button.addEventListener('click', () => {
       avatarOptions.forEach((item) => item.classList.remove('is-selected'));
@@ -232,7 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('请先输入邮箱');
       return;
     }
-    const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
       redirectTo: REDIRECT_URL,
     });
 
@@ -240,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert(`发送失败: ${error.message}`);
       return;
     }
+
     alert('重置邮件已发送，请检查邮箱。');
   });
 
@@ -249,14 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
 
-    const { data, error } = await window.supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
     if (error) {
       alert(`注册失败: ${error.message}`);
       return;
     }
 
     if (data.user) {
-      await window.supabaseClient.from('profiles').insert([
+      await supabaseClient.from('profiles').insert([
         { id: data.user.id, nickname: nick, avatar_url: selectedAvatar },
       ]);
     }
@@ -271,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
-    const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
       alert(`登录失败: ${error.message}`);
       return;
@@ -285,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
   resetForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const password = document.getElementById('new-password').value;
-    const { error } = await window.supabaseClient.auth.updateUser({ password });
+    const { error } = await supabaseClient.auth.updateUser({ password });
     if (error) {
       alert(`修改失败: ${error.message}`);
       return;
@@ -303,19 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) {
       alert('请先登录后再发帖。');
       return;
     }
 
-    const { data: profile } = await window.supabaseClient
+    const { data: profile } = await supabaseClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .maybeSingle();
 
-    const { error } = await window.supabaseClient.from('posts').insert([
+    const { error } = await supabaseClient.from('posts').insert([
       {
         content,
         user_id: user.id,
@@ -333,14 +266,74 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadPosts();
   });
 
-  // 启动基础界面组件
-  setTab('login');
-  initCarousel();
+  supabaseClient.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      openModal();
+      setTab('login');
+      loginForm.hidden = true;
+      regForm.hidden = true;
+      resetForm.hidden = false;
+    }
+  });
 
-  // 🌟 火车头出发：点火安全秘钥分发引擎，顺次恢复动态、状态与鉴权入口
-  initSecurityEngine();
+  setTab('login');
+  refreshUserState();
+  loadPosts();
+  initCarousel();
 
   window.addEventListener('beforeunload', () => {
     if (carouselTimer) window.clearInterval(carouselTimer);
   });
 });
+
+
+// 🌟 首页启动火车头：只负责静默侦测身份并解锁入口
+    async function initAdminEntrance() {
+        try {
+            // 1. 去你的独立 Worker 搬钥匙
+            const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+            const response = await fetch(workerUrl);
+            if (!response.ok) return; // Worker 异常时静默退出，不影响普通用户浏览
+            
+            const config = await response.json();
+            
+            // 2. 初始化全局 Supabase 实例
+            if (typeof window.supabase === 'undefined' || typeof window.supabase.auth === 'undefined') {
+                window.supabase = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+            }
+
+            // 3. 静默校验当前登录的是不是管理员
+            const isAdmin = await checkIsAdminSilent();
+            
+            // 4. 如果是管理员，啪！让隐藏的跳转链接现形
+            if (isAdmin) {
+                const entrance = document.getElementById('admin-entrance-wrapper');
+                if (entrance) {
+                    entrance.style.display = 'block'; 
+                    console.log('❤️ 管理员身份确认，隐藏管理后台入口已激活。');
+                }
+            }
+
+        } catch (error) {
+            // 容错：首页发生任何异常都保持静默，决不影响前台玩家的看牌/看站体验
+            console.log('前台常规资源加载完毕。');
+        }
+    }
+
+    // 🌟 纯净的静默权限检查（不弹窗、不打扰用户）
+    async function checkIsAdminSilent() {
+        try {
+            const { data: { session }, error } = await window.supabase.auth.getSession();
+            if (error || !session) return false;
+
+            // 锁定你的管理员邮箱
+            const OWNER_EMAIL = 'xiao.ye751111@outlook.com'; 
+            return session.user.email === OWNER_EMAIL;
+            
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // 唯一起动阀（可以和你首页原有的 DOMContentLoaded 逻辑并列存在，互不干扰）
+    document.addEventListener('DOMContentLoaded', initAdminEntrance);
