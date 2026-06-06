@@ -35,9 +35,7 @@ a {
   text-decoration: none;
 }
 
-button,
-input,
-textarea {
+button, input, textarea {
   font: inherit;
 }
 
@@ -45,82 +43,100 @@ button {
   cursor: pointer;
 }
 
-/* 📱 完美避开手机端双行导航栏，防止阻挡点击 */
+/* 📱 默认留出顶部固定栏的高占位 */
 main {
-  padding-top: 140px !important;
+  padding-top: 84px;
 }
 
 /* ==========================================================
-   🧱 1. 顶部导航安全加固（确保按钮可以被点击）
+   🧱 1. 顶部导航核心区（彻底解决并排与手机端无法点击问题）
    ========================================================== */
 .site-header {
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 99999 !important; /* 提到最高层 */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: fixed !important;
+  inset: 0 0 auto !important;
+  z-index: 999999 !important; /* 提到绝对最高的物理图层，绝不被轮播图遮挡 */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
   gap: 16px;
-  padding: 16px 5%;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  background: rgba(0, 0, 0, 0.55);
+  padding: 14px 5% !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   pointer-events: auto !important;
 }
 
 .logo {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
+/* 🎯 导航栏容器：不论 PC 还是手机，内部元素全部强制横向并排 */
 .nav {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important; /* 禁止换行，保证并排 */
+  gap: 8px !important;
 }
 
-.nav__link,
-.nav__button {
+.nav__link {
   border: 0;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   color: var(--text-main);
   background: transparent;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap; /* 防止文字折行 */
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .nav__link:hover,
-.nav__button:hover,
 .nav__link.is-active {
-  color: #222;
+  color: #111;
   background: var(--accent);
 }
 
+/* 🎯 登录/注册按钮：改造成独立的醒目胶囊，并提升触控灵敏度 */
 .nav__button, #user-btn {
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 999px !important;
+  padding: 6px 14px !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
   position: relative !important;
-  z-index: 100000 !important;
-  touch-action: manipulation !important;
+  z-index: 1000000 !important; /* 确保层级高于一切 */
+  touch-action: manipulation !important; /* 彻底移除手机浏览器 300ms 点击延迟 */
+  transition: all 0.2s ease !important;
+}
+
+.nav__button:hover, #user-btn:hover {
+  color: #111 !important;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
 }
 
 /* ==========================================================
-   📺 2. 轮播图与文字悬浮重构（核心修改点）
+   📺 2. 轮播图区域自适应极致精修（背景全透明、文字完美悬浮）
    ========================================================== */
 .hero {
   position: relative !important;
-  z-index: 10 !important;
+  z-index: 10 !important; /* 乖乖待在下方层级 */
   overflow: hidden !important;
   border-radius: 20px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: #000;
   touch-action: pan-y;
-  margin: 10px 5% 0;
-  height: 280px; /* 统高度占位 */
+  margin: 16px 5% 0;
+  height: 380px; /* PC 端大图视界 */
 }
 
 .hero__slides {
@@ -153,26 +169,26 @@ main {
   object-position: center;
 }
 
-/* 暗色渐变遮罩，确保悬浮白字能看清 */
+/* 磨砂阴影滤镜：确保悬浮文字易读 */
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.6));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55));
   pointer-events: none;
 }
 
-/* 🎯 让文字绝对定位，悬浮在图片上方 */
+/* 🎯 文字区域：绝对定位直接浮动在图片正上方，背景完全透明 */
 .hero__content {
   position: absolute !important;
   bottom: 0;
   left: 0;
   width: 100%;
-  z-index: 3; /* 压在图片和遮罩上方 */
-  padding: 20px !important;
-  background: transparent !important; /* 背景完全透明 */
-  pointer-events: none; /* 防止拦截轮播图手势 */
+  z-index: 3;
+  padding: 24px 20px !important;
+  background: transparent !important; /* 彻底剔除黑框背景 */
+  pointer-events: none;
 }
 
 .eyebrow {
@@ -190,19 +206,19 @@ main {
   margin: 0;
   font-size: clamp(1.3rem, 4vw, 2.5rem);
   line-height: 1.2;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
 .hero__text {
   max-width: 60ch;
   margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 0.85rem;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  font-size: 0.88rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 /* ==========================================================
-   🖼️ 3. 推荐卡牌流
+   🖼3. 推荐卡牌流
    ========================================================== */
 .section {
   padding: 30px 5%;
@@ -260,14 +276,13 @@ main {
 }
 
 /* ==========================================================
-   💬 4. 动漫社区版面精修与头像大小强力规范
+   💬 4. 动漫社区版面精修（强制规范小头像）
    ========================================================== */
 .section--community {
   padding-top: 10px;
 }
 
-.post-box,
-.posts {
+.post-box, .posts {
   max-width: 860px;
   margin: 0 auto;
 }
@@ -280,9 +295,7 @@ main {
   background: var(--panel-bg);
 }
 
-.post-box textarea,
-.form input,
-.form textarea {
+.post-box textarea, .form input, .form textarea {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 10px;
@@ -329,10 +342,8 @@ main {
   align-items: flex-start;
 }
 
-/* 🎯 极致靶向：严密锁死头像尺寸，拒绝变大 */
-.post__avatar,
-.post img,
-#posts-list img {
+/* 🎯 极致锁死头像：杜绝大图污染，不论哪个 class 渲染，全部重置为完美尺寸 */
+.post__avatar, .post img, #posts-list img {
   width: 42px !important;
   height: 42px !important;
   min-width: 42px !important;
@@ -393,7 +404,7 @@ main {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 200000 !important;
+  z-index: 2000000 !important; /* 极高遮罩层 */
   display: grid;
   place-items: center;
   padding: 20px;
@@ -464,17 +475,6 @@ main {
   color: var(--text-muted);
 }
 
-.form__hint--right {
-  text-align: right;
-}
-
-.link-btn {
-  padding: 0;
-  border: 0;
-  color: var(--accent);
-  background: transparent;
-}
-
 .avatar-selector p {
   margin: 0 0 10px;
   font-size: 0.88rem;
@@ -510,54 +510,64 @@ main {
   transform: scale(1.06);
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
-}
-
 /* ==========================================================
-   📱 6. 响应式移动端深度适配
+   📱 6. 移动端专属适配响应式（实现横向平滑滚动并排）
    ========================================================== */
 @media (max-width: 768px) {
   .site-header {
-    padding: 12px 14px;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: column !important; /* 手机端上方一行标题Logo，下方一行导航排 */
+    align-items: center !important;
+    padding: 10px 8px !important;
   }
 
+  .logo {
+    margin-bottom: 6px !important;
+    font-size: 1.05rem !important;
+  }
+
+  /* 📱 关键点：在手机端将菜单和登录按钮横向排成一列，若超出则允许手指横向滑动，防止折行重叠 */
   .nav {
-    width: 100%;
-    justify-content: space-between;
-    margin-top: 4px;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    overflow-x: auto !important; /* 开启横向平滑滑动 */
+    scrollbar-width: none !important; /* 隐藏滚动条 */
+    padding: 2px 4px !important;
+  }
+  
+  .nav::-webkit-scrollbar {
+    display: none !important; /* 隐藏苹果/谷歌浏览器滚动条 */
   }
 
+  .nav__link {
+    padding: 4px 10px !important;
+    font-size: 0.85rem !important;
+  }
+
+  /* 登录按钮在手机端保持完美并排尺寸 */
+  #user-btn, .nav__button {
+    padding: 4px 12px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* 让主页内容自适应下移，完美避开双行头部空间 */
   main {
-    padding-top: 136px !important;
+    padding-top: 106px !important;
   }
 
+  /* 手机端轮播图精致紧凑占比 */
   .hero {
     margin-top: 4px !important;
-    height: 210px; /* 手机端精致扁平化比例 */
+    height: 200px !important;
   }
 
   .hero__content {
-    padding: 12px 16px !important;
+    padding: 12px 14px !important;
   }
 
   .section {
     padding-inline: 12px;
-    padding-top: 24px;
-    padding-bottom: 24px;
-  }
-
-  .post {
-    flex-direction: row !important;
+    padding-top: 20px;
+    padding-bottom: 20px;
   }
 }
 
@@ -567,30 +577,25 @@ main {
   }
 }
 
+/* 后台管理快捷键 */
 #admin-entrance-wrapper {
     display: none;
-    margin-left: 12px;
+    margin-left: 6px;
 }
-
 .admin-entrance-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 16px;
+    gap: 4px;
+    padding: 5px 12px;
     background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
     color: #e2e8f0;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.82rem;
+    white-space: nowrap;
 }
-
 .admin-icon {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     fill: currentColor;
 }
