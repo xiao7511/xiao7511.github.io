@@ -511,65 +511,54 @@ main {
     scroll-behavior: auto !important;
   }
 }
+/* 管理员快捷通道容器 */
+#admin-entrance-wrapper {
+    display: none; /* 默认隐藏，由 JS 静默鉴权通过后唤醒 */
+    margin-left: 12px;
+}
 
-.admin-portal-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: space-between;
-        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-        color: #ffffff !important;
-        font-weight: 700;
-        padding: 12px 24px;
-        border-radius: 50px;
-        text-decoration: none !important;
-        box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        cursor: pointer;
-        width: 100%;
-        box-sizing: border-box;
-    }
+/* 管理员控制台按钮 - 二次元微光磨砂胶囊风格 */
+.admin-entrance-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px; /* 完美匹配隔壁欢迎气泡的圆角 */
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
 
-    .admin-portal-btn:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(37, 117, 252, 0.6);
-        background: linear-gradient(135deg, #7b2cbf 0%, #3a86ff 100%);
-    }
+/* 悬停动效：泛起霓虹紫微光 */
+.admin-entrance-btn:hover {
+    background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(236, 72, 153, 0.2) 100%);
+    border-color: rgba(168, 85, 247, 0.5);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+    transform: translateY(-1px);
+}
 
-    .admin-portal-btn:active {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(37, 117, 252, 0.4);
-    }
+.admin-entrance-btn:active {
+    transform: translateY(0);
+}
 
-    .admin-portal-icon {
-        font-size: 1.2rem;
-        margin-right: 10px;
-        animation: pulse 2s infinite;
-    }
+/* 用清爽的 SVG 齿轮图标替代厚重的盾牌 */
+.admin-icon {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    animation: spinSlow 8s linear infinite; /* 按钮悬停或平时让齿轮极其轻微地旋转，细节拉满 */
+}
 
-    .admin-portal-text {
-        font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-        letter-spacing: 1px;
-        flex-grow: 1;
-        text-align: left;
-        padding-left: 5px;
-    }
-
-    .admin-portal-arrow {
-        transition: transform 0.3s ease;
-    }
-
-    .admin-portal-btn:hover .admin-portal-arrow {
-        transform: translateX(5px);
-    }
-
-    /* 丝滑的淡入与微动特效动画 */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.15); }
-        100% { transform: scale(1); }
-    }
+@keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
