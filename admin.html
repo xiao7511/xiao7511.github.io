@@ -208,9 +208,25 @@
             border: 1px solid rgba(255,255,255,0.03);
             box-sizing: border-box;
         }
-        
-        .img-container { width: 100%; height: 95px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.2); }
-        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* 🎨 优化后的预览区容器：高度自适应，保证图片完整呈现 */
+        .img-container { 
+            width: 100%; 
+            min-height: 90px; 
+            max-height: 180px; /* 限制手机端最大高度，防止拉得过长 */
+            border-radius: 6px; 
+            overflow: hidden; 
+            background: #090616; /* 给图床加个深色背景垫底 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .img-container img { 
+            width: 100%; 
+            height: auto; 
+            max-height: 180px;
+            object-fit: contain; /* 💡 核心修改：改为 contain，确保整张图片按比例完整缩放显示，绝不裁剪 */
+        }
         
         .badge {
             font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px;
@@ -386,6 +402,7 @@
     }
 
     // 动态绘制响应式双列网格看板（带防手机强缓存穿透时间戳）
+    // 渲染带有“部署”锁的控制面板（加入多重强刷机制，击穿手机缓存）
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -394,7 +411,7 @@
             { id: 'section_banner', name: '首页 Banner 大图轮播区', maxCount: 5 },
             { id: 'section_anime', name: '动漫版面轮播区', maxCount: 4 },
             { id: 'section_community', name: '社区交流轮播区', maxCount: 4 },
-            { id: 'section_recommend', name: '热门强推卡片轮播区', maxCount: 4 }
+            { id: 'section_recommend', name: '热门强推卡牌轮播区', maxCount: 4 }
         ];
 
         wrapper.innerHTML = '';
@@ -403,6 +420,7 @@
             const block = document.createElement('div');
             block.className = 'dashboard-section';
 
+            // 头部：标题 + 一键部署按钮
             const header = document.createElement('div');
             header.className = 'section-header';
             header.innerHTML = `
@@ -410,20 +428,24 @@
                 <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
             `;
 
+            // 图片流网格布局
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
+            // 循环生成预览列
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                // 💡 加入实时高精度时间戳，确保手机端替换图片后，画面立刻刷新刷新，绝不卡死老缓存
-                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
+                
+                // 💡 核心优化：采用带有当前毫秒级时间戳的微调动态 URL，彻底断绝手机浏览器的旧缓存
+                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
+                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png${cacheBuster}`;
 
                 card.innerHTML = `
                     <div class="img-container">
-                        <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.display='none'"/>
+                        <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.style.visibility='hidden'"/>
                     </div>
-                    <span class="badge">位置槽 [${i}]</span>
+                    <span class="badge">索引位置 [${i}]</span>
                 `;
                 grid.appendChild(card);
             }
