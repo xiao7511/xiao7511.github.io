@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carouselTimer) clearInterval(carouselTimer);
   }
 
-  // 📱 为轮播图区域注入手势滑动支持
+  // 📱 轮播图区域手势支持
   const heroSection = document.querySelector('.hero');
   if (heroSection) {
     let touchStartX = 0;
@@ -115,12 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     } catch (err) {
-      console.warn('平滑切换回本地备份图层呈现。');
+      console.warn('正在平滑切换回本地备份图层呈现。');
     }
   }
 
   // ==========================================
-  // 🔐 APP 核心初始化基础链路
+  // 🔐 APP 核心初始化（通过 onAuthStateChange 自动驱动 UI）
   // ==========================================
   async function initApp() {
     showSlide(0);
@@ -155,10 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (entrance) entrance.style.display = 'block';
     }
 
+    // 🌟 状态接管的核心：只要登录状态发生改变，100% 触发 updateUserUI
     if (window.supabaseClient) {
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
       });
+      
+      // 首次加载安全获取一次状态兜底
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      updateUserUI(session?.user || null);
     }
   }
 
@@ -175,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(mode) {
     if (!modal) return;
     modal.removeAttribute('hidden');
-    modal.style.setProperty('display', 'grid', 'important');
+    modal.style.setProperty('display', 'grid', 'important'); // 强行通过 CSS 铺开，防止隐藏冲突
     switchMode(mode);
   }
 
@@ -208,17 +213,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 🎯 顶部安全原生点击事件
+  // ==========================================
+  // ⚡ 核心收拢：唯一、安全的按钮点击事件（不依赖任何外部拦截器）
+  // ==========================================
   if (userButton) {
+    // 兼容移动端快速触控响应，同时彻底防止冒泡冲突
     userButton.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       if (!window.supabaseClient) return;
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      if (session) {
+
+      // 根据当前按钮里面的文本来最快判断是该“退出”还是该“弹窗”，从而彻底绕开异步网络的等待卡顿
+      const isLogged = userButton.textContent.includes('欢迎回来');
+
+      if (isLogged) {
         if (confirm('确定要退出登录吗？')) {
           await window.supabaseClient.auth.signOut();
+          updateUserUI(null); // 立刻清理本地状态
           window.location.reload();
         }
       } else {
+        console.log('✨ 正在安全唤醒登录框...');
         openModal('login');
       }
     });
@@ -239,9 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================================
-  // ⚡ 核心修复：移动端一触即发、UI优先表单逻辑
-  // ==========================================
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -256,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 按钮进入加载动画状态
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
       submitBtn.textContent = '⏱️ 正在安全登录...';
@@ -273,15 +285,14 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        // 🚀【秒切核心1】验证通过瞬间关闭弹窗，0毫秒延迟
         closeModal();
 
-        // 🚀【秒切核心2】不等待耗时的异步网络，瞬间手动调用更新UI，阻断“等很久”的痛点
+        // 登录成功瞬间手动切状态，不需要等后台慢网络
         if (data && data.user) {
           updateUserUI(data.user);
         }
 
-        // 🚀【秒切核心3】耗时的数据刷新全部放到后台静默跑，决不卡死当前的UI
+        // 耗时较长的重载任务扔给下一帧，防止卡死 UI
         setTimeout(async () => {
           try {
             await syncLiveImagesFromDB();
@@ -292,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
               if (entrance) entrance.style.display = 'block';
             }
           } catch (bgErr) {
-            console.warn('后台数据刷新遇到轻微阻塞:', bgErr);
+            console.warn('后台更新遇到轻微延迟:', bgErr);
           }
         }, 50);
 
