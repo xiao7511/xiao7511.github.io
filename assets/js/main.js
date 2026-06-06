@@ -1,9 +1,9 @@
-// 🌟 1. 声明全局配置、客户端以及业务相关状态变量（开局为 null）
+// 🌟 1. 全局配置与安全业务实例声明
 window.sysConfig = null;
-window.supabaseClient = null; // 全站唯一的、安全的 Supabase 业务实例
+window.supabaseClient = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 从 HTML 中抓取页面交互所需的 DOM 元素
+  // 获取所有基础 DOM 元素
   const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
   const userButton = document.getElementById('user-btn');
   const modal = document.getElementById('auth-modal');
@@ -26,73 +26,74 @@ document.addEventListener('DOMContentLoaded', () => {
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ==========================================
-  // 🛡️ 核心安全引擎：通过 Cloudflare 异步加载配置
+  // 🛡️ 核心引擎：运行时从 Cloudflare Worker 获取秘钥
   // ==========================================
   async function initSecurityEngine() {
     try {
-      // 检查全局 SDK 是否就绪
-      if (!window.supabase) {
-        console.error('Supabase SDK 未加载');
-        return;
-      }
-
-      // 1. 去你的独立 Worker 搬钥匙，绝不暴露在前端代码
+      // 1. 去你的独立 Worker 搬钥匙，代码里无痕隔离
       const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-      console.log('正在动态请求安全秘钥凭证...');
       const response = await fetch(workerUrl);
-      if (!response.ok) throw new Error('Cloudflare 独立 Worker 响应失败');
+      if (!response.ok) throw new Error('Worker 响应失败');
       
       const config = await response.json();
       
-      // 2. 挂载到全局变量，方便后续上传或登录校验时共享
       window.sysConfig = {
         supabaseUrl: config.SUPABASE_URL,
         supabaseAnonKey: config.SUPABASE_ANON_KEY
       };
 
-      // 3. 锁死全站唯一的全局安全业务实例
-      window.supabaseClient = window.supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
-      console.log('🔐 全局安全通信实例初始化成功，秘钥无痕隔离。');
+      // 2. 注入创建全局唯一的安全通信客户端
+      window.supabaseClient = supabase.createClient(window.sysConfig.supabaseUrl, window.sysConfig.supabaseAnonKey);
+      console.log('🔐 安全通信实例成功构筑，前端硬编码已全面清除。');
 
-      // 4. 通道完美就绪！按顺序依次解锁首页动态、用户状态以及管理员专属入口
+      // 3. 订阅密码重置等状态变更（使用修复后的安全实例）
+      window.supabaseClient.auth.onAuthStateChange((authEvent) => {
+        if (authEvent === 'PASSWORD_RECOVERY') {
+          openModal();
+          setTab('login');
+          loginForm.hidden = true;
+          regForm.hidden = true;
+          resetForm.hidden = false;
+        }
+      });
+
+      // 4. 按严格时序流水线激活业务
       await refreshUserState();
       await loadPosts();
       await initAdminEntrance();
 
     } catch (error) {
       console.error('❌ 安全流初始化断开:', error);
-      if (postsList) postsList.innerHTML = '<p class="loading-state">系统核心加载失败，请联系网管。</p>';
+      if (postsList) postsList.innerHTML = '<p class="loading-state">核心组件加载失败，请刷新或联系网管。</p>';
     }
   }
 
   // ==========================================
-  // 🛡️ 管理员专属隐藏入口校验
+  // 🛡️ 管理员隐藏入口链接挂载逻辑
   // ==========================================
   async function initAdminEntrance() {
     try {
-        // 静默扫描当前在线用户身份
         const isAdmin = await checkIsAdminSilent();
         
-        // 如果是管理员，啪！让 index.html 里的隐藏跳转链接现形
+        // 如果是在线管理员，啪！让 index.html 里的跳转挂载链接现形
         if (isAdmin) {
             const entrance = document.getElementById('admin-entrance-wrapper');
             if (entrance) {
                 entrance.style.display = 'block'; 
-                console.log('❤️ 尊贵的管理员，欢迎回来！管理后台隐藏挂载链接已激活。');
+                console.log('❤️ 欢迎，超级管理员！后台跳转快捷通道已安全挂载。');
             }
         }
     } catch (error) {
-        console.log('常规前台加载，隐藏入口保持隔离状态。');
+        console.log('常规访客浏览中...');
     }
   }
 
-  // 纯净的静默权限检查（不弹窗、不打扰普通用户）
+  // 静默检查（不弹窗、不打扰普通用户）
   async function checkIsAdminSilent() {
     try {
         const { data: { session }, error } = await window.supabaseClient.auth.getSession();
         if (error || !session) return false;
 
-        // 锁定你的管理员唯一邮箱
         const OWNER_EMAIL = 'xiao.ye751111@outlook.com';
         return session.user.email === OWNER_EMAIL;
     } catch (e) {
@@ -101,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 📝 互动社区原有业务函数（全部接入安全实例）
+  // 📝 社区互动业务函数（全量接入全局安全实例）
   // ==========================================
   const openModal = () => { modal.hidden = false; };
   const closeModal = () => { modal.hidden = true; };
@@ -140,8 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
       avatar.className = 'post__avatar';
       avatar.src = post.avatar_url || '';
       avatar.alt = `${post.nickname || '用户'} 的头像`;
-      avatar.loading = 'lazy';
-      avatar.decoding = 'async';
 
       const content = document.createElement('div');
       const name = document.createElement('p');
@@ -164,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const loadPosts = async () => {
-    // 使用全站共享的安全变量执行操作，防止冲突崩溃
     const { data, error } = await window.supabaseClient
       .from('posts')
       .select('*')
@@ -207,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ==========================================
-  // 🔘 事件监听器绑定
+  // 🔘 用户事件处理绑定（全量净化）
   // ==========================================
   avatarOptions.forEach((button) => {
     button.addEventListener('click', () => {
@@ -271,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
+    // 💡 修复关键：Supabase 2.x 使用 signInWithPassword 执行标准表单认证
     const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
       alert(`登录失败: ${error.message}`);
@@ -333,11 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
     await loadPosts();
   });
 
-  // 启动基础界面组件
+  // 初始化基础状态与轮播
   setTab('login');
   initCarousel();
 
-  // 🌟 火车头出发：点火安全秘钥分发引擎，顺次恢复动态、状态与鉴权入口
+  // 🔥 核心点火启动器：获取秘钥 -> 初始化客户端 -> 恢复状态与挂载入口
   initSecurityEngine();
 
   window.addEventListener('beforeunload', () => {
