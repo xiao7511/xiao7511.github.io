@@ -272,51 +272,53 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('login-password').value;
       const submitBtn = loginForm.querySelector('button[type="submit"]');
 
-      // 1. ✨ 极其重要的视觉反馈：进入加载状态，防止用户连续狂点
+      // 1. ⚡ 视觉即时反馈：立刻禁用按钮并改变文字，告诉用户已经在加载了
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = '⏱️ 正在登录...'; 
+      submitBtn.textContent = '⏱️ 正在验证登录...';
 
       try {
-        // 2. 发起 Supabase 鉴权请求
+        // 2. 向 Supabase 发起登录验证
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
           alert(`登录失败: ${error.message}`);
-          // 恢复按钮状态
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
           return;
         }
 
-        // 3. 🚀 移动端提速核心：坚决不使用 reload()！改为无缝局部渲染
-        // 立刻关闭模态框
+        // 3. 🚀 核心提速：登录成功后立刻关闭弹窗，不给网络半点阻塞UI的机会
         if (typeof closeModal === 'function') {
           closeModal();
+        } else {
+          // 兜底隐藏弹窗
+          const authModal = document.getElementById('auth-modal');
+          if (authModal) authModal.setAttribute('hidden', '');
         }
 
-        // 4. 主动触发页面状态更新（不需要重刷网页，直接用代码切换状态）
-        // 如果你代码里有检查登录状态的函数（比如 checkUserStatus 或 initAuth），直接在这里调用它
-        if (typeof checkUserStatus === 'function') {
-          await checkUserStatus(); 
-        } else if (typeof checkAuth === 'function') {
-          await checkAuth();
+        // 4. ✨ 核心干掉 reload：通过直接调用鉴权状态初始化函数，来实现 0 秒无缝切换
+        // 检查你的 main.js 内部，如果是用 initAuth() 或者是 checkUserStatus() 来判断登录状态的，直接调用它：
+        if (typeof initAuth === 'function') {
+          await initAuth(); 
+        } else if (typeof checkUserStatus === 'function') {
+          await checkUserStatus();
         } else {
-          // 🛠️ 兜底：如果你没有封装状态函数，那我们只在万不得已时进行轻量级刷新
-          // 但加上微小的延迟，让用户先看到弹窗消失的丝滑动画
+          // 🛠️ 终极兜底：如果你没有封装状态函数，那我们使用轻量刷新，但加上微小延迟，让用户先看到弹窗消失
           setTimeout(() => {
             window.location.reload();
-          }, 100);
+          }, 60);
           return;
         }
 
-        // 5. 如果社区列表函数存在，无缝刷新帖子列表（不需要整页刷新）
+        // 5. 无缝刷新下方的社区帖子列表（不需要重新加载整个网页）
         if (typeof fetchPosts === 'function') {
           fetchPosts();
         }
 
       } catch (err) {
-        console.error(err);
+        console.error('登录运行期错误:', err);
+        alert('登录发生未知错误，请重试');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
       }
