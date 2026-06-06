@@ -434,34 +434,32 @@
         }
     }
 
-    // 将选定的有效多图序列同步打包至前台配置表
+    // 💡 核心部署锁：优化为免网络探测直通常道，彻底规避跨域拦截
     window.deploySection = async function(section, maxCount, supabaseUrl) {
         let deployedUrls = [];
         
+        // 按照版面最大数量，直接硬核拼接出对应的线上 CDN 图片路径，加入高精度时间戳穿透手机缓存
         for (let i = 0; i < maxCount; i++) {
-            const testUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
-            try {
-                const res = await fetch(testUrl, { method: 'HEAD' });
-                if (res.ok) {
-                    deployedUrls.push(`${testUrl}?t=${new Date().getTime()}`);
-                }
-            } catch (e) {}
-        }
-
-        if (deployedUrls.length === 0) {
-            alert('当前预览库无任何有效图片，请先上传！');
-            return;
+            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
+            deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
         }
 
         try {
+            showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
+            
+            // 将图片以 JSON 字符串数组形式同步写入数据库配置表
             const { error } = await window.supabaseClient
                 .from('site_config')
                 .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
 
             if (error) throw error;
-            alert('✨ 部署指令同步下发成功！主页相应版面多图滚动已实时变动。');
+            
+            alert('✨ 部署指令已安全同步！主页相应版面多图轮播已实时覆盖。');
+            showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
+
         } catch (err) {
-            alert('线上同步部署发生故障: ' + err.message);
+            alert('部署同步失败: ' + err.message);
+            showStatus('部署失败: ' + err.message, 'error');
         }
     };
 
