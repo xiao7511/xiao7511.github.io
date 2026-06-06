@@ -49,18 +49,23 @@ main {
   padding-top: 84px;
 }
 
+/* ==========================================================
+   🧱 1. 顶部导航区域安全加固（彻底解决手机端无法点击登录问题）
+   ========================================================== */
 .site-header {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 1000;
+  z-index: 10000 !important; /* 提到绝对最高的图层 */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 5%;
   backdrop-filter: blur(14px);
-  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(0, 0, 0, 0.55);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: auto !important;
 }
 
 .logo {
@@ -94,19 +99,33 @@ main {
   background: var(--accent);
 }
 
-.nav__button {
+/* 强力激活登录按钮在手机端的热区与层级 */
+.nav__button, #user-btn {
   background: rgba(255, 255, 255, 0.12);
+  position: relative !important;
+  z-index: 10001 !important;
+  touch-action: manipulation !important; /* 消除手机端点击延迟 */
 }
 
+/* ==========================================================
+   📺 2. 轮播图区域自适应极致精修
+   ========================================================== */
 .hero {
-  position: relative;
-  min-height: clamp(360px, 52vh, 640px);
-  overflow: hidden;
+  position: relative !important;
+  z-index: 10 !important; /* 降低层级，绝不遮挡顶部导航 */
+  overflow: hidden !important;
+  border-radius: 20px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #000;
+  touch-action: pan-y; /* 允许手机端纵向滚动的同时捕捉横向手势 */
+  margin: 16px 5% 0; /* 左右收窄，更具卡片高级感 */
 }
 
 .hero__slides {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: 240px; /* 📱 手机端紧凑而精致的高度 */
 }
 
 .hero__slide {
@@ -114,56 +133,77 @@ main {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
   opacity: 0;
-  transition: opacity 600ms ease;
+  visibility: hidden;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+  z-index: 1;
 }
 
 .hero__slide.is-active {
   opacity: 1;
+  visibility: visible;
+  z-index: 2;
+}
+
+.hero__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 保证铺满且不变形 */
+  object-position: center;
+  transform: scale(1.02);
+  transition: transform 6s linear;
+}
+
+.hero__slide.is-active img {
+  transform: scale(1);
 }
 
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.45));
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.4));
+  pointer-events: none; /* 防止遮罩层拦截点击 */
 }
 
 .hero__content {
   position: relative;
-  z-index: 1;
+  z-index: 4;
   max-width: 720px;
-  padding: clamp(48px, 8vw, 88px) 5% 64px;
+  padding: 24px 20px;
 }
 
 .eyebrow {
   display: inline-flex;
-  margin: 0 0 12px;
-  padding: 6px 12px;
+  margin: 0 0 8px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.24);
+  background: rgba(0, 0, 0, 0.35);
   color: var(--accent);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   letter-spacing: 0.04em;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1.1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .hero__text {
   max-width: 60ch;
-  margin: 16px 0 0;
+  margin: 10px 0 0;
   color: var(--text-muted);
-  font-size: 1.03rem;
+  font-size: 0.95rem;
 }
 
+/* ==========================================================
+   🖼️ 3. 推荐卡牌流
+   ========================================================== */
 .section {
-  padding: 56px 5%;
+  padding: 40px 5%;
 }
 
 .section__head {
@@ -183,8 +223,8 @@ main {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
 }
 
 .card {
@@ -209,22 +249,25 @@ main {
 }
 
 .card__body {
-  padding: 14px 15px 16px;
+  padding: 12px;
 }
 
 .card__title {
   margin: 0 0 4px;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .card__tag {
   margin: 0;
   color: var(--accent);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
 }
 
+/* ==========================================================
+   💬 4. 论坛社区区域紧凑化与头像污染修复
+   ========================================================== */
 .section--community {
-  padding-top: 20px;
+  padding-top: 10px;
 }
 
 .post-box,
@@ -234,8 +277,8 @@ main {
 }
 
 .post-box {
-  margin-bottom: 22px;
-  padding: 18px;
+  margin-bottom: 20px;
+  padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
@@ -254,25 +297,27 @@ main {
 }
 
 .post-box textarea {
-  min-height: 92px;
+  min-height: 80px;
   resize: vertical;
-  padding: 14px;
+  padding: 12px;
+  font-size: 0.9rem;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .primary-btn {
   border: 0;
   border-radius: 999px;
-  padding: 11px 20px;
+  padding: 9px 18px;
   font-weight: 700;
   color: #222;
   background: linear-gradient(135deg, #ffe066, #fff2a5);
   transition: transform 0.2s ease, filter 0.2s ease;
+  font-size: 0.88rem;
 }
 
 .primary-btn:hover {
@@ -282,45 +327,60 @@ main {
 
 .posts {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .post {
   display: flex;
   gap: 14px;
-  padding: 16px;
+  padding: 14px !important; /* 缩小内边距 */
   border: 1px solid var(--panel-border);
   border-radius: 16px;
   background: var(--panel-bg);
   box-shadow: var(--shadow);
 }
 
-.post__avatar {
-  width: 48px;
-  height: 48px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  object-fit: cover;
+/* 🎯 强力靶向重置：彻底根治论坛头像变大问题 */
+.post__avatar,
+.posts .post__avatar,
+#posts-list .post__avatar {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .post__name {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   color: var(--accent);
   font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .post__content {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .post__meta {
   margin-top: 6px;
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.78rem;
 }
 
+/* ==========================================================
+   🔒 5. 其他基础组件（保留原有功能）
+   ========================================================== */
 .loading-state {
   margin: 0;
   text-align: center;
@@ -338,7 +398,7 @@ main {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 20000 !important; /* 确保遮罩在最顶层 */
   display: grid;
   place-items: center;
   padding: 20px;
@@ -472,6 +532,9 @@ main {
   border: 0;
 }
 
+/* ==========================================================
+   📱 6. 响应式移动端深度适配（防重叠、撑开安全点击距）
+   ========================================================== */
 @media (max-width: 768px) {
   .site-header {
     padding: 12px 14px;
@@ -482,22 +545,42 @@ main {
   .nav {
     width: 100%;
     justify-content: space-between;
+    margin-top: 4px;
   }
 
+  /* 📱 核心：由于顶部导航栏在手机端变成了双行，这里将上方间距推开到 144px，留下绝对安全的物理空白，不给轮播图任何拦截点击的机会！ */
   main {
-    padding-top: 122px;
+    padding-top: 144px !important;
+  }
+
+  .hero {
+    margin-top: 8px !important;
+  }
+
+  .hero__slides {
+    height: 200px; /* 移动端稍稍收紧高度，更符合手机纵向视觉 */
   }
 
   .hero__content {
-    padding-top: 40px;
+    padding-top: 24px;
   }
 
   .section {
     padding-inline: 14px;
+    padding-top: 32px;
+    padding-bottom: 32px;
   }
 
+  /* 手机端帖子保持优雅横向排列，不强制变纵向，省出空间 */
   .post {
-    flex-direction: column;
+    flex-direction: row !important;
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 769px) {
+  .hero__slides {
+    height: 420px; /* 电脑端宏大视野 */
   }
 }
 
@@ -511,13 +594,13 @@ main {
     scroll-behavior: auto !important;
   }
 }
-/* 管理员快捷通道容器 */
+
+/* 后台管理员快捷通道 */
 #admin-entrance-wrapper {
-    display: none; /* 默认隐藏，由 JS 静默鉴权通过后唤醒 */
+    display: none;
     margin-left: 12px;
 }
 
-/* 管理员控制台按钮 - 二次元微光磨砂胶囊风格 */
 .admin-entrance-btn {
     display: inline-flex;
     align-items: center;
@@ -527,7 +610,7 @@ main {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px; /* 完美匹配隔壁欢迎气泡的圆角 */
+    border-radius: 20px;
     color: #e2e8f0;
     font-size: 0.85rem;
     font-weight: 500;
@@ -537,7 +620,6 @@ main {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 悬停动效：泛起霓虹紫微光 */
 .admin-entrance-btn:hover {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(236, 72, 153, 0.2) 100%);
     border-color: rgba(168, 85, 247, 0.5);
@@ -550,84 +632,14 @@ main {
     transform: translateY(0);
 }
 
-/* 用清爽的 SVG 齿轮图标替代厚重的盾牌 */
 .admin-icon {
     width: 14px;
     height: 14px;
     fill: currentColor;
-    animation: spinSlow 8s linear infinite; /* 按钮悬停或平时让齿轮极其轻微地旋转，细节拉满 */
+    animation: spinSlow 8s linear infinite;
 }
 
 @keyframes spinSlow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
-
-/* ==========================================================
-   🚀 终极精修：解决点击拦截、头像污染、以及社区版面空间紧凑化
-   ========================================================== */
-
-/* 1. 修复轮播图物理遮挡，给上方导航栏留出绝对安全触控空间 */
-.hero {
-    margin-top: 16px; /* 与上方导航栏拉开间距，防止透明层阻挡登录点击 */
-    position: relative;
-    z-index: 5; /* 确保不压过模态框和下拉导航 */
-}
-
-/* 2. 强力约束论坛头像尺寸，彻底解决“头像变大”的污染问题 */
-.post-item__avatar {
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    min-height: 42px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* 3. 紧凑化论坛社区空间布局，使其与版面高度协调 */
-.community-section {
-    margin-top: 24px;
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    padding: 16px !important; /* 缩小内边距，释放更多手机屏幕空间 */
-}
-
-.post-item {
-    padding: 12px 8px !important; /* 收紧每个帖子之间的上下间距 */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    gap: 12px !important;
-}
-
-.post-item__content {
-    font-size: 0.9rem !important; /* 微调字体大小，让手机端单屏容纳更多内容 */
-    line-height: 1.5 !important;
-    color: rgba(255, 255, 255, 0.9);
-    margin: 6px 0 0 0 !important;
-}
-
-.post-item__nickname {
-    font-size: 0.85rem !important;
-    color: var(--accent);
-}
-
-.post-item__time {
-    font-size: 0.75rem !important;
-    color: var(--text-muted);
-}
-
-/* 优化发帖框的紧凑度 */
-#post-content {
-    border-radius: 10px;
-    padding: 10px !important;
-    font-size: 0.9rem;
-    background: rgba(0, 0, 0, 0.2);
-}
-
-#publish-btn {
-    padding: 8px 16px !important;
-    font-size: 0.85rem !important;
-    border-radius: 8px;
 }
