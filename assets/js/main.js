@@ -272,59 +272,76 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = document.getElementById('login-password').value;
       const submitBtn = loginForm.querySelector('button[type="submit"]');
 
-      // 1. ⚡ 瞬间视觉反馈（降服移动端卡顿感）：
-      // 立刻禁用按钮，并显示动效文字，让用户知道系统正在全力以赴处理
+      if (!email || !password) {
+        alert('请输入账号和密码喵！');
+        return;
+      }
+
+      // 1. ⚡ 视觉瞬间反馈：立刻改变按钮状态，防止手机端多次重复点击
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span>⏱️ 正在安全登录...</span>`;
-      submitBtn.style.opacity = '0.7';
+      submitBtn.textContent = '⏱️ 正在安全登录...';
+      submitBtn.style.opacity = '0.6';
 
       try {
-        // 2. 发起异步身份验证
+        console.log('正在向 Supabase 发送登录凭证...');
+        // 2. 向 Supabase 发起身份验证
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
-          // 登录失败反馈
           alert(`登录失败: ${error.message}`);
           submitBtn.disabled = false;
-          submitBtn.innerHTML = originalText;
+          submitBtn.textContent = originalText;
           submitBtn.style.opacity = '1';
           return;
         }
 
-        // 3. 🚀 移动端提速核心：登录验证通过后，0毫秒立刻关闭登录框，不让界面有半点卡顿
+        console.log('Supabase 验证通过，登录成功！进行移动端局部无缝清场...');
+
+        // 3. 🚀 无论后续代码如何报错，登录框必须在 0 毫秒内对用户隐藏！
+        const authModal = document.getElementById('auth-modal');
+        if (authModal) {
+          authModal.setAttribute('hidden', '');
+          authModal.style.setProperty('display', 'none', 'important');
+        }
         if (typeof closeModal === 'function') {
-          closeModal();
-        } else {
-          const authModal = document.getElementById('auth-modal');
-          if (authModal) authModal.setAttribute('hidden', '');
+          try { closeModal(); } catch(e) {}
         }
 
-        // 4. ✨ 无缝状态接管：直接调用初始化状态函数，通过代码本地切换登录状态
-        // 从而【彻底干掉 window.location.reload()】，免去重新载入网页文件的漫长等待！
-        if (typeof initAuth === 'function') {
-          await initAuth(); 
-        } else if (typeof checkUserStatus === 'function') {
-          await checkUserStatus();
-        } else {
-          // 🛠️ 极其罕见的兜底：如果你没有封装局部鉴权函数，不得不刷新页面
-          // 我们也通过定时器，等弹窗完全关闭后，在后台静默刷新
-          setTimeout(() => {
-            window.location.reload();
-          }, 100);
+        // 4. 🛡️ 安全隔离防死机区：用独立的 try-catch 运行状态切换函数
+        // 这样即使 initAuth() 里有获取不到的 DOM 报错，也绝对不会卡死登录流程
+        try {
+          if (typeof initAuth === 'function') {
+            await initAuth(); 
+          } else if (typeof checkUserStatus === 'function') {
+            await checkUserStatus();
+          } else {
+            // 如果实在找不到任何局部渲染函数，采用 0 延迟兜底刷新
+            console.log('未检测到状态接管函数，准备静默刷新...');
+            setTimeout(() => { window.location.reload(); }, 50);
+            return;
+          }
+        } catch (authError) {
+          console.error('⚠️ 状态更新函数内部报错（多为DOM不存在引起），已成功跳过，防止卡死：', authError);
+          // 在报错的情况下，给手机端执行一次安全的微延迟刷新作为降级兜底
+          setTimeout(() => { window.location.reload(); }, 100);
           return;
         }
 
-        // 5. 无缝刷新社区帖子列表
-        if (typeof fetchPosts === 'function') {
-          fetchPosts();
+        // 5. 局部无缝刷新社区帖子列表
+        try {
+          if (typeof fetchPosts === 'function') {
+            fetchPosts();
+          }
+        } catch (postError) {
+          console.error('帖子刷新失败，已跳过:', postError);
         }
 
       } catch (err) {
-        console.error('登录运行期异常:', err);
-        alert('登录发生未知错误，请重试');
+        console.error('🚨 登录运行期遇到未知重大异常:', err);
+        alert('登录遭遇未知网络异常，请重试');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+        submitBtn.textContent = originalText;
         submitBtn.style.opacity = '1';
       }
     });
