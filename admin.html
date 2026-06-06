@@ -54,7 +54,9 @@
     async function initSupabaseWithCloudflare() {
     try {
         // 💡 因为同源部署，直接请求相对路径即可，极其优雅
-        const response = await fetch('/config.js'); 
+       // const response = await fetch('/config.js'); 
+        // 修改 admin.html 第 59 行左右的 fetch 地址
+        const response = await fetch('/functions/config');
         
         if (!response.ok) throw new Error('Cloudflare 桥接失败');
         const config = await response.json();
