@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carouselTimer) clearInterval(carouselTimer);
   }
 
-  // 📱 为轮播图区域注入手势滑动（Touch Events）支持，让移动端极度丝滑
+  // 📱 为轮播图区域注入手势滑动（Touch Events）支持
   const heroSection = document.querySelector('.hero');
   if (heroSection) {
     let touchStartX = 0;
@@ -82,9 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  // 📡 核心修正：解耦鉴权锁，无论登不登录，任何人进站都能秒速加载线上/本地轮播图
+  // 📡 核心修正：解耦鉴权锁
   async function syncLiveImagesFromDB() {
-    // 默认本地基础图库谱，随时准备为游客做无缝兜底
     const fallbackImages = {
       section_banner: [
         'images/IMG_4822.jpeg',
@@ -97,8 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       let liveUrls = [];
-      
-      // 只有在实例准备好的时候才向云端伸手拿数据
       if (window.supabaseClient) {
         const { data, error } = await window.supabaseClient
           .from('site_config')
@@ -111,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 执行渲染覆盖
       carouselSlides.forEach((slide, index) => {
         const imgElement = slide.querySelector('img');
         if (imgElement) {
@@ -122,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      console.log('✨ 轮播图流就绪（支持游客免登录浏览）');
+      console.log('✨ 轮播图流就绪');
     } catch (err) {
       console.warn('正在平滑切换回本地备份图层呈现。');
     }
@@ -132,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔐 基础解耦初始化
   // ==========================================
   async function initApp() {
-    // 无论如何先渲染出初始基础图层，让页面绝不留白
     showSlide(0);
     startCarousel();
 
@@ -156,18 +151,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 🌟 无限极解耦：客户端初始化完后，立刻执行图库同步和帖子流抓取
     await syncLiveImagesFromDB();
     await fetchPosts();
 
-    // 检查管理员状态展示入口
     const isAdmin = await checkIsAdminSilent();
     if (isAdmin) {
       const entrance = document.getElementById('admin-entrance-wrapper');
       if (entrance) entrance.style.display = 'block';
     }
 
-    // 监听全局认证改变状态
     if (window.supabaseClient) {
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
@@ -188,11 +180,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(mode) {
     if (!modal) return;
     modal.removeAttribute('hidden');
+    modal.style.setProperty('display', 'grid', 'important'); // 确保能强制铺开
     switchMode(mode);
   }
 
   function closeModal() {
-    if (modal) modal.setAttribute('hidden', '');
+    if (modal) {
+      modal.setAttribute('hidden', '');
+      modal.style.setProperty('display', 'none', 'important');
+    }
   }
 
   function switchMode(mode) {
@@ -218,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (userButton) {
-    userButton.addEventListener('click', async () => {
+    userButton.addEventListener('click', async (e) => {
       if (!window.supabaseClient) return;
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       if (session) {
@@ -247,22 +243,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /*
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!window.supabaseClient) return;
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      const submitBtn = loginForm.querySelector('button[type="submit"]');
-
-      submitBtn.disabled = true;
-      const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) { alert(`登录失败: ${error.message}`); submitBtn.disabled = false; return; }
-      closeModal();
-      window.location.reload();
-    });
-  }*/
+  // ==========================================
+  // 🎯 核心优化：高容错登录表单监听流
+  // ==========================================
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -277,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 1. ⚡ 视觉瞬间反馈：立刻改变按钮状态，防止手机端多次重复点击
+      // 1. ✨ 瞬间触觉反馈
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
       submitBtn.textContent = '⏱️ 正在安全登录...';
@@ -285,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         console.log('正在向 Supabase 发送登录凭证...');
-        // 2. 向 Supabase 发起身份验证
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
@@ -296,49 +278,23 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        console.log('Supabase 验证通过，登录成功！进行移动端局部无缝清场...');
+        console.log('Supabase 验证通过，登录成功！关闭模态框...');
+        closeModal();
 
-        // 3. 🚀 无论后续代码如何报错，登录框必须在 0 毫秒内对用户隐藏！
-        const authModal = document.getElementById('auth-modal');
-        if (authModal) {
-          authModal.setAttribute('hidden', '');
-          authModal.style.setProperty('display', 'none', 'important');
-        }
-        if (typeof closeModal === 'function') {
-          try { closeModal(); } catch(e) {}
-        }
-
-        // 4. 🛡️ 安全隔离防死机区：用独立的 try-catch 运行状态切换函数
-        // 这样即使 initAuth() 里有获取不到的 DOM 报错，也绝对不会卡死登录流程
+        // 2. 🛡️ 核心修正：对齐应用真正的初始化接管函数 initApp()，并杜绝 reload 卡死
         try {
-          if (typeof initAuth === 'function') {
-            await initAuth(); 
-          } else if (typeof checkUserStatus === 'function') {
-            await checkUserStatus();
+          if (typeof initApp === 'function') {
+            await initApp(); 
           } else {
-            // 如果实在找不到任何局部渲染函数，采用 0 延迟兜底刷新
-            console.log('未检测到状态接管函数，准备静默刷新...');
             setTimeout(() => { window.location.reload(); }, 50);
-            return;
           }
         } catch (authError) {
-          console.error('⚠️ 状态更新函数内部报错（多为DOM不存在引起），已成功跳过，防止卡死：', authError);
-          // 在报错的情况下，给手机端执行一次安全的微延迟刷新作为降级兜底
+          console.error('状态接管失败，执行静默降级刷新：', authError);
           setTimeout(() => { window.location.reload(); }, 100);
-          return;
-        }
-
-        // 5. 局部无缝刷新社区帖子列表
-        try {
-          if (typeof fetchPosts === 'function') {
-            fetchPosts();
-          }
-        } catch (postError) {
-          console.error('帖子刷新失败，已跳过:', postError);
         }
 
       } catch (err) {
-        console.error('🚨 登录运行期遇到未知重大异常:', err);
+        console.error('🚨 登录重大异常:', err);
         alert('登录遭遇未知网络异常，请重试');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -432,11 +388,10 @@ document.addEventListener('DOMContentLoaded', () => {
         : '';
 
       posts.forEach(post => {
-        const li = document.createElement('div'); // 统一变更为 div 弹性容器
-        li.className = 'post'; // ⚙️ 修正核心：对齐原生 .post 架构
+        const li = document.createElement('div');
+        li.className = 'post';
         const formattedTime = new Date(post.created_at).toLocaleString('zh-CN', { hour12: false });
         
-        // ⚙️ 头像 class 修正为 post__avatar，并追加包裹层 post__body 隔离版面
         li.innerHTML = `
           <img class="post__avatar" src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" alt="头像" loading="lazy">
           <div class="post__body">
@@ -508,43 +463,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 
   // ==========================================================
-  // ⚡ 终极加固：移动端全局触控拦截器（彻底解决任何点不出的玄学问题）
+  // ⚡ 终极加固：安全版全局点击拦截器（移除了对 touchend 的高危拦截，防止死循环）
   // ==========================================================
   const globalTriggerModal = (e) => {
-    // 靶向精准锁定：检查点击的元素或者其父级是不是我们那个登录按钮
     const targetBtn = e.target.closest('#user-btn');
-    if (!targetBtn) return; // 如果点的是别的地方，直接放行
+    if (!targetBtn) return; 
 
-    // 检查这个按钮当前是不是“登录/注册”状态（防止登录成功后还去弹窗）
+    // 判断文字，只有在未登录状态时才允许拦截拉起弹窗
     if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
       e.preventDefault();
       e.stopPropagation();
-
-      const authModal = document.getElementById('auth-modal');
-      const loginForm = document.getElementById('login-form');
-      const regForm = document.getElementById('reg-form');
-
-      if (authModal) {
-        // 1. 强行破除一切隐藏属性
-        authModal.removeAttribute('hidden');
-        authModal.style.setProperty('display', 'grid', 'important');
-        
-        // 2. 默认展示登录表单，隐藏注册表单
-        if (loginForm) loginForm.removeAttribute('hidden');
-        if (regForm) regForm.setAttribute('hidden', '');
-        
-        // 3. 同步高亮登录标签页
-        const tabLogin = document.getElementById('tab-login');
-        const tabReg = document.getElementById('tab-reg');
-        if (tabLogin) tabLogin.classList.add('is-active');
-        if (tabReg) tabReg.classList.remove('is-active');
-        
-        console.log('✨ 触控拦截器已成功强行唤醒登录框！');
-      }
+      openModal('login');
+      console.log('✨ 拦截器安全唤醒登录框！');
     }
   };
 
-  // 🎯 双保险监听：全面统治手机端触控与 PC 端点击
-  document.addEventListener('touchend', globalTriggerModal, { passive: false });
+  // 只绑定原生的 click 事件，移动端依靠它的 click 即可，防止 touchend 扼杀表单内部按钮
   document.addEventListener('click', globalTriggerModal);
 });
