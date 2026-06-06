@@ -25,9 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ==========================================
-  // 🔮 核心优化：动态替换线上图片并注入移动端触控交互
-  // ==========================================
   let currentSlideIndex = 0;
 
   function showSlide(index) {
@@ -58,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carouselTimer) clearInterval(carouselTimer);
   }
 
-  // 📱 为轮播图区域注入手势滑动（Touch Events）支持
+  // 📱 为轮播图区域注入手势滑动支持
   const heroSection = document.querySelector('.hero');
   if (heroSection) {
     let touchStartX = 0;
@@ -82,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  // 📡 核心修正：解耦鉴权锁
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
@@ -118,14 +114,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       });
-      console.log('✨ 轮播图流就绪');
     } catch (err) {
-      console.warn('正在平滑切换回本地备份图层呈现。');
+      console.warn('平滑切换回本地备份图层呈现。');
     }
   }
 
   // ==========================================
-  // 🔐 基础解耦初始化
+  // 🔐 APP 核心初始化基础链路
   // ==========================================
   async function initApp() {
     showSlide(0);
@@ -142,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
       }
     } catch (error) {
-      console.log('网路降级，激活前端直连核心。');
+      console.log('网络降级，激活前端直连核心。');
       if (typeof supabase !== 'undefined') {
         window.supabaseClient = supabase.createClient(
           'https://kogjjfccyncdszuuwlun.supabase.co',
@@ -180,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(mode) {
     if (!modal) return;
     modal.removeAttribute('hidden');
-    modal.style.setProperty('display', 'grid', 'important'); // 确保能强制铺开
+    modal.style.setProperty('display', 'grid', 'important');
     switchMode(mode);
   }
 
@@ -213,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 🎯 顶部安全原生点击事件
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
       if (!window.supabaseClient) return;
@@ -244,10 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 🎯 核心优化：高容错登录表单监听流
-  // ==========================================
-  // ==========================================
-  // 🎯 终极优化：高响应、防阻塞移动端登录监听流
+  // ⚡ 核心修复：移动端一触即发、UI优先表单逻辑
   // ==========================================
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -263,14 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 1. ✨ 瞬间触觉反馈：禁用按钮防止重复提交
+      // 按钮进入加载动画状态
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
       submitBtn.textContent = '⏱️ 正在安全登录...';
       submitBtn.style.opacity = '0.6';
 
       try {
-        console.log('正在向 Supabase 发送登录凭证...');
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
         
         if (error) {
@@ -281,28 +273,28 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        console.log('Supabase 验证通过，登录成功！立刻关闭模态框清场...');
-        
-        // 2. ⚡ 核心提速修改：手机端 0 毫秒强制关闭弹窗，不给网络请求阻塞 UI 的机会
+        // 🚀【秒切核心1】验证通过瞬间关闭弹窗，0毫秒延迟
         closeModal();
 
-        // 3. 🛡️ 终极拆弹：绝不在主线程中直接 await initApp()！
-        // 用 setTimeout(..., 0) 把耗时的后台网络请求移出当前的提交事件作用域
-        // 这样可以确保当前的点击与弹窗关闭动画瞬间完成，绝不卡死
+        // 🚀【秒切核心2】不等待耗时的异步网络，瞬间手动调用更新UI，阻断“等很久”的痛点
+        if (data && data.user) {
+          updateUserUI(data.user);
+        }
+
+        // 🚀【秒切核心3】耗时的数据刷新全部放到后台静默跑，决不卡死当前的UI
         setTimeout(async () => {
           try {
-            if (typeof initApp === 'function') {
-              // 在后台静默执行界面和数据更新
-              await initApp(); 
-              console.log('✨ 后台状态更新成功！');
-            } else {
-              window.location.reload();
+            await syncLiveImagesFromDB();
+            await fetchPosts();
+            const isAdmin = await checkIsAdminSilent();
+            if (isAdmin) {
+              const entrance = document.getElementById('admin-entrance-wrapper');
+              if (entrance) entrance.style.display = 'block';
             }
-          } catch (authError) {
-            console.error('后台状态接管失败，执行降级静默刷新：', authError);
-            window.location.reload();
+          } catch (bgErr) {
+            console.warn('后台数据刷新遇到轻微阻塞:', bgErr);
           }
-        }, 10);
+        }, 50);
 
       } catch (err) {
         console.error('🚨 登录重大异常:', err);
@@ -471,24 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 启动应用
   initApp();
-
-  // ==========================================================
-  // ⚡ 终极加固：安全版全局点击拦截器（移除了对 touchend 的高危拦截，防止死循环）
-  // ==========================================================
-  const globalTriggerModal = (e) => {
-    const targetBtn = e.target.closest('#user-btn');
-    if (!targetBtn) return; 
-
-    // 判断文字，只有在未登录状态时才允许拦截拉起弹窗
-    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
-      e.preventDefault();
-      e.stopPropagation();
-      openModal('login');
-      console.log('✨ 拦截器安全唤醒登录框！');
-    }
-  };
-
-  // 只绑定原生的 click 事件，移动端依靠它的 click 即可，防止 touchend 扼杀表单内部按钮
-  document.addEventListener('click', globalTriggerModal);
 });
