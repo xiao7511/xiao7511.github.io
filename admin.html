@@ -30,7 +30,7 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 900px;
             margin: auto;
             background: var(--panel-bg);
             backdrop-filter: blur(20px);
@@ -39,8 +39,10 @@
             border-radius: 24px;
             border: 1px solid var(--border-glow);
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(106, 17, 203, 0.1);
+            animation: panelFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
+        /* 顶部导航与面包屑 */
         .header-box {
             display: flex;
             justify-content: space-between;
@@ -60,6 +62,7 @@
             letter-spacing: 1px;
         }
 
+        /* 返回主页按钮——丝滑像素/微章风格 */
         .back-home-btn {
             display: inline-flex;
             align-items: center;
@@ -81,8 +84,16 @@
             transform: translateX(-4px);
         }
 
-        .back-arrow { margin-right: 8px; }
+        .back-arrow {
+            margin-right: 8px;
+            transition: transform 0.3s ease;
+        }
 
+        .back-home-btn:hover .back-arrow {
+            transform: translateX(-3px);
+        }
+
+        /* 配置上传区域布局 */
         .upload-card {
             background: rgba(0, 0, 0, 0.2);
             border-radius: 16px;
@@ -100,6 +111,18 @@
             gap: 8px;
         }
 
+        /* 美化版面下拉选择框 */
+        .custom-select-wrapper {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
         select {
             width: 100%;
             background: #1c1836;
@@ -109,10 +132,17 @@
             border-radius: 12px;
             font-size: 1rem;
             outline: none;
+            cursor: pointer;
+            transition: all 0.3s;
             box-sizing: border-box;
         }
 
-        /* 拖拽区 */
+        select:focus {
+            border-color: #2575fc;
+            box-shadow: 0 0 10px rgba(37, 117, 252, 0.3);
+        }
+
+        /* 高级拖拽/点击文件上传仓 */
         .dropzone-area {
             border: 2px dashed rgba(255, 255, 255, 0.15);
             background: rgba(255, 255, 255, 0.02);
@@ -122,20 +152,43 @@
             cursor: pointer;
             transition: all 0.3s ease;
             position: relative;
-            margin: 20px 0;
+            margin-bottom: 25px;
         }
 
-        .dropzone-area:hover {
+        .dropzone-area:hover, .dropzone-area.dragover {
             border-color: var(--accent-neon);
             background: rgba(0, 245, 255, 0.03);
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.1);
+        }
+
+        .dropzone-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .dropzone-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .dropzone-text em {
+            color: var(--accent-neon);
+            font-style: normal;
+            font-weight: 600;
         }
 
         input[type='file'] {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0; cursor: pointer;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
         }
 
+        /* 终极发射上传按钮 */
         .action-btn {
             width: 100%;
             background: var(--primary-glow);
@@ -146,267 +199,306 @@
             border: none;
             border-radius: 12px;
             cursor: pointer;
+            transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+            letter-spacing: 2px;
         }
 
-        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 117, 252, 0.5);
+            filter: brightness(1.1);
+        }
 
+        .action-btn:disabled {
+            background: #2e2a44;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 全局状态实时播报台 */
         #upload-status {
-            margin-top: 15px; padding: 12px; border-radius: 8px;
-            font-size: 0.9rem; text-align: center; display: none;
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+            display: none;
         }
-        .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; }
-        .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; }
-        .status-error { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
 
-        /* 看板网格与部署系统布局 */
-        .preview-dashboard { margin-top: 40px; }
-        .dashboard-section {
-            background: rgba(255, 255, 255, 0.02);
+        .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; border: 1px solid rgba(37, 117, 252, 0.3); }
+        .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; border: 1px solid rgba(46, 213, 115, 0.3); }
+        .status-error { background: rgba(255, 71, 87, 0.15); color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3); }
+
+        /* 🖼️ 新增：看板网格区（即时预览当前线上运行的图片） */
+        .preview-dashboard {
+            margin-top: 35px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .preview-card {
+            background: rgba(0, 0, 0, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 25px;
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
         }
-        .section-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;
-        }
-        .section-title { font-weight: 700; color: var(--accent-neon); }
-        
-        .deploy-btn {
-            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-            color: white; border: none; padding: 8px 16px; border-radius: 8px;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
-        }
-        .deploy-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 206, 201, 0.4); }
 
-        .image-flow-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;
+        .preview-card p {
+            font-size: 0.85rem;
+            margin: 0 0 10px 0;
+            color: var(--text-muted);
+            font-weight: 600;
         }
-        .img-preview-card {
-            background: #110d24; border-radius: 8px; padding: 8px; text-align: center; position: relative;
+
+        .img-wrapper {
+            width: 100%;
+            height: 110px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #110d24;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.03);
         }
-        .img-container { width: 100%; height: 90px; border-radius: 6px; overflow: hidden; }
-        .img-container img { width: 100%; height: 100%; object-fit: cover; }
-        .badge {
-            font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 5px;
-            background: rgba(255,255,255,0.1); color: var(--text-muted);
+
+        .img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .img-wrapper img:hover {
+            transform: scale(1.08);
+        }
+
+        @keyframes panelFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-box">
-            <h1>内容管理后台 —— 终极控制台</h1>
-            <a href="index.html" class="back-home-btn"><span class="back-arrow">←</span> 返回站点主页</a>
+            <h1>内容管理后台</h1>
+            <a href="index.html" class="back-home-btn">
+                <span class="back-arrow">←</span> 返回站点主页
+            </a>
         </div>
 
         <div class="upload-card">
-            <h2><span>🔮</span> 批量上传文件 (支持多选同时上传)</h2>
+            <h2><span>🔮</span> 全局版面图片精准覆盖更新</h2>
             
-            <div style="margin-bottom: 20px;">
-                <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">目标更新版面</label>
+            <div class="custom-select-wrapper">
+                <label for="page-section">请选择目标更新版面</label>
                 <select id="page-section">
-                    <option value="section_banner">首页Banner大图轮播</option>
-                    <option value="section_anime">动漫版面多图轮播</option>
-                    <option value="section_community">社区交流多图轮播</option>
-                    <option value="section_recommend">热门强推多图轮播</option>
+                    <option value="section_banner">首页Banner大图</option>
+                    <option value="section_anime">动漫版面背景/微章</option>
+                    <option value="section_community">社区交流版面图</option>
+                    <option value="section_recommend">热门强推卡牌图</option>
                 </select>
             </div>
 
             <div class="dropzone-area" id="drop-zone">
-                <span style="font-size:2.5rem; display:block; margin-bottom:10px;">📥</span>
-                <span class="dropzone-text">可同时选中多个文件拖拽至此，或 <em>点击批量浏览本地文件</em></span>
-                <input type="file" id="file-input" accept="image/*" multiple />
+                <span class="dropzone-icon">📥</span>
+                <span class="dropzone-text">将新图片拖拽至此，或 <em>点击浏览本地文件</em></span>
+                <input type="file" id="file-input" accept="image/*" />
             </div>
 
-            <button id="upload-btn" class="action-btn" disabled>确认上传至预览缓冲区</button>
+            <button id="upload-btn" class="action-btn" disabled>确认上传并覆盖线上</button>
             <div id="upload-status"></div>
         </div>
 
         <div class="preview-dashboard">
-            <h2><span>🖼️</span> 线上运行与待部署图库看台 (先预览，后部署)</h2>
-            <div id="sections-wrapper">
+            <h2><span>🖼️</span> 当前系统线上运行图库看板</h2>
+            <div class="preview-grid" id="dashboard-grid">
                 </div>
         </div>
     </div>
 
 <script>
+    // 🌟 全局唯一无污染命名空间安全通信指针
     window.supabaseClient = null;
-    let selectedFilesCache = []; // 本地多文件缓存
 
+    // 🚀 初始化引擎：控制时序流程
     async function initWorkflow() {
+        const statusElement = document.getElementById('upload-status');
         try {
             const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/'; 
+            console.log('正在从独立 Worker 轨道获取安全配置...', workerUrl);
+            
             const response = await fetch(workerUrl);
-            if (!response.ok) throw new Error('Worker 秘钥中转失败');
+            if (!response.ok) throw new Error('Cloudflare Worker 秘钥中转失败');
+            
             const config = await response.json();
             
+            // 💡【核心防错洗涤】清洗 URL 格式，去掉末尾多余的斜杠，防范拼出畸形双斜杠 //token 引发报错
             let cleanedUrl = (config.SUPABASE_URL || '').trim();
-            if (cleanedUrl.endsWith('/')) cleanedUrl = cleanedUrl.slice(0, -1);
-
-            window.supabaseClient = supabase.createClient(cleanedUrl, (config.SUPABASE_ANON_KEY || '').trim());
-            
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
-            if (!session || session.user.email !== 'xiao.ye751111@outlook.com') {
-                window.location.href = 'index.html';
-                return;
+            if (cleanedUrl.endsWith('/')) {
+                cleanedUrl = cleanedUrl.slice(0, -1);
             }
 
+            // 💡 建立统一客户端
+            window.supabaseClient = supabase.createClient(cleanedUrl, (config.SUPABASE_ANON_KEY || '').trim());
+            console.log('🔐 后台安全通信管道架设就绪！');
+            
+            // 执行拦截
+            const session = await verifyAdminAuth();
+            if (!session) return; 
+
+            // 激活业务与看板刷新
             activateUploadListener(cleanedUrl);
             await refreshLiveDashboard(cleanedUrl);
 
         } catch (error) {
+            console.error('❌ 系统流初始化失败:', error);
             showStatus('系统加载失败，请刷新重试。', 'error');
         }
     }
 
+    // 🔒 专职权限验证与强制遣返拦截
+    async function verifyAdminAuth() {
+        console.log('正在执行管理员安全扫描...');
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+        const OWNER_EMAIL = 'xiao.ye751111@outlook.com';
+
+        if (error || !session) {
+            alert('检测到未登录或会话过期，正在退回首页！');
+            window.location.href = 'index.html';
+            return null;
+        }
+
+        if (session.user.email !== OWNER_EMAIL) {
+            alert(`非法权越！账号 ${session.user.email} 无权访问后台。`);
+            window.location.href = 'index.html';
+            return null;
+        }
+
+        console.log('🎉 认证通过，尊敬的管理员:', session.user.email);
+        return session;
+    }
+
+    // 🔘 绑定核心交互与拖拽业务事件
     function activateUploadListener(supabaseUrl) {
         const uploadBtn = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-input');
         const dropZone = document.getElementById('drop-zone');
 
-        uploadBtn.disabled = false;
+        if (!uploadBtn) return;
+        uploadBtn.disabled = false; // 解锁发射按钮
 
+        // 处理文件选择框联动特效
         fileInput.addEventListener('change', () => {
-            selectedFilesCache = Array.from(fileInput.files);
-            if (selectedFilesCache.length > 0) {
-                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 个文件，准备上传。`;
+            if (fileInput.files.length > 0) {
+                dropZone.querySelector('.dropzone-text').innerHTML = `已选中文件：<em style="color:#2ed573">${fileInput.files[0].name}</em>`;
             }
         });
 
-        // 批量向存储桶发射文件
+        // 绑定主上传动作
         uploadBtn.addEventListener('click', async () => {
-            if (selectedFilesCache.length === 0) {
-                alert('请先选择或拖入图片！');
+            const files = Array.from(fileInput.files);
+            const section = document.getElementById('page-section').value;
+
+            if (files.length === 0) {
+                alert('请先选择或拖拽要上传的图片！');
                 return;
             }
 
-            const section = document.getElementById('page-section').value;
-            showStatus(`正在批量上传 ${selectedFilesCache.length} 张图片到预览库...`, 'info');
+            showStatus('正在拼命搬运上传至 Supabase 存储桶中...', 'info');
 
+            const file = files[0];
+            const fileName = `${section}.png`;
+            const bucketName = 'images';
+
+            // 1. 推送至 Storage 存储，upsert: true 强行覆盖线上同名老文件
+            const { data, error } = await window.supabaseClient.storage
+                .from(bucketName)
+                .upload(`images/${fileName}`, file, { upsert: true });
+
+            if (error) {
+                showStatus('存储桶覆盖失败: ' + error.message, 'error');
+                return;
+            }
+
+            // 2. 动态拼装线上公共访问绝对路径
+            const imageUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/images/${fileName}?t=${new Date().getTime()}`;
+            
             try {
-                // 依次循环处理多文件并行上传
-                for (let i = 0; i < selectedFilesCache.length; i++) {
-                    const file = selectedFilesCache[i];
-                    // 动态命名：如 section_banner_0.png, section_banner_1.png
-                    const fileName = `${section}_${i}.png`; 
-                    
-                    await window.supabaseClient.storage
-                        .from('images')
-                        .upload(`images/${fileName}`, file, { upsert: true });
-                }
+                // 3. 将新地址upsert更新进数据库配置表里
+                const { error: dbError } = await window.supabaseClient
+                    .from('site_config')
+                    .upsert([{ section: section, url: imageUrl }]);
 
-                showStatus('🎉 批量上传预览库成功！请在下方核对，确认无误后点击“一键部署”。', 'success');
-                selectedFilesCache = [];
-                fileInput.value = '';
-                dropZone.querySelector('.dropzone-text').innerHTML = '可同时选中多个文件拖拽至此，或 <em>点击批量浏览本地文件</em>';
+                if (dbError) throw dbError;
+
+                showStatus(`🎉 版面更新成功！最新图片已上线覆盖。`, 'success');
                 
-                // 刷新本地预览面板
+                // 4. 重置状态并秒级同步刷新下方的图库看板
+                fileInput.value = '';
+                dropZone.querySelector('.dropzone-text').innerHTML = '将新图片拖拽至此，或 <em>点击浏览本地文件</em>';
                 await refreshLiveDashboard(supabaseUrl);
 
-            } catch (err) {
-                showStatus('批量上传发生中断: ' + err.message, 'error');
+            } catch (dbErr) {
+                showStatus('数据库 URL 同步记录失败: ' + dbErr.message, 'error');
             }
         });
     }
 
-    // 渲染带有“部署”锁的控制面板
+    // 🖼️ 异步实时流：渲染线上实际运行的图片看板
     async function refreshLiveDashboard(supabaseUrl) {
-        const wrapper = document.getElementById('sections-wrapper');
-        if (!wrapper) return;
-
+        const grid = document.getElementById('dashboard-grid');
+        if (!grid) return;
+        
         const sections = [
-            { id: 'section_banner', name: '首页 Banner 大图轮播区', maxCount: 5 },
-            { id: 'section_anime', name: '动漫版面轮播区', maxCount: 4 },
-            { id: 'section_community', name: '社区交流轮播区', maxCount: 4 },
-            { id: 'section_recommend', name: '热门强推卡牌轮播区', maxCount: 4 }
+            { id: 'section_banner', name: '首页 Banner 大图' },
+            { id: 'section_anime', name: '动漫版面背景' },
+            { id: 'section_community', name: '社区交流版面' },
+            { id: 'section_recommend', name: '热门强推卡牌' }
         ];
 
-        wrapper.innerHTML = '';
+        grid.innerHTML = ''; // 清空旧数据
+        const bucketName = 'images';
 
-        for (const item of sections) {
-            const block = document.createElement('div');
-            block.className = 'dashboard-section';
+        sections.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            
+            // 附带时间戳防浏览器缓存旧图不更新
+            const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/images/${item.id}.png?t=${new Date().getTime()}`;
 
-            // 头部：标题 + 一键部署按钮
-            const header = document.createElement('div');
-            header.className = 'section-header';
-            header.innerHTML = `
-                <div class="section-title">📺 ${item.name}</div>
-                <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
+            card.innerHTML = `
+                <p>${item.name}</p>
+                <div class="img-wrapper">
+                    <img src="${liveImgUrl}" onerror="this.src='https://placehold.co/200x110/110d24/fff?text=No+Image'"/>
+                </div>
             `;
-
-            // 图片流网格布局
-            const grid = document.createElement('div');
-            grid.className = 'image-flow-grid';
-
-            // 循环侦测生成可用的多图预览列
-            for (let i = 0; i < item.maxCount; i++) {
-                const card = document.createElement('div');
-                card.className = 'img-preview-card';
-                
-                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
-
-                card.innerHTML = `
-                    <div class="img-container">
-                        <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.display='none'"/>
-                    </div>
-                    <span class="badge">索引位置 [${i}]</span>
-                `;
-                grid.appendChild(card);
-            }
-
-            block.appendChild(header);
-            block.appendChild(grid);
-            wrapper.appendChild(block);
-        }
+            grid.appendChild(card);
+        });
     }
 
-    // 💡 核心部署锁：点击后正式把当前版面的多图图片数组打包同步给数据库
-    window.deploySection = async function(section, maxCount, supabaseUrl) {
-        let deployedUrls = [];
-        
-        // 扫描拿到所有存在的有效预览图地址
-        for (let i = 0; i < maxCount; i++) {
-            const testUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
-            // 简单通过 fetch 的 HEAD 请求检查文件在存储桶里是否真实上传存在
-            try {
-                const res = await fetch(testUrl, { method: 'HEAD' });
-                if (res.ok) {
-                    deployedUrls.push(`${testUrl}?t=${new Date().getTime()}`);
-                }
-            } catch (e) {}
-        }
-
-        if (deployedUrls.length === 0) {
-            alert('当前该版面预览库没有任何图片，无法部署！');
-            return;
-        }
-
-        try {
-            // 将图片以 JSON 字符串数组形式优雅写入配置表的 url 字段中
-            const { error } = await window.supabaseClient
-                .from('site_config')
-                .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
-
-            if (error) throw error;
-            alert('✨ 部署指令已下发！该版面多图轮播已正式覆盖部署到主页。');
-
-        } catch (err) {
-            alert('部署同步失败: ' + err.message);
-        }
-    };
-
+    // 📢 辅助函数：状态播报台控制
     function showStatus(msg, type) {
         const el = document.getElementById('upload-status');
-        el.style.display = 'block'; el.className = ''; el.innerText = msg;
+        el.style.display = 'block';
+        el.className = ''; // 清除旧 class
+        el.innerText = msg;
         if (type === 'info') el.classList.add('status-info');
         if (type === 'success') el.classList.add('status-success');
         if (type === 'error') el.classList.add('status-error');
     }
 
+    // 🚦 唯一的火花塞：全页面仅保留一个 DOM 载入阀点，杜绝 Race Condition 并发冲突
     document.addEventListener('DOMContentLoaded', initWorkflow);
 </script>
 </body>
