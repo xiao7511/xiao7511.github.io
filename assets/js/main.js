@@ -247,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /*
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -260,6 +261,65 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) { alert(`登录失败: ${error.message}`); submitBtn.disabled = false; return; }
       closeModal();
       window.location.reload();
+    });
+  }*/
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!window.supabaseClient) return;
+
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const submitBtn = loginForm.querySelector('button[type="submit"]');
+
+      // 1. ✨ 极其重要的视觉反馈：进入加载状态，防止用户连续狂点
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏱️ 正在登录...'; 
+
+      try {
+        // 2. 发起 Supabase 鉴权请求
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+          alert(`登录失败: ${error.message}`);
+          // 恢复按钮状态
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          return;
+        }
+
+        // 3. 🚀 移动端提速核心：坚决不使用 reload()！改为无缝局部渲染
+        // 立刻关闭模态框
+        if (typeof closeModal === 'function') {
+          closeModal();
+        }
+
+        // 4. 主动触发页面状态更新（不需要重刷网页，直接用代码切换状态）
+        // 如果你代码里有检查登录状态的函数（比如 checkUserStatus 或 initAuth），直接在这里调用它
+        if (typeof checkUserStatus === 'function') {
+          await checkUserStatus(); 
+        } else if (typeof checkAuth === 'function') {
+          await checkAuth();
+        } else {
+          // 🛠️ 兜底：如果你没有封装状态函数，那我们只在万不得已时进行轻量级刷新
+          // 但加上微小的延迟，让用户先看到弹窗消失的丝滑动画
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+          return;
+        }
+
+        // 5. 如果社区列表函数存在，无缝刷新帖子列表（不需要整页刷新）
+        if (typeof fetchPosts === 'function') {
+          fetchPosts();
+        }
+
+      } catch (err) {
+        console.error(err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   }
 
