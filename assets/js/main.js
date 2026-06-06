@@ -484,4 +484,45 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initApp();
+
+  // ==========================================================
+  // ⚡ 终极加固：移动端全局触控拦截器（彻底解决任何点不出的玄学问题）
+  // ==========================================================
+  const globalTriggerModal = (e) => {
+    // 靶向精准锁定：检查点击的元素或者其父级是不是我们那个登录按钮
+    const targetBtn = e.target.closest('#user-btn');
+    if (!targetBtn) return; // 如果点的是别的地方，直接放行
+
+    // 检查这个按钮当前是不是“登录/注册”状态（防止登录成功后还去弹窗）
+    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const authModal = document.getElementById('auth-modal');
+      const loginForm = document.getElementById('login-form');
+      const regForm = document.getElementById('reg-form');
+
+      if (authModal) {
+        // 1. 强行破除一切隐藏属性
+        authModal.removeAttribute('hidden');
+        authModal.style.setProperty('display', 'grid', 'important');
+        
+        // 2. 默认展示登录表单，隐藏注册表单
+        if (loginForm) loginForm.removeAttribute('hidden');
+        if (regForm) regForm.setAttribute('hidden', '');
+        
+        // 3. 同步高亮登录标签页
+        const tabLogin = document.getElementById('tab-login');
+        const tabReg = document.getElementById('tab-reg');
+        if (tabLogin) tabLogin.classList.add('is-active');
+        if (tabReg) tabReg.classList.remove('is-active');
+        
+        console.log('✨ 触控拦截器已成功强行唤醒登录框！');
+      }
+    }
+  };
+
+  // 🎯 双保险监听：全面统治手机端触控与 PC 端点击
+  document.addEventListener('touchend', globalTriggerModal, { passive: false });
+  document.addEventListener('click', globalTriggerModal);
 });
