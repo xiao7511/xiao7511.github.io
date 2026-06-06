@@ -511,3 +511,65 @@ main {
     scroll-behavior: auto !important;
   }
 }
+
+.admin-portal-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: #ffffff !important;
+        font-weight: 700;
+        padding: 12px 24px;
+        border-radius: 50px;
+        text-decoration: none !important;
+        box-shadow: 0 4px 15px rgba(37, 117, 252, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        cursor: pointer;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .admin-portal-btn:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(37, 117, 252, 0.6);
+        background: linear-gradient(135deg, #7b2cbf 0%, #3a86ff 100%);
+    }
+
+    .admin-portal-btn:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(37, 117, 252, 0.4);
+    }
+
+    .admin-portal-icon {
+        font-size: 1.2rem;
+        margin-right: 10px;
+        animation: pulse 2s infinite;
+    }
+
+    .admin-portal-text {
+        font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        letter-spacing: 1px;
+        flex-grow: 1;
+        text-align: left;
+        padding-left: 5px;
+    }
+
+    .admin-portal-arrow {
+        transition: transform 0.3s ease;
+    }
+
+    .admin-portal-btn:hover .admin-portal-arrow {
+        transform: translateX(5px);
+    }
+
+    /* 丝滑的淡入与微动特效动画 */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+        100% { transform: scale(1); }
+    }
