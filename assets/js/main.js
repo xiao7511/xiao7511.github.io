@@ -101,6 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!error && data && data.url) {
           liveUrls = JSON.parse(data.url);
+          // 🌟 触发同步挂载到管理员配置界面的渲染钩子
+          if (typeof window.renderAdminBannerList === 'function') {
+            window.renderAdminBannerList(liveUrls);
+          }
         }
       }
 
@@ -120,33 +124,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================
-  // 🔐 APP 核心初始化（UI 优先策略：秒级就绪，耗时网络请求后置）
+  // 🔐 APP 核心初始化
   // =========================================================
   async function initApp() {
-    // 1. 0毫秒本地核心同步：瞬间激活静态 UI 元素
     showSlide(0);
     startCarousel();
-    updateUserUI(null); // 先让按钮初始化为“✨ 登录 / 注册专区”，确保一进来就能点！
+    updateUserUI(null); 
 
-    // 2. 核心直连实例化（不再等待 Cloudflare Worker 响应，直接建立基础客端，彻底防卡死）
     if (typeof supabase !== 'undefined') {
       window.supabaseClient = supabase.createClient(
         'https://kogjjfccyncdszuuwlun.supabase.co',
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
       );
       
-      // 瞬间绑定会话状态监听
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
       });
 
-      // 瞬间获取一次本地会话缓存（通常为 0 毫秒响应）
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       updateUserUI(session?.user || null);
     }
 
-    // 3. 🗺️ 耗时异步拆弹区：将所有需要从远端慢网络拉取数据的网络请求，扔到后台静默运行
-    // 这样可以确保手机端即使网络再卡，首页的登录按钮在打开网页的瞬间就是百分之百可点击的！
     setTimeout(async () => {
       const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
       try {
@@ -154,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (response.ok) {
           const config = await response.json();
           window.sysConfig = config;
-          // 后台平滑更新最新的客户端配置
           if (typeof window.supabase !== 'undefined') {
             window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
           }
@@ -163,11 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('配置使用直连接管。');
       }
 
-      // 后台加载图片和帖子
       await syncLiveImagesFromDB();
       await fetchPosts();
 
-      // 后台默默进行管理员鉴权
       const isAdmin = await checkIsAdminSilent();
       if (isAdmin) {
         const entrance = document.getElementById('admin-entrance-wrapper');
@@ -222,15 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================================
-  // ⚡ 核心收拢：唯一、安全的按钮点击事件
-  // ==========================================
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // 如果由于某种极端原因客户端还未完全就绪，这里直接帮其强制初始化，彻底拒绝“点击无反应”
       if (!window.supabaseClient && typeof supabase !== 'undefined') {
         window.supabaseClient = supabase.createClient(
           'https://kogjjfccyncdszuuwlun.supabase.co',
@@ -247,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.reload();
         }
       } else {
-        console.log('✨ 正在安全唤醒登录框...');
         openModal('login');
       }
     });
@@ -299,10 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         closeModal();
-
-        if (data && data.user) {
-          updateUserUI(data.user);
-        }
+        if (data && data.user) updateUserUI(data.user);
 
         setTimeout(async () => {
           try {
@@ -319,7 +306,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
 
       } catch (err) {
-        console.error('🚨 登录重大异常:', err);
         alert('登录遭遇未知网络异常，请重试');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -392,7 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ]);
 
       if (error) { alert(`发布失败: ${error.message}`); return; }
-
       postContent.value = '';
       await fetchPosts();
     });
@@ -407,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       postsList.innerHTML = posts.length === 0 
         ? '<p style="text-align:center; color:var(--text-muted); padding:20px;">暂无漫友发言，快来抢沙发吧~</p>'
         : '';
@@ -485,6 +469,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ==========================================================
+  // ❌ 7. 管理控制台：动态生成配置列表并提供一键删除闭环
+  // ==========================================================
+  window.renderAdminBannerList = function(imageUrlsArray) {
+    const container = document.getElementById('admin-banner-manager-list');
+    if (!container) return; // 如果当前 DOM 里没有渲染配置的挂载容器，则静默返回
+
+    container.innerHTML = ''; 
+
+    if (!imageUrlsArray || imageUrlsArray.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:12px;">队列为空</p>';
+      return;
+    }
+
+    imageUrlsArray.forEach((url, index) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'admin-image-item';
+      itemDiv.innerHTML = `
+        <div class="admin-preview-wrapper">
+          <img src="${url}" alt="预览">
+          <button type="button" class="admin-image-delete-btn" data-index="${index}">✕</button>
+        </div>
+        <input type="text" class="admin-banner-input" value="${url}" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
+      `;
+      container.appendChild(itemDiv);
+    });
+
+    // 绑定删除按钮点击事件
+    container.querySelectorAll('.admin-image-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const targetIndex = parseInt(btn.dataset.index);
+        if (confirm(`确定要删除第 ${targetIndex + 1} 张图片吗？`)) {
+          imageUrlsArray.splice(targetIndex, 1);
+          // 重新更新管理面板的 UI
+          window.renderAdminBannerList(imageUrlsArray);
+          alert('图片已从当前配置列表移除，点击保存配置后将永久同步至数据库！');
+        }
+      });
+    });
+  };
+
   // 启动应用
   initApp();
+
+  // 全局智能拦截器
+  const globalTriggerModal = (e) => {
+    const targetBtn = e.target.closest('#user-btn');
+    if (!targetBtn) return;
+
+    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const authModal = document.getElementById('auth-modal');
+      const loginForm = document.getElementById('login-form');
+      const regForm = document.getElementById('reg-form');
+
+      if (authModal) {
+        authModal.removeAttribute('hidden');
+        authModal.style.setProperty('display', 'grid', 'important');
+        if (loginForm) loginForm.removeAttribute('hidden');
+        if (regForm) regForm.setAttribute('hidden', '');
+        
+        const tabLogin = document.getElementById('tab-login');
+        const tabReg = document.getElementById('tab-reg');
+        if (tabLogin) tabLogin.classList.add('is-active');
+        if (tabReg) tabReg.classList.remove('is-active');
+      }
+    }
+  };
+
+  document.addEventListener('touchend', globalTriggerModal, { passive: false });
+  document.addEventListener('click', globalTriggerModal);
 });
