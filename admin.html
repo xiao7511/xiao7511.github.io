@@ -357,18 +357,36 @@
                     const file = selectedFilesCache[i];
                     const fileName = `${section}_${i}.png`; 
                     
-                    const { data, error } = await window.supabaseClient.storage
+                    // 1. 强力并发推送至云仓 Storage，开启覆盖写入机制
+                    const { error: storageError } = await window.supabaseClient.storage
                         .from('images')
                         .upload(`images/${fileName}`, file, { upsert: true });
 
-                     if (error) {
-                        alert('上传失败');
-                    } else {
-                        // 🔔 就是这里！在这个 else 分支（即上传成功的分支）内部！
-                        // 原本的代码可能是直接刷新了页面，或者做了一些简单的 alert。
-                        // 在你原本上传成功的地方调用：
-                        await handleImageUploadSuccess(section, i, fileName, window.supabaseClient.supabaseUrl);
-                    }   
+                    if (storageError) {
+                        alert(`索引 [${i}] 存储桶上传失败: ${storageError.message}`);
+                        continue;
+                    }
+
+                    // 2. 拼接公开的线上大图 URL
+                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${fileName}`;
+
+                    // 3. 🎯 核心解决：同步写入 deployed_images 表
+                    await window.supabaseClient
+                        .from('deployed_images')
+                        .upsert({
+                            section_id: section,
+                            image_index: i,
+                            storage_url: storageUrl,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'section_id,image_index' });
+
+                    // 4. 🎯 核心解决：带上强制毫秒时间戳击穿浏览器缓存，实时点亮单张预览
+                    const targetImg = document.getElementById(`img-${section}-${i}`);
+                    const targetCard = document.getElementById(`card-${section}-${i}`);
+                    
+                    if (targetImg) {
+                        targetImg.src = `${storageUrl}?t=${new Date().getTime()}`;
+                    }
                 }
 
                 showStatus('🎉 预览库更新成功！请在下方核对多图，核对无误后点击“一键部署”。', 'success');
@@ -376,6 +394,7 @@
                 fileInput.value = '';
                 dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册文件或拍照';
                 
+                // 5. 最终全量重新查表校验渲染，确保看板万无一失地刷新
                 await refreshLiveDashboard(supabaseUrl);
 
             } catch (err) {
@@ -430,9 +449,6 @@
             alert('图片已上传，但动态预览刷新失败，请手动刷新页面。');
         }
     }
-    // ==========================================
-    // 3. 查表路由版的控制台看板动态刷新（毫秒级秒开）
-    // ==========================================
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -446,7 +462,7 @@
 
         wrapper.innerHTML = '';
 
-        // 💡 核心替代：一次性查出线上真正部署了的图片数组，不再盲目拼接去撞 404
+        // 🎯 核心改变：一次性拉取最新的线上路由表，绝不盲目去撞 404
         let deployedList = [];
         try {
             const { data, error } = await window.supabaseClient
@@ -459,47 +475,50 @@
             console.error("读取线上图片路由表失败，降级为默认渲染:", err);
         }
 
-        // 渲染面板结构
         for (const item of sections) {
             const block = document.createElement('div');
             block.className = 'dashboard-section';
-            block.innerHTML = `
-                <div class="section-header">
-                    <div class="section-title">📺 ${item.name}</div>
-                    <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
-                </div>
+
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.innerHTML = `
+                <div class="section-title">📺 ${item.name}</div>
+                <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
             `;
 
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
             for (let i = 0; i < item.maxCount; i++) {
-                // 检查当前位置在公共路由表里有没有被激活部署
-                const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
-
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                
+                card.id = `card-${item.id}-${i}`; // 🎯 给卡片加上唯一 ID，方便上传成功后一瞬间精准定位刷新
+
+                // 检查当前位置在数据库里有没有成功记录
+                const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
+                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
+
                 if (match) {
-                    // 只有云端表里确认存在的图片，才渲染容器和加载图片，断绝 404
+                    // 🌟 如果表里有记录，完美高亮渲染图片，去掉恶心的隐藏逻辑
                     card.innerHTML = `
                         <div class="img-container">
-                            <img id="img-${item.id}-${i}" src="${match.storage_url}?t=${new Date().getTime()}" loading="lazy" />
+                            <img id="img-${item.id}-${i}" src="${match.storage_url}${cacheBuster}" />
                         </div>
-                        <span class="badge active" style="background:#2ecc71;">● 已上线 [索引 ${i}]</span>
+                        <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [索引 ${i}]</span>
                     `;
                 } else {
-                    // 如果没有部署过，只显示一个干净的占位待上传卡片，绝对不发起无效的图片 HTTP 请求
+                    // 📷 如果没传过，显示一个高档舒适的二次元像素风占位席位，绝不发起死锁网络请求
                     card.innerHTML = `
-                        <div class="img-container placeholder" style="background:#f5f6fa; display:flex; align-items:center; justify-content:center; height:120px; color:#b2bec3;">
+                        <div class="img-container" style="background:#090616; height:90px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;">
                             <span>📷 席位空缺</span>
                         </div>
-                        <span class="badge" style="background:#b2bec3;">未部署 [索引 ${i}]</span>
+                        <span class="badge">未部署 [索引 ${i}]</span>
                     `;
                 }
                 grid.appendChild(card);
             }
 
+            block.appendChild(header);
             block.appendChild(grid);
             wrapper.appendChild(block);
         }
