@@ -341,19 +341,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }*/
   if (userButton) {
       userButton.addEventListener('click', async (e) => {
-        // 🎯 1. 彻底切断冒泡，不给外层全局拦截器任何干扰的机会
+        // 1. 彻底掐断事件冒泡，防止任何全局拦截器的干扰
         e.preventDefault();
         e.stopPropagation();
 
-        // 🎯 2. 使用更稳固的模糊文本检索判定登录态
+        // 2. 精准包含判定
         const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
 
         if (isLogged) {
           if (confirm('确定要退出登录吗？')) {
-            console.log("正在执行安全注销流...");
+            console.log("启动终极物理熔断退出流...");
             
-            // 🚨 【核心修复】：绝对不能直接调用 localStorage.clear() 盲目全清！
-            // 我们只精准清除我们自己写的管理和用户缓存，保留 Supabase 的底层握手
+            // 🎯【核心改良】：在页面强刷前，物理抹除 Supabase 官方的一切本地 Token 残留
+            // 这样可以彻底打断重新载入时的自动无感登录链条
+            try {
+              // 扫描并定点清除所有以 sb- 开头的 Supabase 官方凭证
+              for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('sb-')) {
+                  localStorage.removeItem(key);
+                }
+              }
+            } catch (clearErr) {
+              console.warn("清洗官方缓存略有异常:", clearErr);
+            }
+
+            // 清除咱们自己的自定义管理和用户缓存
             document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
             localStorage.removeItem('is_admin');
             localStorage.removeItem('user_nickname');
@@ -362,21 +375,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
               if (window.supabaseClient && window.supabaseClient.auth) {
-                // 限制 1.5 秒超时注销，防止云端长连接网络挂起
+                // 异步通知云端注销（限时 1 秒，超时不候）
                 await Promise.race([
                   window.supabaseClient.auth.signOut(),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500))
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
                 ]);
               }
             } catch (signOutErr) {
-              console.warn("云端注销略有延迟，本地已强制安全清退:", signOutErr);
+              console.warn("云端注销略有延迟，本地已物理断开:", signOutErr);
             }
 
             alert('已安全退出登录！');
-            window.location.reload(); // 刷新页面
+            // 🎯 强行跳转回纯净的主页根路径，彻底洗净一切后台路由和时序残留
+            window.location.href = window.location.origin + window.location.pathname;
           }
         } else {
-          // 未登录状态下，唤起标准的登录弹窗
+          // 未登录状态，正常唤起登录弹窗
           if (typeof openModal === 'function') openModal('login');
         }
       });
