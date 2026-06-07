@@ -248,6 +248,50 @@
             .section-title { font-size: 1.05rem; }
             .deploy-btn { font-size: 0.85rem; padding: 8px 16px; }
         }
+       /* ==========================================================
+        ❌ 后台管理：预览区图片悬浮删除按钮专用样式（不改变原有界面）
+        ========================================================== */
+        .image-item {
+            position: relative; /* 确保删除按钮能够相对此容器完美定位 */
+        }
+
+        .preview-wrapper {
+            position: relative !important;
+            overflow: visible !important; /* 允许删除按钮稍微溢出，更有灵动感 */
+        }
+
+        /* ✕ 绝对定位的极简红圈删除按钮 */
+        .admin-image-delete-btn {
+            position: absolute !important;
+            top: -6px !important;
+            right: -6px !important;
+            width: 20px !important;
+            height: 20px !important;
+            background: #ff4757 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 50% !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 2px 6px rgba(255, 71, 87, 0.6) !important;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            z-index: 99 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+        }
+
+        .admin-image-delete-btn:hover {
+            transform: scale(1.2) !important;
+            background: #ff6b81 !important;
+        }
+
+        .admin-image-delete-btn:active {
+            transform: scale(0.9) !important;
+        }
     </style>
 </head>
 <body>
@@ -318,7 +362,16 @@
             if (cleanedUrl.endsWith('/')) cleanedUrl = cleanedUrl.slice(0, -1);
 
             // 🌟 关键修复：先实例化客户端，再执行鉴权流水线，彻底根治 getSession of undefined 报错
-            window.supabaseClient = supabase.createClient(cleanedUrl, (config.SUPABASE_ANON_KEY || '').trim());
+           // window.supabaseClient = supabase.createClient(cleanedUrl, (config.SUPABASE_ANON_KEY || '').trim());
+            // 🎯 完美修改：隔离后台 Session，防止后台登录行为洗掉主页的登录状态
+            if (typeof supabase !== 'undefined') {
+                window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
+                    auth: {
+                        persistSession: false, // 🔒 核心：不将管理员会话写入 localStorage，绝不污染主页
+                        autoRefreshToken: false
+                    }
+                });
+            }
             
             // 安全鉴权会话扫描
             const session = await verifyAdminAuth();
