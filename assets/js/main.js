@@ -299,30 +299,42 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
-  // ==========================================
-  // 2. 精准拦截的 userButton 退出与登录点击事件
-  // ==========================================
+  /*======================================================*/
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
-      // 🎯 核心修复：死死卡住冒泡，不给底部的全局 html 弹窗拦截器任何冲突的机会
+      // 🎯 核心加固：100% 掐断冒泡和捕获，不给最底部的全局拦截器任何卡死它的机会
       e.preventDefault();
       e.stopPropagation();
 
-      // 同步判定：只要文案显示欢迎回来，就直接执行退出，不走任何异步请求
-      if (userButton.textContent.includes('欢迎回来')) {
+      // 改为更安全的精准包含判断，防止二次渲染的 innerHTML 小图标破坏文本
+      const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
+
+      if (isLogged) {
         if (confirm('确定要退出登录吗？')) {
-          if (window.supabaseClient) {
-            await window.supabaseClient.auth.signOut();
-            // 清空一切本地缓存与 Cookie
-            localStorage.clear();
-            document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
-            alert('已安全退出登录！');
-            window.location.reload(); // 强刷整洁页面
+          console.log("正在执行退出流...");
+          
+          // 先同步强制清除本地的一切缓存与状态，防止网络挂起
+          localStorage.clear();
+          sessionStorage.clear();
+          document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
+          
+          try {
+            if (window.supabaseClient && window.supabaseClient.auth) {
+              // 加上 1 秒限时，防止 signOut() 的云端网络请求无声卡死
+              await Promise.race([
+                window.supabaseClient.auth.signOut(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
+              ]);
+            }
+          } catch (signOutErr) {
+            console.warn("云端注销略有延迟，已平滑跳过:", signOutErr);
           }
+
+          alert('已安全退出登录！');
+          window.location.reload(); // 强刷整洁页面
         }
       } else {
-        // 未登录状态，正常唤起原有的登录 Modal
-        if (typeof openModal === 'function') openModal();
+        openModal('login');
       }
     });
   }
@@ -578,20 +590,34 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 
   // ✨ 拦截器加固：只有处于登出状态、且点击了包含特定文案的按钮时才拦截弹窗
+  // 全局智能拦截器 (修改后的防死锁版)
   const globalTriggerModal = (e) => {
     const targetBtn = e.target.closest('#user-btn');
     if (!targetBtn) return;
 
-    const text = targetBtn.textContent;
-    if (text.includes('登录') || text.includes('注册专区')) {
+    // 🎯 核心加固：如果按钮文本里已经包含了“欢迎回来”，说明是登录态，全局拦截器直接放行，绝不强弹窗或干扰
+    if (targetBtn.textContent.includes('欢迎回来')) {
+      return;
+    }
+
+    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
       e.preventDefault();
       e.stopPropagation();
 
       const authModal = document.getElementById('auth-modal');
+      const loginForm = document.getElementById('login-form');
+      const regForm = document.getElementById('reg-form');
+
       if (authModal) {
         authModal.removeAttribute('hidden');
         authModal.style.setProperty('display', 'grid', 'important');
-        switchMode('login');
+        if (loginForm) loginForm.removeAttribute('hidden');
+        if (regForm) regForm.setAttribute('hidden', '');
+        
+        const tabLogin = document.getElementById('tab-login');
+        const tabReg = document.getElementById('tab-reg');
+        if (tabLogin) tabLogin.classList.add('is-active');
+        if (tabReg) tabReg.classList.remove('is-active');
       }
     }
   };
