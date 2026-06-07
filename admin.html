@@ -375,7 +375,7 @@
         });
     }
 
-    // 💡 高性能非阻塞渲染重构
+    // admin.html -> 修改后的 refreshLiveDashboard 函数
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -389,8 +389,8 @@
 
         wrapper.innerHTML = '';
 
-        // 采用异步图片探测代理，防网络死锁
-        const checkImageExists = (url) => {
+        // 🎯 核心修复：定义一个轻量级的图片存在性异步探测器
+        const probeImage = (url) => {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => resolve(true);
@@ -412,30 +412,30 @@
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
-            // 先把架构生成出来，图片载入交给后台异步流
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
+                // 💡 默认先设为隐藏，避免触发 404 挂起页面
+                card.style.display = 'none'; 
                 card.id = `card-${item.id}-${i}`;
                 card.innerHTML = `
                     <div class="img-container">
-                        <img loading="lazy" id="img-${item.id}-${i}" />
+                        <img id="img-${item.id}-${i}" loading="lazy" />
                     </div>
                     <span class="badge">索引位置 [${i}]</span>
                 `;
                 grid.appendChild(card);
 
-                // 异步探测网络
-                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
-                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png${cacheBuster}`;
+                // 发起后台异步探测，不阻塞主线程渲染
+                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
                 
-                checkImageExists(liveImgUrl).then((exists) => {
-                    if (exists) {
+                probeImage(liveImgUrl).then((isExist) => {
+                    if (isExist) {
                         const targetImg = document.getElementById(`img-${item.id}-${i}`);
                         const targetCard = document.getElementById(`card-${item.id}-${i}`);
                         if (targetImg && targetCard) {
                             targetImg.src = liveImgUrl;
-                            targetCard.style.display = 'block'; // 确认有图，平滑显现
+                            targetCard.style.display = 'block'; // 只有真实的图片存在才显示容器
                         }
                     }
                 });
