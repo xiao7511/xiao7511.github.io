@@ -23,464 +23,454 @@
             font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: var(--bg-gradient);
             color: var(--text-main);
-            margin: 0;
-            padding: 20px 14px;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container {
             width: 100%;
-            max-width: 800px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        header {
-            text-align: center;
-            padding: 10px 0;
-        }
-
-        header h1 {
-            font-size: 1.6rem;
-            margin: 0 0 6px;
-            background: linear-gradient(to right, #00f5ff, #ff6ec7);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(0, 245, 255, 0.2);
-        }
-
-        header p {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin: 0;
-        }
-
-        .panel {
+            max-width: 900px;
+            margin: auto;
             background: var(--panel-bg);
-            border: 1px solid var(--border-glow);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 20px;
             border-radius: 16px;
-            padding: 18px;
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+        }
+
+        .header-box {
             display: flex;
             flex-direction: column;
             gap: 14px;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
         }
 
-        .panel-title {
-            font-size: 1rem;
-            font-weight: bold;
-            color: var(--accent-neon);
-            margin: 0 0 4px;
+        h1 {
+            font-size: 1.3rem;
+            margin: 0;
+            font-weight: 800;
+            background: linear-gradient(120deg, #ffffff, var(--accent-neon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .back-home-btn {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main) !important;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-decoration: none !important;
+            transition: all 0.2s;
+        }
+        .back-home-btn:hover { background: var(--primary-glow); border-color: transparent; }
+
+        .back-arrow { margin-right: 6px; }
+
+        .upload-card {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-size: 1.05rem;
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 8px;
+            gap: 6px;
         }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        input[type="text"], input[type="password"], select {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 10px 12px;
+        select {
+            width: 100%;
+            background: #1c1836;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px; 
             border-radius: 8px;
-            color: var(--text-main);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             outline: none;
-            transition: all 0.25s ease;
+            box-sizing: border-box;
         }
 
-        input[type="text"]:focus, input[type="password"]:focus, select:focus {
-            border-color: var(--accent-neon);
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.15);
-        }
-
-        .btn {
-            background: var(--primary-glow);
-            color: white;
-            border: none;
-            padding: 11px 20px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
+        .dropzone-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 16px 0;
+            box-sizing: border-box;
+        }
+        .dropzone-area:active {
+            border-color: var(--accent-neon);
+            background: rgba(0, 245, 255, 0.04);
+        }
+
+        input[type='file'] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+            z-index: 5;
+        }
+
+        .action-btn {
+            width: 100%;
+            background: var(--primary-glow);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(106, 17, 203, 0.3);
+            transition: opacity 0.2s;
+        }
+        .action-btn:active { opacity: 0.8; }
+        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+
+        #upload-status {
+            margin-top: 14px; padding: 12px; border-radius: 8px;
+            font-size: 0.85rem; text-align: center; line-height: 1.4;
+        }
+        .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; }
+        .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; }
+        .status-error { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
+
+        .preview-dashboard { margin-top: 32px; }
+        
+        .dashboard-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .section-header {
+            display: flex; 
+            flex-direction: row; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 14px; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+            padding-bottom: 10px;
+            gap: 10px;
+        }
+        
+        .section-title { font-weight: 700; color: var(--accent-neon); font-size: 0.95rem; }
+        
+        .deploy-btn {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white; border: none; padding: 8px 14px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 0.8rem;
+            white-space: nowrap;
+            box-shadow: 0 4px 8px rgba(0, 206, 201, 0.2);
+        }
+        .deploy-btn:active { opacity: 0.9; }
+
+        .image-flow-grid {
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px;
+        }
+        
+        .img-preview-card {
+            background: #110d24; border-radius: 8px; padding: 8px; text-align: center;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-sizing: border-box;
+        }
+
+        .img-container { 
+            width: 100%; 
+            min-height: 90px; 
+            max-height: 180px;
+            border-radius: 6px; 
+            overflow: hidden; 
+            background: #090616;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(106, 17, 203, 0.3);
+        }
+        .img-container img { 
+            width: 100%; 
+            height: auto; 
+            max-height: 180px;
+            object-fit: contain; /* 💡 完美保留按比例缩放，不剪裁 */
+        }
+        
+        .badge {
+            font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px;
+            background: rgba(255,255,255,0.06); color: var(--text-muted);
         }
 
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(106, 17, 203, 0.45);
-            filter: brightness(1.1);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            color: var(--text-main);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
-        }
-
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .status-bar {
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 0.82rem;
-            display: none;
-        }
-
-        .status-info { background: rgba(37, 117, 252, 0.15); border: 1px solid rgba(37, 117, 252, 0.3); color: #70a1ff; }
-        .status-success { background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.3); color: #2ed573; }
-        .status-error { background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.3); color: #ff4757; }
-
-        .admin-image-item { position: relative !important; }
-        .admin-preview-wrapper { position: relative !important; overflow: visible !important; }
-        .admin-image-delete-btn {
-            position: absolute !important;
-            top: -5px !important;
-            right: -5px !important;
-            width: 18px !important;
-            height: 18px !important;
-            background: #ff4757 !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 50% !important;
-            font-size: 10px !important;
-            font-weight: bold !important;
-            display: flex !items: center !justify-content: center !z-index: 99 !important;
+        @media (min-width: 600px) {
+            body { padding: 40px 20px; }
+            .container { padding: 35px; border-radius: 24px; }
+            .header-box { flex-direction: row; justify-content: space-between; align-items: center; }
+            h1 { font-size: 1.6rem; }
+            h2 { font-size: 1.2rem; }
+            .upload-card { padding: 25px; }
+            .dropzone-area { padding: 35px 20px; }
+            .image-flow-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
+            .img-container { height: 90px; }
+            .badge { font-size: 0.75rem; }
+            .section-title { font-size: 1.05rem; }
+            .deploy-btn { font-size: 0.85rem; padding: 8px 16px; }
         }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <header>
-        <h1>DorisY 动漫世界 · 终极管理中心</h1>
-        <p>控制台实时打通 Supabase 引擎，尊享秒级数据下发与图层覆盖</p>
-    </header>
-
-    <div class="panel" id="auth-panel" style="display: none;">
-        <div class="panel-title">🔑 数据库最高安全通行权限验证</div>
-        <div class="form-group">
-            <label for="admin-email">管理员鉴权账号 (Owner Email)</label>
-            <input type="text" id="admin-email" value="xiao.ye751111@outlook.com" readonly style="opacity: 0.7; background: rgba(255,255,255,0.03);">
-        </div>
-        <div class="form-group">
-            <label for="admin-password">鉴权密钥令牌 (Access Secret Key)</label>
-            <input type="password" id="admin-password" placeholder="请输入你的管理员安全密钥密码">
-        </div>
-        <button class="btn" id="btn-auth-verify">🔓 校验并激活全线数据链路</button>
-    </div>
-
-    <div class="panel" id="control-panel" style="display: none;">
-        <div class="panel-title">📺 主页多图轮播图配置中心</div>
-        <div class="form-group">
-            <label>当前正在编辑的模块标识</label>
-            <select id="config-section-select">
-                <option value="section_banner" selected>首页大图轮播区 (section_banner)</option>
-            </select>
+    <div class="container">
+        <div class="header-box">
+            <h1>内容管理后台 —— 终极自适应控制台</h1>
+            <!-- 💡 移除了重新登录冲突，利用共享 Session 实现平滑直接返回 -->
+            <a href="index.html" class="back-home-btn"><span class="back-arrow">←</span> 返回站点主页</a>
         </div>
 
-        <div id="admin-banner-manager-list" style="margin-top: 6px;">
-            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">正在安全握手并同步最新云端配置中...</p>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-            <button class="btn btn-secondary" id="add-new-url-btn" type="button">➕ 在当前队列末尾追随一张新图</button>
-            <div class="btn-group">
-                <button class="btn" id="save-config-btn" type="button">💾 保存当前配置至云端</button>
-                <button class="btn btn-danger" id="btn-deploy-live" type="button">🚀 闪电下发覆盖前台</button>
+        <div class="upload-card">
+            <h2><span>🔮</span> 批量上传文件 (手机端支持多选/拍照)</h2>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">目标更新版面</label>
+                <select id="page-section">
+                    <option value="section_banner">首页Banner大图轮播</option>
+                    <option value="section_anime">动漫版面多图轮播</option>
+                    <option value="section_community">社区交流多图轮播</option>
+                    <option value="section_recommend">热门强推多图轮播</option>
+                </select>
             </div>
-            <button class="btn btn-secondary" onclick="window.location.href='index.html'" type="button" style="margin-top: 5px;">⬅️ 安全返回 DorisY 动漫主页</button>
+
+            <div class="dropzone-area" id="drop-zone">
+                <span style="font-size:2.2rem; display:block; margin-bottom:8px;">📥</span>
+                <span class="dropzone-text">点击批量选择相册文件或拍照</span>
+                <input type="file" id="file-input" accept="image/*" multiple />
+            </div>
+
+            <button id="upload-btn" class="action-btn" disabled>确认上传至下方预览库</button>
+            <div id="upload-status" class="status-info" style="display: block;">正在安全连接控制中心...</div>
+        </div>
+
+        <div class="preview-dashboard">
+            <h2><span>🖼️</span> 线上运行与待部署图库看板 (先预览，后部署)</h2>
+            <div id="sections-wrapper"></div>
         </div>
     </div>
-
-    <div class="status-bar status-info" id="upload-status">系统已就位。</div>
-</div>
 
 <script>
     window.supabaseClient = null;
-    let cachedLiveUrlsArray = []; 
-    const FALLBACK_DEFAULT_URL = "images/IMG_4822.jpeg";
+    let selectedFilesCache = []; 
 
-    const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
-    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOY0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
-
-    // 🌟 强效初始化：每次强制清空可能导致 Invalid API Key 的本地旧会话破坏
-    function createFreshClient(skipSession = false) {
-        if (typeof supabase !== 'undefined') {
-            // 如果强制跳过会话缓存，先物理抹除浏览器的会话存储，防止幽灵缓存作恶
-            if (skipSession) {
-                try {
-                    localStorage.removeItem('sb-kogjjfccyncdszuuwlun-auth-token');
-                } catch(e){}
-            }
-            return supabase.createClient(SUPABASE_URL, ANON_KEY, {
-                auth: { 
-                    persistSession: !skipSession, 
-                    autoRefreshToken: true,
-                    detectSessionInUrl: false
-                },
-                global: {
-                    headers: {
-                        'apikey': ANON_KEY,
-                        'Authorization': `Bearer ${ANON_KEY}`
-                    }
+    async function initWorkflow() {
+        try {
+            // 🚀 直接采用标准的本地持久化机制（跨页面共用登录态）
+            const SUPABASE_URL = "https://kogjjfccyncdszuuwlun.supabase.co";
+            const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec";
+            
+            window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
+                auth: {
+                    persistSession: true, // 保持持久登录态，这样进出主页都不用反复制动重新登录
+                    autoRefreshToken: true
                 }
             });
+            
+            // 🔒 智能静默鉴权流水线
+            const session = await verifyAdminAuth();
+            if (!session) return; 
+
+            showStatus('✨ 通信链路已就绪。欢迎回来，管理员！', 'info');
+            
+            activateUploadListener(SUPABASE_URL);
+            await refreshLiveDashboard(SUPABASE_URL);
+
+        } catch (error) {
+            console.error(error);
+            showStatus('数据引擎对接断开，请刷新重试。', 'error');
         }
-        return null;
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        const passwordInput = document.getElementById('admin-password');
-        const authBtn = document.getElementById('btn-auth-verify');
-        const authPanel = document.getElementById('auth-panel');
-        const controlPanel = document.getElementById('control-panel');
-        const addNewBtn = document.getElementById('add-new-url-btn');
-        const saveConfigBtn = document.getElementById('save-config-btn');
-        const deployLiveBtn = document.getElementById('btn-deploy-live');
+    // 🛡️ 免密码纯会话级特权验证
+    async function verifyAdminAuth() {
+        if (!window.supabaseClient) return null;
+        
+        // 抓取主页传过来的活跃 Session
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
 
-        // 先尝试静默检查主页带过来的状态
-        window.supabaseClient = createFreshClient(false);
-
-        async function checkSessionAndInitialize() {
-            showStatus('🔐 正在智能检索并校对主页活动会话通行证...', 'info');
-            try {
-                if (!window.supabaseClient) return;
-                const { data: { session }, error } = await window.supabaseClient.auth.getSession();
-                const currentEmail = session?.user?.email;
-
-                if (!error && currentEmail === 'xiao.ye751111@outlook.com') {
-                    showStatus('🎉 欢迎回来，管理员 Xiao Ye！', 'success');
-                    authPanel.style.display = 'none';
-                    controlPanel.style.display = 'flex';
-                    await fetchLatestBannerConfig();
-                } else {
-                    // 如果检查遇到问题，直接亮起密码框
-                    showStatus('🔒 请输入管理员安全密钥密码以激活全线数据链路...', 'info');
-                    authPanel.style.display = 'flex';
-                    controlPanel.style.display = 'none';
-                }
-            } catch (err) {
-                authPanel.style.display = 'flex';
-                controlPanel.style.display = 'none';
-            }
+        if (error || !session) {
+            alert('错误：未检测到合法的登录状态！请在主页登录。');
+            window.location.href = 'index.html';
+            return null;
         }
 
-        await checkSessionAndInitialize();
+        // 去 users 表校验该登录邮箱是否拥有管理员身份
+        const { data: userPermission, error: dbError } = await window.supabaseClient
+            .from('users')
+            .select('is_admin')
+            .eq('email', session.user.email)
+            .maybeSingle();
 
-        // ==========================================
-        // 🎯 核心防假死登录逻辑
-        // ==========================================
-        authBtn.addEventListener('click', async () => {
-            const password = passwordInput.value;
-            if (!password) { alert('请输入管理员密钥专区通行密码！'); return; }
-            showStatus('正在执行指纹对比与密码安全验证...', 'info');
+        if (dbError || !userPermission || userPermission.is_admin !== true) {
+            alert(`鉴权失败：账号 ${session.user.email} 无控制台访问特权。`);
+            window.location.href = 'index.html';
+            return null;
+        }
+        
+        return session;
+    }
 
-            try {
-                // 🚀 【关键改动】点击时彻底抛弃之前的本地干扰环境，生成沙盒级纯净客户端
-                window.supabaseClient = createFreshClient(true);
+    function activateUploadListener(supabaseUrl) {
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
 
-                if (!window.supabaseClient) {
-                    alert("Supabase 库未正确加载，请刷新页面！");
-                    return;
-                }
+        uploadBtn.disabled = false;
 
-                // 直接调用登录
-                const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-                    email: 'xiao.ye751111@outlook.com',
-                    password: password
-                });
-
-                if (error) {
-                    console.error('登录被系统拦截:', error.message);
-                    // 彻底阻断底层的恶性报错干扰，通过业务翻译提示
-                    if (error.message.includes('Invalid API key') || error.status === 400 || error.status === 401) {
-                        showStatus('验证失败：密码输入不正确，请重新核对后再试！', 'error');
-                        alert('鉴权失败：输入的密码与云端不匹配，请重新检查密码输入！');
-                    } else {
-                        showStatus('错误: ' + error.message, 'error');
-                        alert('连接异常: ' + error.message);
-                    }
-                    return; 
-                }
-
-                // 认证彻底通过，重新初始化一个允许存储 Session 的客户端保证后续操作不丢失登录态
-                const finalToken = data.session?.access_token;
-                window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
-                    auth: { persistSession: true, autoRefreshToken: true },
-                    global: { headers: { 'Authorization': `Bearer ${finalToken}` } }
-                });
-
-                showStatus('👑 管理员密码验证通过！正在接管控制面板...', 'success');
-                authPanel.style.display = 'none';
-                controlPanel.style.display = 'flex';
-
-                await fetchLatestBannerConfig();
-            } catch (err) {
-                showStatus('防御锁截获运行时异常: ' + err.message, 'error');
+        fileInput.addEventListener('change', () => {
+            selectedFilesCache = Array.from(fileInput.files);
+            if (selectedFilesCache.length > 0) {
+                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张图片，准备就绪。`;
             }
         });
 
-        // 渲染管理列表
-        window.renderAdminBannerList = function(imageUrlsArray) {
-            cachedLiveUrlsArray = imageUrlsArray || [];
-            const container = document.getElementById('admin-banner-manager-list');
-            if (!container) return;
-            container.innerHTML = ''; 
-
-            if (cachedLiveUrlsArray.length === 0) {
-                container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:16px; font-size:0.85rem;">当前暂无配置图片，请点击下方按钮新增~</p>';
+        uploadBtn.addEventListener('click', async () => {
+            if (selectedFilesCache.length === 0) {
+                alert('请先拍照或选取相册图片！');
                 return;
             }
 
-            cachedLiveUrlsArray.forEach((url, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'admin-image-item';
-                itemDiv.style.display = 'flex';
-                itemDiv.style.alignItems = 'center';
-                itemDiv.style.gap = '12px';
-                itemDiv.style.background = 'rgba(255, 255, 255, 0.05)';
-                itemDiv.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-                itemDiv.style.padding = '10px';
-                itemDiv.style.borderRadius = '12px';
-                itemDiv.style.marginBottom = '12px';
+            const section = document.getElementById('page-section').value;
+            showStatus(`⚡ 正在并发上传 ${selectedFilesCache.length} 张图片到云仓预览缓冲区...`, 'info');
 
-                itemDiv.innerHTML = `
-                    <div class="admin-preview-wrapper" style="position: relative; width: 80px; height: 50px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); flex-shrink: 0;">
-                        <img src="${url || FALLBACK_DEFAULT_URL}" alt="预览" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.src='images/IMG_4822.jpeg'">
-                        <button type="button" class="admin-image-delete-btn" data-index="${index}">✕</button>
-                    </div>
-                    <input type="text" class="admin-banner-input" value="${url}" placeholder="请输入合法的 URL 线上链接" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255, 255, 255, 0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
-                `;
-                container.appendChild(itemDiv);
-            });
-
-            container.querySelectorAll('.admin-image-delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const targetIndex = parseInt(btn.dataset.index);
-                    if (confirm(`确定要从当前的轮播队列中删除第 ${targetIndex + 1} 张图片吗？`)) {
-                        cachedLiveUrlsArray.splice(targetIndex, 1);
-                        window.renderAdminBannerList(cachedLiveUrlsArray);
-                    }
-                });
-            });
-
-            container.querySelectorAll('.admin-banner-input').forEach(input => {
-                input.addEventListener('input', () => {
-                    const idx = parseInt(input.dataset.index);
-                    cachedLiveUrlsArray[idx] = input.value.trim();
-                    const img = input.parentElement.querySelector('.admin-preview-wrapper img');
-                    if (img) img.src = input.value.trim() || FALLBACK_DEFAULT_URL;
-                });
-            });
-        };
-
-        async function fetchLatestBannerConfig() {
             try {
-                const { data, error } = await window.supabaseClient
-                    .from('site_config')
-                    .select('url')
-                    .eq('section', 'section_banner')
-                    .maybeSingle();
+                for (let i = 0; i < selectedFilesCache.length; i++) {
+                    const file = selectedFilesCache[i];
+                    const fileName = `${section}_${i}.png`; 
+                    
+                    await window.supabaseClient.storage
+                        .from('images')
+                        .upload(`images/${fileName}`, file, { upsert: true });
+                }
 
-                if (error) throw error;
-                let liveUrls = [];
-                if (data && data.url) { liveUrls = JSON.parse(data.url); }
-                window.renderAdminBannerList(liveUrls);
-                showStatus('🎉 成功同步最新云端配置。', 'success');
+                showStatus('🎉 预览库更新成功！请在下方核对多图，核对无误后点击“一键部署”。', 'success');
+                selectedFilesCache = [];
+                fileInput.value = '';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册文件或拍照';
+                
+                await refreshLiveDashboard(supabaseUrl);
+
             } catch (err) {
-                window.renderAdminBannerList([]);
-            }
-        }
-
-        addNewBtn.addEventListener('click', () => {
-            cachedLiveUrlsArray.push('');
-            window.renderAdminBannerList(cachedLiveUrlsArray);
-        });
-
-        saveConfigBtn.addEventListener('click', async () => {
-            const cleanedUrls = cachedLiveUrlsArray.filter(u => u.trim() !== '');
-            showStatus('正在同步至云端数据库...', 'info');
-            saveConfigBtn.disabled = true;
-            try {
-                const { error } = await window.supabaseClient
-                    .from('site_config')
-                    .upsert([{ section: 'section_banner', url: JSON.stringify(cleanedUrls) }]);
-                if (error) throw error;
-                showStatus('💾 完美存档至 site_config 数据表。', 'success');
-                alert('🎉 轮播项修改已成功同步上云存档！');
-                window.renderAdminBannerList(cleanedUrls);
-            } catch (err) {
-                alert('同步保存失败: ' + err.message);
-            } finally { saveConfigBtn.disabled = false; }
-        });
-
-        deployLiveBtn.addEventListener('click', async () => {
-            if (typeof window.deploySectionImages === 'function') {
-                await window.deploySectionImages('section_banner', 5, SUPABASE_URL);
-            } else {
-                saveConfigBtn.click();
+                showStatus('上传流发生阻断: ' + err.message, 'error');
             }
         });
-    });
-
-    function showStatus(msg, type) {
-        const el = document.getElementById('upload-status');
-        if (!el) return;
-        el.style.display = 'block';
-        el.className = `status-bar status-${type}`;
-        el.textContent = msg;
     }
 
-    window.deploySectionImages = async function(section, maxCount, supabaseUrl) {
+    async function refreshLiveDashboard(supabaseUrl) {
+        const wrapper = document.getElementById('sections-wrapper');
+        if (!wrapper) return;
+
+        const sections = [
+            { id: 'section_banner', name: '首页 Banner 大图轮播区', maxCount: 5 },
+            { id: 'section_anime', name: '动漫版面轮播区', maxCount: 4 },
+            { id: 'section_community', name: '社区交流轮播区', maxCount: 4 },
+            { id: 'section_recommend', name: '热门强推卡牌轮播区', maxCount: 4 }
+        ];
+
+        wrapper.innerHTML = '';
+
+        for (const item of sections) {
+            const block = document.createElement('div');
+            block.className = 'dashboard-section';
+
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.innerHTML = `
+                <div class="section-title">📺 ${item.name}</div>
+                <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
+            `;
+
+            const grid = document.createElement('div');
+            grid.className = 'image-flow-grid';
+
+            for (let i = 0; i < item.maxCount; i++) {
+                const card = document.createElement('div');
+                card.className = 'img-preview-card';
+                
+                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
+                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png${cacheBuster}`;
+
+                card.innerHTML = `
+                    <div class="img-container">
+                        <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.visibility='hidden'"/>
+                    </div>
+                    <span class="badge">索引位置 [${i}]</span>
+                `;
+                grid.appendChild(card);
+            }
+
+            block.appendChild(header);
+            block.appendChild(grid);
+            wrapper.appendChild(block);
+        }
+    }
+
+    window.deploySection = async function(section, maxCount, supabaseUrl) {
         let deployedUrls = [];
         for (let i = 0; i < maxCount; i++) {
             const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
             deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
         }
+
         try {
             showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
+            
             const { error } = await window.supabaseClient
                 .from('site_config')
                 .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
+
             if (error) throw error;
-            alert('✨ 部署指令已安全同步！主页对应版面已实时覆盖。');
+            
+            alert('✨ 部署指令已安全同步！主页相应版面多图轮播已实时覆盖。');
             showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
+
         } catch (err) {
             alert('部署同步失败: ' + err.message);
+            showStatus('部署失败: ' + err.message, 'error');
         }
     };
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('upload-status');
+        el.style.display = 'block'; 
+        el.innerText = msg;
+        el.className = ''; 
+        if (type === 'info') el.className = 'status-info';
+        if (type === 'success') el.className = 'status-success';
+        if (type === 'error') el.className = 'status-error';
+    }
+
+    document.addEventListener('DOMContentLoaded', initWorkflow);
 </script>
 </body>
 </html>
