@@ -137,41 +137,49 @@ document.addEventListener('DOMContentLoaded', () => {
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
       );
       
-      window.supabaseClient.auth.onAuthStateChange((event, session) => {
+      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        // 1. 保持你原有的 UI 状态更新
         updateUserUI(session?.user || null);
 
-        // 获取主页控制台按钮（假设它的 HTML id 是 'go-admin-btn'）
+        // 获取主页控制台按钮（根据你的截图，其 ID 是 'admin-entrance-wrapper'）
         const adminBtn = document.getElementById('admin-entrance-wrapper');
         if (!adminBtn) return;
 
-        // 2. 如果用户登录了，开始智能审查其是否为管理员
+        // 2. 如果检测到登录会话
         if (session && session.user) {
             try {
-                // 前往刚刚建立好的 public.users 表，检索当前登录邮箱的管理员标签
-                const { data: userData, error } = window.supabaseClient
+                // 🎯 核心加固：前往新创建的 users 表中检索管理员状态
+                const { data: userData, error } = await window.supabaseClient
                     .from('users')
                     .select('is_admin')
                     .eq('email', session.user.email)
                     .maybeSingle();
 
-                // 如果查询成功，且云端标记 is_admin 为 true，则闪现控制台按钮
-                if (!error && userData && userData.is_admin === true) {
-                    adminBtn.style.display = 'inline-block'; // 或者 'block'，取决于你的布局
-                    console.log(`👑 尊贵的管理员 [${session.user.email}] 已就位，控制台绿色通道开启。`);
-                } else {
-                    // 普通登录用户，隐藏控制台按钮
+                // 🔍 修复 undefined 报错的核心防御逻辑
+                if (error) {
+                    console.error("Supabase 鉴权发生底层握手错误:", error.message);
                     adminBtn.style.display = 'none';
+                    return;
+                }
+
+                // 判定：必须确保 userData 实体存在，且 is_admin 字段真值为 true
+                if (userData && userData.is_admin === true) {
+                    adminBtn.style.display = 'inline-block'; // 或者是 'block'，取决于你的布局
+                    console.log(`👑 管理员 [${session.user.email}] 身份核验通过，快捷控制台已亮起！`);
+                } else {
+                    // 普通用户或者新注册用户（userData 为空或 false）
+                    adminBtn.style.display = 'none';
+                    console.warn(`⚠️ 账号 [${session.user.email}] 属于普通访客，无权显示控制台。`);
                 }
             } catch (err) {
                 console.error('审查管理员权限时发生异常:', err);
                 adminBtn.style.display = 'none';
             }
         } else {
-            // 3. 用户未登录（或登出了），直接无条件隐藏控制台按钮
+            // 3. 未登录状态下彻底隐藏
             adminBtn.style.display = 'none';
         }
-      });
-
+    });
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       updateUserUI(session?.user || null);
     }
