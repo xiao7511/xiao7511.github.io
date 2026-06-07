@@ -287,49 +287,33 @@
         const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
         const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOY0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
 
-        // ==========================================
-        // 📍 修改位置 1：开启会话持久化与单点登录绑定
-        // ==========================================
+        // 初始化 Supabase
         if (typeof supabase !== 'undefined') {
             window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
                 auth: {
-                    persistSession: true,   // 🎯 开启持久化：完美读取并共享 index.html 的会话状态
-                    autoRefreshToken: true  // 自动刷新令牌，防止状态中途丢失
+                    persistSession: true,   // 开启持久化共享
+                    autoRefreshToken: true
                 }
             });
         }
 
-        // ==========================================================
-        // 📍 修改位置 2：重构鉴权初始化检测函数（Session 自动承接与零强退自愈）
-        // ==========================================================
+        // 检测会话初始化函数
         async function checkSessionAndInitialize() {
             showStatus('🔐 正在智能检索并校对主页活动会话通行证...', 'info');
-            
             try {
                 if (!window.supabaseClient) return;
-
-                // 1. 获取当前由主页单点登录带来的持久化 Session
                 const { data: { session }, error } = await window.supabaseClient.auth.getSession();
-                
-                // 2. 提取当前登录会话用户的邮箱
                 const currentEmail = session?.user?.email;
 
-                // 3. 精准匹配：如果是管理员邮箱，实现免密零秒直通
                 if (!error && currentEmail === 'xiao.ye751111@outlook.com') {
                     console.log('👑 检测到主页管理员会话完美对齐，无缝免密解锁直通后台！');
                     showStatus('🎉 欢迎回来，管理员 Xiao Ye！数据链路已全线激活。', 'success');
-                    
                     authPanel.style.display = 'none';
                     controlPanel.style.display = 'flex';
-
-                    // 直接全自动加载云端图片管理列表
                     await fetchLatestBannerConfig();
                 } else {
-                    // 4. 自愈保护：若未检索到活动会话，绝不执行 window.location.href 将管理员踢回首页！
-                    // 而是优雅显示后台自带的“密码输入卡片”作为极佳备用，供输入密钥密码直接激活
                     console.warn('⚠️ 暂未检测到活动的持久化管理员会话，切换至备用手动解锁机制。');
                     showStatus('🔒 请输入管理员安全密钥密码以激活全线数据链路...', 'info');
-                    
                     authPanel.style.display = 'flex';
                     controlPanel.style.display = 'none';
                 }
@@ -340,31 +324,45 @@
             }
         }
 
-        // 立即呼叫智能会话对齐检查
         await checkSessionAndInitialize();
 
-        // 备用密码手动核验锁
+        // ==========================================
+        // 📍 核心修改位置：全面加固备用密码核验模块（自愈并防止 throw error）
+        // ==========================================
         authBtn.addEventListener('click', async () => {
             const password = passwordInput.value;
             if (!password) { alert('请输入管理员密钥专区通行密码！'); return; }
             showStatus('正在执行指纹对比与密码安全验证...', 'info');
 
             try {
-                const { error } = await window.supabaseClient.auth.signInWithPassword({
+                // 1. 核心防御：登录前，先尝试登出残留或冲突的会话，彻底清除会话锁死状态
+                if (window.supabaseClient && window.supabaseClient.auth) {
+                    await window.supabaseClient.auth.signOut();
+                }
+
+                // 2. 发起全新的干净密码会话校验
+                const { data, error } = await window.supabaseClient.auth.signInWithPassword({
                     email: 'xiao.ye751111@outlook.com',
                     password: password
                 });
 
-                if (error) throw error;
+                // 3. 拦截特定报错，实现温和业务级反馈，不再抛出未处理异常
+                if (error) {
+                    console.error('Supabase 认证底层返回错误:', error.message);
+                    showStatus('验证失败：' + error.message, 'error');
+                    alert('鉴权失败：密码输入不正确，请重新核对后再试！');
+                    return; // 优雅终止，拒绝 throw error
+                }
 
                 showStatus('👑 管理员密码验证通过！正在接管控制面板...', 'success');
                 authPanel.style.display = 'none';
                 controlPanel.style.display = 'flex';
 
+                // 4. 成功登录后重新加载配置
                 await fetchLatestBannerConfig();
             } catch (err) {
-                showStatus('验证失败：密码密码不正确，已被系统安全拦截。', 'error');
-                alert('鉴权失败：密码不正确！');
+                showStatus('系统高等级自愈防御生效: ' + err.message, 'error');
+                console.error('抓取到捕获链异常:', err);
             }
         });
 
