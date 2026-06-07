@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-   /* function activateAuthStateListener() {
+    function activateAuthStateListener() {
       if (!window.supabaseClient) return;
 
       window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -294,12 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
           // 遇到 INITIAL_SESSION 或 SIGNED_IN 等事件时统一交由核心函数审查
           await checkAdminPermission(session);
       });
-    }*/
+    }
 
   // =========================================================
   // 🎯 核心加固：将监听逻辑封装，确保其在客户端完全创建成功后运作
   // =========================================================
-  function activateAuthStateListener() {
+  /*function activateAuthStateListener() {
     if (!window.supabaseClient) return;
 
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             adminBtn.style.setProperty('display', 'none', 'important');
         }
     });
-  }
+  }*/
 
   function openModal(mode) {
     if (!modal) return;
