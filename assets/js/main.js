@@ -122,9 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // =========================================================
-  // 🔐 APP 核心初始化流水线 (高精度重构：理顺时序与状态锁)
-  // =========================================================
+  // main.js -> 修改后的 initApp 函数
   async function initApp() {
     showSlide(0);
     startCarousel();
@@ -140,19 +138,16 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
-
       const response = await fetch(workerUrl, { signal: controller.signal });
       clearTimeout(timeoutId);
 
       if (response.ok) {
         config = await response.json();
         window.sysConfig = config;
-        console.log("🔒 已通过 Cloudflare Workers 安全通道下发动态链路凭证。");
       } else {
         throw new Error();
       }
     } catch (e) {
-      console.warn("⚠️ Cloudflare Worker 握手受阻，自动激活免配置直连沙箱通道。");
       config = {
         SUPABASE_URL: 'https://kogjjfccyncdszuuwlun.supabase.co',
         SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
@@ -161,13 +156,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
       auth: {
-        persistSession: true, 
+        persistSession: true,
         autoRefreshToken: true
       }
     });
 
-    // ✨ 核心机制：激活状态监听流。Supabase 会在初始化后自动向此流广播 INITIAL_SESSION 事件
-    activateAuthStateListener();
+    // 🎯 核心修复：完全由监听器驱动状态，消灭 getSession() 造成的几百毫秒时间差
+    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      console.log(`Auth 状态变更: ${event}`);
+      if (session) {
+        updateUserUI(session.user);
+        await checkAdminPermission(session); // 确保每次回来都能重新验证并显示控制台
+      } else {
+        updateUserUI(null);
+        const adminBtn = document.getElementById('admin-entrance-wrapper');
+        if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
+      }
+    });
 
     await syncLiveImagesFromDB();
     await fetchPosts();
@@ -262,26 +267,24 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
-
+// main.js -> 修改后的 userButton 点击事件
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
       e.preventDefault();
-      e.stopPropagation();
-
-      // 精准判断当前状态，防止被文字混淆
-      const isLogged = window.supabaseClient && (await window.supabaseClient.auth.getSession()).data.session !== null;
-
-      if (isLogged) {
+      
+      // 🎯 核心修复：根据文案直接精准切入退出逻辑，防止异步阻塞
+      if (userButton.textContent.includes('欢迎回来')) {
         if (confirm('确定要退出登录吗？')) {
           if (window.supabaseClient) {
             await window.supabaseClient.auth.signOut();
-            localStorage.clear(); // 清理残留缓存
-            updateUserUI(null); 
+            // 清理缓存并强刷
+            localStorage.clear();
+            alert('已安全退出登录！');
             window.location.reload();
           }
         }
       } else {
-        openModal('login');
+        openModal();
       }
     });
   }
