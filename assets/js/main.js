@@ -1,4 +1,4 @@
-// 🌟 1. 全局配置与安全业务实例声明
+// 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.sysConfig = null;
 window.supabaseClient = null; 
 
@@ -101,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!error && data && data.url) {
           liveUrls = JSON.parse(data.url);
-          // 🌟 触发同步挂载到管理员配置界面的渲染钩子
           if (typeof window.renderAdminBannerList === 'function') {
             window.renderAdminBannerList(liveUrls);
           }
@@ -124,100 +123,119 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================
-  // 🔐 APP 核心初始化
+  // 🔐 APP 核心初始化流水线 (高精度重构，消除时序死锁)
   // =========================================================
   async function initApp() {
     showSlide(0);
     startCarousel();
     updateUserUI(null); 
 
-    if (typeof supabase !== 'undefined') {
-      window.supabaseClient = supabase.createClient(
-        'https://kogjjfccyncdszuuwlun.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
-      );
-      
-      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        // 1. 保持你原有的 UI 状态更新
+    if (typeof supabase === 'undefined') {
+      console.error("Supabase SDK 尚未加载，中断初始化。");
+      return;
+    }
+
+    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+    let config = null;
+
+    // 1. 第一步：优先向 Cloudflare Worker 获取最新的动态安全证书
+    try {
+      // 设定 2.5 秒超短网络超时，防止由于国内手机网络阻断导致主页无限假死
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+      const response = await fetch(workerUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        config = await response.json();
+        window.sysConfig = config;
+        console.log("🔒 已通过 Cloudflare Workers 安全通道下发动态链路凭证。");
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      console.warn("⚠️ Cloudflare Worker 握手受阻，自动激活免配置直连沙箱通道。");
+      // 直连兜底配置，确保网络不佳时依然能够稳定渲染
+      config = {
+        SUPABASE_URL: 'https://kogjjfccyncdszuuwlun.supabase.co',
+        SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
+      };
+    }
+
+    // 2. 第二步：在全生命周期内【仅创建唯一一次】标准的客户端实例，开启持久化缓存解密
+    window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
+      auth: {
+        persistSession: true, // 核心加固：进出管理后台免密、保持持久登录态
+        autoRefreshToken: true
+      }
+    });
+
+    // 3. 第三步：客户端建立完毕后，立即激活状态监听流，彻底断绝 Invalid API key 或 Pending 状态
+    activateAuthStateListener();
+
+    // 4. 第四步：拉取内容展现层数据
+    await syncLiveImagesFromDB();
+    await fetchPosts();
+  }
+
+  // =========================================================
+  // 🎯 核心加固：将监听逻辑封装，确保其在客户端完全创建成功后运作
+  // =========================================================
+  function activateAuthStateListener() {
+    if (!window.supabaseClient) return;
+
+    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+        // 先安全执行你原有的更新用户头像、昵称等主页UI逻辑
         updateUserUI(session?.user || null);
 
-        // 获取主页控制台按钮（根据你的截图，其 ID 是 'admin-entrance-wrapper'）
+        // 获取主页控制台按钮
         const adminBtn = document.getElementById('admin-entrance-wrapper');
         if (!adminBtn) return;
 
-        // 2. 如果检测到登录会话
-        if (session && session.user) {
-            try {
-                // 🎯 核心加固：前往新创建的 users 表中检索管理员状态
-                const { data: userData, error } = await window.supabaseClient
-                    .from('users')
-                    .select('is_admin')
-                    .eq('email', session.user.email)
-                    .maybeSingle();
+        // 如果用户根本没有登录，利索地隐藏控制台，切断网络请求，防止卡死
+        if (!session || !session.user) {
+            adminBtn.style.setProperty('display', 'none', 'important');
+            return;
+        }
 
-                // 🔍 修复 undefined 报错的核心防御逻辑
-                if (error) {
-                    console.error("Supabase 鉴权发生底层握手错误:", error.message);
-                    adminBtn.style.display = 'none';
-                    return;
-                }
+        // 🛡️ 运行时防假死双重锁保护：如果此时底层方法没准备好，暂缓鉴权
+        if (typeof window.supabaseClient.from !== 'function') {
+            console.warn("⚠️ 数据库底层网络映射未就绪，暂缓鉴权...");
+            adminBtn.style.setProperty('display', 'none', 'important');
+            return;
+        }
 
-                // 判定：必须确保 userData 实体存在，且 is_admin 字段真值为 true
-                if (userData && userData.is_admin === true) {
-                    adminBtn.style.display = 'inline-block'; // 或者是 'block'，取决于你的布局
-                    console.log(`👑 管理员 [${session.user.email}] 身份核验通过，快捷控制台已亮起！`);
-                } else {
-                    // 普通用户或者新注册用户（userData 为空或 false）
-                    adminBtn.style.display = 'none';
-                    console.warn(`⚠️ 账号 [${session.user.email}] 属于普通访客，无权显示控制台。`);
-                }
-            } catch (err) {
-                console.error('审查管理员权限时发生异常:', err);
-                adminBtn.style.display = 'none';
+        try {
+            console.log("⏳ 正在前往 users 安全加固表中检索管理员状态...");
+
+            // 前往新创建的 users 表中检索管理员状态
+            const { data: userData, error } = await window.supabaseClient
+                .from('users')
+                .select('is_admin')
+                .eq('email', session.user.email)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Supabase 鉴权发生底层握手错误:", error.message);
+                adminBtn.style.setProperty('display', 'none', 'important');
+                return;
             }
-        } else {
-            // 3. 未登录状态下彻底隐藏
-            adminBtn.style.display = 'none';
+
+            // 判定：必须确保 userData 实体存在，且 is_admin 字段真值为 true
+            if (userData && userData.is_admin === true) {
+                adminBtn.style.setProperty('display', 'block', 'important');
+                console.log(`👑 欢迎回来，超级管理员 [${session.user.email}]！控制台已安全就位。`);
+            } else {
+                // 普通用户或者新注册用户（userData 为空或 false）
+                adminBtn.style.setProperty('display', 'none', 'important');
+                console.warn(`⚠️ 账号 [${session.user.email}] 属于普通访客，无权显示控制台。`);
+            }
+        } catch (err) {
+            console.error('审查管理员权限时发生致命异常:', err);
+            adminBtn.style.setProperty('display', 'none', 'important');
         }
     });
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      updateUserUI(session?.user || null);
-    }
-
-    setTimeout(async () => {
-      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-      try {
-        const response = await fetch(workerUrl);
-        if (response.ok) {
-          const config = await response.json();
-          window.sysConfig = config;
-          if (typeof window.supabase !== 'undefined') {
-            window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
-          }
-        }
-      } catch (e) {
-        console.log('配置使用直连接管。');
-      }
-
-      await syncLiveImagesFromDB();
-      await fetchPosts();
-
-      const isAdmin = await checkIsAdminSilent();
-      if (isAdmin) {
-        const entrance = document.getElementById('admin-entrance-wrapper');
-        if (entrance) entrance.style.display = 'block';
-      }
-    }, 20);
-  }
-
-  async function checkIsAdminSilent() {
-    if (!window.supabaseClient) return false;
-    try {
-      const { data: { session }, error } = await window.supabaseClient.auth.getSession();
-      if (error || !session) return false;
-      const OWNER_EMAIL = 'xiao.ye751111@outlook.com';
-      return session.user.email === OWNER_EMAIL;
-    } catch { return false; }
   }
 
   function openModal(mode) {
@@ -260,13 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     userButton.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-
-      if (!window.supabaseClient && typeof supabase !== 'undefined') {
-        window.supabaseClient = supabase.createClient(
-          'https://kogjjfccyncdszuuwlun.supabase.co',
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
-        );
-      }
 
       const isLogged = userButton.textContent.includes('欢迎回来');
 
@@ -328,28 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         closeModal();
-        if (data && data.user) updateUserUI(data.user);
-
-        setTimeout(async () => {
-          try {
-            await syncLiveImagesFromDB();
-            await fetchPosts();
-            const isAdmin = await checkIsAdminSilent();
-            if (isAdmin) {
-              const entrance = document.getElementById('admin-entrance-wrapper');
-              //if (entrance) entrance.style.display = 'block';
-              if(entrance){
-                entrance.style.setProperty('display', 'block', 'important');
-                console.log('👑 欢迎管理员 Xiao Ye，控制台已安全就位。');
-              }
-            }else{
-              // 普通用户或未登录状态，双重锁死
-              entrance.style.setProperty('display', 'none', 'important');
-            }
-          } catch (bgErr) {
-            console.warn('后台更新遇到轻微延迟:', bgErr);
-          }
-        }, 50);
+        // 成功登录后，系统会自动触发外层的 onAuthStateChange 鉴权逻辑，此处不需重复编写复杂的 UI 显示逻辑
 
       } catch (err) {
         alert('登录遭遇未知网络异常，请重试');
@@ -520,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================
   window.renderAdminBannerList = function(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
-    if (!container) return; // 如果当前 DOM 里没有渲染配置的挂载容器，则静默返回
+    if (!container) return; 
 
     container.innerHTML = ''; 
 
@@ -549,7 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetIndex = parseInt(btn.dataset.index);
         if (confirm(`确定要删除第 ${targetIndex + 1} 张图片吗？`)) {
           imageUrlsArray.splice(targetIndex, 1);
-          // 重新更新管理面板的 UI
           window.renderAdminBannerList(imageUrlsArray);
           alert('图片已从当前配置列表移除，点击保存配置后将永久同步至数据库！');
         }
@@ -557,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // 启动应用
+  // 启动核心应用
   initApp();
 
   // 全局智能拦截器
