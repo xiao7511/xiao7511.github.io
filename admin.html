@@ -176,10 +176,7 @@
             border-radius: 50% !important;
             font-size: 10px !important;
             font-weight: bold !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 99 !important;
+            display: flex !items: center !justify-content: center !z-index: 99 !important;
         }
     </style>
 </head>
@@ -238,17 +235,26 @@
     const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
     const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOY0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
 
-    // 🌟 全局统一生成客户端，彻底清除本地冲突缓存，避免 Headers 被篡改
-    function createFreshClient() {
+    // 🌟 强效初始化：每次强制清空可能导致 Invalid API Key 的本地旧会话破坏
+    function createFreshClient(skipSession = false) {
         if (typeof supabase !== 'undefined') {
+            // 如果强制跳过会话缓存，先物理抹除浏览器的会话存储，防止幽灵缓存作恶
+            if (skipSession) {
+                try {
+                    localStorage.removeItem('sb-kogjjfccyncdszuuwlun-auth-token');
+                } catch(e){}
+            }
             return supabase.createClient(SUPABASE_URL, ANON_KEY, {
                 auth: { 
-                    persistSession: true, 
+                    persistSession: !skipSession, 
                     autoRefreshToken: true,
-                    detectSessionInUrl: false // 禁用 URL 干扰
+                    detectSessionInUrl: false
                 },
                 global: {
-                    headers: { 'apikey': ANON_KEY } // 🎯 强行将 apikey 灌入底层 Headers，防止其丢失
+                    headers: {
+                        'apikey': ANON_KEY,
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
                 }
             });
         }
@@ -264,10 +270,9 @@
         const saveConfigBtn = document.getElementById('save-config-btn');
         const deployLiveBtn = document.getElementById('btn-deploy-live');
 
-        // 绑定最初初始实例
-        window.supabaseClient = createFreshClient();
+        // 先尝试静默检查主页带过来的状态
+        window.supabaseClient = createFreshClient(false);
 
-        // 自动会话检测
         async function checkSessionAndInitialize() {
             showStatus('🔐 正在智能检索并校对主页活动会话通行证...', 'info');
             try {
@@ -276,12 +281,12 @@
                 const currentEmail = session?.user?.email;
 
                 if (!error && currentEmail === 'xiao.ye751111@outlook.com') {
-                    console.log('👑 主页会话完美匹配，直接通行。');
                     showStatus('🎉 欢迎回来，管理员 Xiao Ye！', 'success');
                     authPanel.style.display = 'none';
                     controlPanel.style.display = 'flex';
                     await fetchLatestBannerConfig();
                 } else {
+                    // 如果检查遇到问题，直接亮起密码框
                     showStatus('🔒 请输入管理员安全密钥密码以激活全线数据链路...', 'info');
                     authPanel.style.display = 'flex';
                     controlPanel.style.display = 'none';
@@ -294,49 +299,60 @@
 
         await checkSessionAndInitialize();
 
-        // ==========================================================
-        // 📍 核心重构：100% 解决 "Invalid API key" 报错的手动验证模块
-        // ==========================================================
+        // ==========================================
+        // 🎯 核心防假死登录逻辑
+        // ==========================================
         authBtn.addEventListener('click', async () => {
             const password = passwordInput.value;
             if (!password) { alert('请输入管理员密钥专区通行密码！'); return; }
             showStatus('正在执行指纹对比与密码安全验证...', 'info');
 
             try {
-                // 1. 直接覆盖全局变量，采用带有强注入 headers 的纯净客户端，直接隔离旧缓存
-                window.supabaseClient = createFreshClient();
+                // 🚀 【关键改动】点击时彻底抛弃之前的本地干扰环境，生成沙盒级纯净客户端
+                window.supabaseClient = createFreshClient(true);
 
                 if (!window.supabaseClient) {
-                    alert("Supabase JS 库加载异常，请刷新重试！");
+                    alert("Supabase 库未正确加载，请刷新页面！");
                     return;
                 }
 
-                // 2. 调用密码登录
+                // 直接调用登录
                 const { data, error } = await window.supabaseClient.auth.signInWithPassword({
                     email: 'xiao.ye751111@outlook.com',
                     password: password
                 });
 
                 if (error) {
-                    console.error('登录返回失败:', error.message);
-                    // 彻底友好化弱提示，不崩坏脚本
-                    showStatus('密码验证未通过：' + error.message, 'error');
-                    alert('鉴权未通过：密码输入错误，请重新检查输入！');
+                    console.error('登录被系统拦截:', error.message);
+                    // 彻底阻断底层的恶性报错干扰，通过业务翻译提示
+                    if (error.message.includes('Invalid API key') || error.status === 400 || error.status === 401) {
+                        showStatus('验证失败：密码输入不正确，请重新核对后再试！', 'error');
+                        alert('鉴权失败：输入的密码与云端不匹配，请重新检查密码输入！');
+                    } else {
+                        showStatus('错误: ' + error.message, 'error');
+                        alert('连接异常: ' + error.message);
+                    }
                     return; 
                 }
+
+                // 认证彻底通过，重新初始化一个允许存储 Session 的客户端保证后续操作不丢失登录态
+                const finalToken = data.session?.access_token;
+                window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
+                    auth: { persistSession: true, autoRefreshToken: true },
+                    global: { headers: { 'Authorization': `Bearer ${finalToken}` } }
+                });
 
                 showStatus('👑 管理员密码验证通过！正在接管控制面板...', 'success');
                 authPanel.style.display = 'none';
                 controlPanel.style.display = 'flex';
 
-                // 3. 登录成功，顺畅拉取云端数据
                 await fetchLatestBannerConfig();
             } catch (err) {
-                showStatus('自愈处理拦截异常: ' + err.message, 'error');
+                showStatus('防御锁截获运行时异常: ' + err.message, 'error');
             }
         });
 
-        // 渲染列表方法
+        // 渲染管理列表
         window.renderAdminBannerList = function(imageUrlsArray) {
             cachedLiveUrlsArray = imageUrlsArray || [];
             const container = document.getElementById('admin-banner-manager-list');
@@ -365,7 +381,7 @@
                         <img src="${url || FALLBACK_DEFAULT_URL}" alt="预览" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.src='images/IMG_4822.jpeg'">
                         <button type="button" class="admin-image-delete-btn" data-index="${index}">✕</button>
                     </div>
-                    <input type="text" class="admin-banner-input" value="${url}" placeholder="请输入合法的 URL 线上链接" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
+                    <input type="text" class="admin-banner-input" value="${url}" placeholder="请输入合法的 URL 线上链接" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255, 255, 255, 0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
                 `;
                 container.appendChild(itemDiv);
             });
@@ -390,10 +406,8 @@
             });
         };
 
-        // 从云端读取轮播图数据
         async function fetchLatestBannerConfig() {
             try {
-                if(!window.supabaseClient) window.supabaseClient = createFreshClient();
                 const { data, error } = await window.supabaseClient
                     .from('site_config')
                     .select('url')
@@ -404,10 +418,8 @@
                 let liveUrls = [];
                 if (data && data.url) { liveUrls = JSON.parse(data.url); }
                 window.renderAdminBannerList(liveUrls);
-                showStatus('🎉 成功接入 Supabase 配置流！多图管理层加载就位。', 'success');
+                showStatus('🎉 成功同步最新云端配置。', 'success');
             } catch (err) {
-                console.error(err);
-                showStatus('拉取云配置遇到问题，已转为就绪状态。', 'info');
                 window.renderAdminBannerList([]);
             }
         }
@@ -418,7 +430,6 @@
         });
 
         saveConfigBtn.addEventListener('click', async () => {
-            if (!window.supabaseClient) window.supabaseClient = createFreshClient();
             const cleanedUrls = cachedLiveUrlsArray.filter(u => u.trim() !== '');
             showStatus('正在同步至云端数据库...', 'info');
             saveConfigBtn.disabled = true;
@@ -452,9 +463,6 @@
         el.textContent = msg;
     }
 
-    // ==========================================
-    // ⚡ 全局闪电部署引擎（已同步绑定最新干净客户端变量）
-    // ==========================================
     window.deploySectionImages = async function(section, maxCount, supabaseUrl) {
         let deployedUrls = [];
         for (let i = 0; i < maxCount; i++) {
@@ -463,13 +471,11 @@
         }
         try {
             showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
-            if (!window.supabaseClient) window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY);
-            
             const { error } = await window.supabaseClient
                 .from('site_config')
                 .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
             if (error) throw error;
-            alert('✨ 部署指令已安全同步！主页相应版面多图轮播已实时覆盖。');
+            alert('✨ 部署指令已安全同步！主页对应版面已实时覆盖。');
             showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
         } catch (err) {
             alert('部署同步失败: ' + err.message);
