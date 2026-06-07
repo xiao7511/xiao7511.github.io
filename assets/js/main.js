@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
+  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染（点赞防拦截加固版）
   // ==========================================
   async function fetchPosts() {
     if (!postsList) return;
@@ -538,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLiked = likesArray.includes(currentEmail);
         const likeCount = likesArray.length;
 
-        // 拼接主贴 DOM
+        // 拼接主贴 DOM 骨架 (注意：把 button 上的 onclick 移除了，改用 class 进行精准绑定)
         let htmlContent = `
           <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%;" />
@@ -550,10 +550,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
           
           <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
-            <button onclick="toggleLike('${post.id}', ${JSON.stringify(likesArray)})" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold;">
+            <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
               ${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
             </button>
-            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold;">
+            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
               💬 回复
             </button>
           </div>
@@ -587,6 +587,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         postCard.innerHTML = htmlContent;
         postsList.appendChild(postCard);
+
+        // 🎯 【核心加固点】：动态绑定点赞点击，死死拦截冒泡，避开一切外部全局拦截器！
+        const likeBtn = postCard.querySelector('.like-action-btn');
+        if (likeBtn) {
+          likeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 💥 切断冒泡，让全局智能拦截器变成瞎子
+            
+            // 安全触发更新，直接传入 post 对象，完美避开 JSON.stringify 引号截断 Bug
+            await window.toggleLike(post.id, likesArray);
+          });
+        }
       });
     } catch (err) {
       console.error("加载论坛卡死:", err);
