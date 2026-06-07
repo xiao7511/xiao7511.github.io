@@ -139,6 +139,37 @@ document.addEventListener('DOMContentLoaded', () => {
       
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         updateUserUI(session?.user || null);
+
+        // 获取主页控制台按钮（假设它的 HTML id 是 'go-admin-btn'）
+        const adminBtn = document.getElementById('admin-entrance-wrapper');
+        if (!adminBtn) return;
+
+        // 2. 如果用户登录了，开始智能审查其是否为管理员
+        if (session && session.user) {
+            try {
+                // 前往刚刚建立好的 public.users 表，检索当前登录邮箱的管理员标签
+                const { data: userData, error } = await window.supabaseClient
+                    .from('users')
+                    .select('is_admin')
+                    .eq('email', session.user.email)
+                    .maybeSingle();
+
+                // 如果查询成功，且云端标记 is_admin 为 true，则闪现控制台按钮
+                if (!error && userData && userData.is_admin === true) {
+                    adminBtn.style.display = 'inline-block'; // 或者 'block'，取决于你的布局
+                    console.log(`👑 尊贵的管理员 [${session.user.email}] 已就位，控制台绿色通道开启。`);
+                } else {
+                    // 普通登录用户，隐藏控制台按钮
+                    adminBtn.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('审查管理员权限时发生异常:', err);
+                adminBtn.style.display = 'none';
+            }
+        } else {
+            // 3. 用户未登录（或登出了），直接无条件隐藏控制台按钮
+            adminBtn.style.display = 'none';
+        }
       });
 
       const { data: { session } } = await window.supabaseClient.auth.getSession();
