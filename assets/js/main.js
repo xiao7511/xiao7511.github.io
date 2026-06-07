@@ -122,7 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // main.js -> 修改后的 initApp 函数
+  // ==========================================
+  // 1. 增强型应用程序初始化函数
+  // ==========================================
   async function initApp() {
     showSlide(0);
     startCarousel();
@@ -132,7 +134,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+    // 从 Cookie 中同步秒读管理员状态（0毫秒延迟，彻底防止按钮闪现或消失）
+    const isAdminCookie = document.cookie.split('; ').find(row => row.startsWith('is_admin='));
+    const isAdmin = isAdminCookie ? isAdminCookie.split('=')[1] === 'true' : false;
+    
+    const adminBtn = document.getElementById('admin-entrance-wrapper');
+    if (adminBtn) {
+      if (isAdmin) {
+        adminBtn.style.setProperty('display', 'block', 'important');
+      } else {
+        adminBtn.style.setProperty('display', 'none', 'important');
+      }
+    }
+
+    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';[cite: 1]
     let config = null;
 
     try {
@@ -155,27 +170,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true
-      }
+      auth: { persistSession: true, autoRefreshToken: true }
     });
 
-  // 🎯 修复方案：用标准的事件广播机制流替换，百分之百捕获初始化状态和退出状态
+    // 🎯 使用标准状态广播流：同步状态到 Cookie 并处理权限
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth状态流变更:", event, session);
+      console.log("Auth 状态变更流:", event);
       
       if (session && session.user) {
-        // 只要有会话（无论是初始化恢复、还是刚登录），立刻刷出用户信息并验权
         updateUserUI(session.user);
-        await checkAdminPermission(session);
-      } else {
-        // 只要退出了，立刻抹除状态，隐藏后台按钮
-        updateUserUI(null);
-        const adminBtn = document.getElementById('admin-entrance-wrapper');
-        if (adminBtn) {
-          adminBtn.style.setProperty('display', 'none', 'important');
+        
+        // 异步去验权，一旦确认为管理员，立即补写 Cookie 锁死状态
+        try {
+          const { data, error } = await window.supabaseClient
+            .from('users')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (data && data.is_admin) {
+            document.cookie = "is_admin=true; path=/; max-age=86400; SameSite=Lax";
+            if (adminBtn) adminBtn.style.setProperty('display', 'block', 'important');
+          } else {
+            document.cookie = "is_admin=false; path=/; max-age=0; SameSite=Lax";
+            if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
+          }
+        } catch (err) {
+          console.error("级联验权失败:", err);
         }
+      } else {
+        // 清退逻辑
+        updateUserUI(null);
+        document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
+        if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
       }
     });
 
@@ -272,24 +299,30 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
-// main.js -> 修改后的 userButton 点击事件
+  // ==========================================
+  // 2. 精准拦截的 userButton 退出与登录点击事件
+  // ==========================================
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
+      // 🎯 核心修复：死死卡住冒泡，不给底部的全局 html 弹窗拦截器任何冲突的机会
       e.preventDefault();
-      
-      // 🎯 核心修复：根据文案直接精准切入退出逻辑，防止异步阻塞
+      e.stopPropagation();
+
+      // 同步判定：只要文案显示欢迎回来，就直接执行退出，不走任何异步请求
       if (userButton.textContent.includes('欢迎回来')) {
         if (confirm('确定要退出登录吗？')) {
           if (window.supabaseClient) {
             await window.supabaseClient.auth.signOut();
-            // 清理缓存并强刷
+            // 清空一切本地缓存与 Cookie
             localStorage.clear();
+            document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
             alert('已安全退出登录！');
-            window.location.reload();
+            window.location.reload(); // 强刷整洁页面
           }
         }
       } else {
-        openModal();
+        // 未登录状态，正常唤起原有的登录 Modal
+        if (typeof openModal === 'function') openModal();
       }
     });
   }
