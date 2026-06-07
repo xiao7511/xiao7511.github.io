@@ -357,9 +357,18 @@
                     const file = selectedFilesCache[i];
                     const fileName = `${section}_${i}.png`; 
                     
-                    await window.supabaseClient.storage
+                    const { data, error } = await window.supabaseClient.storage
                         .from('images')
                         .upload(`images/${fileName}`, file, { upsert: true });
+
+                     if (error) {
+                        alert('上传失败');
+                    } else {
+                        // 🔔 就是这里！在这个 else 分支（即上传成功的分支）内部！
+                        // 原本的代码可能是直接刷新了页面，或者做了一些简单的 alert。
+                        // 在你原本上传成功的地方调用：
+                        await handleImageUploadSuccess(section, i, fileName, window.supabaseClient.supabaseUrl);
+                    }   
                 }
 
                 showStatus('🎉 预览库更新成功！请在下方核对多图，核对无误后点击“一键部署”。', 'success');
@@ -375,6 +384,47 @@
         });
     }
 
+    // 直接整体复制粘贴到 admin.html 的脚本区域
+    async function handleImageUploadSuccess(sectionId, index, fileName, supabaseUrl) {
+        const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${fileName}`;
+        console.log(`图片上传成功，正在同步路由表并刷新预览... 位置: ${sectionId}_${index}`);
+
+        try {
+            // 同步更新路由表
+            await window.supabaseClient
+                .from('deployed_images')
+                .upsert({
+                    section_id: sectionId,
+                    image_index: index,
+                    storage_url: storageUrl,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'section_id,image_index' });
+
+            // 精准击穿缓存刷新 DOM
+            const targetImg = document.getElementById(`img-${sectionId}-${index}`);
+            const targetCard = document.getElementById(`card-${sectionId}-${index}`);
+
+            if (targetImg && targetCard) {
+                const cacheBusterUrl = `${storageUrl}?t=${new Date().getTime()}`;
+                targetImg.src = cacheBusterUrl;
+                targetCard.style.display = 'block'; 
+                
+                const badge = targetCard.querySelector('.badge');
+                if (badge) {
+                    badge.className = 'badge active';
+                    badge.style.backgroundColor = '#2ecc71';
+                    badge.textContent = `● 已上线 [索引 ${index}]`;
+                }
+            } else {
+                // 如果拿不到 DOM，直接调用咱们之前重构的查表看板刷新函数
+                await refreshLiveDashboard(supabaseUrl);
+            }
+            alert('照片提交成功，预览图已实时刷新！');
+        } catch (err) {
+            console.error("提交后处理预览失败:", err);
+            alert('图片已上传，但动态预览刷新失败，请手动刷新页面。');
+        }
+    }
     // ==========================================
     // 3. 查表路由版的控制台看板动态刷新（毫秒级秒开）
     // ==========================================
