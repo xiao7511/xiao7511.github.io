@@ -375,7 +375,9 @@
         });
     }
 
-    // 🎯 修复方案：动态异步探测，彻底解决并发 404 导致控制台白屏、加载慢的问题
+    // ==========================================
+    // 3. 查表路由版的控制台看板动态刷新（毫秒级秒开）
+    // ==========================================
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -389,6 +391,20 @@
 
         wrapper.innerHTML = '';
 
+        // 💡 核心替代：一次性查出线上真正部署了的图片数组，不再盲目拼接去撞 404
+        let deployedList = [];
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('deployed_images')
+                .select('section_id, image_index, storage_url');
+            if (data && !error) {
+                deployedList = data;
+            }
+        } catch (err) {
+            console.error("读取线上图片路由表失败，降级为默认渲染:", err);
+        }
+
+        // 渲染面板结构
         for (const item of sections) {
             const block = document.createElement('div');
             block.className = 'dashboard-section';
@@ -403,37 +419,30 @@
             grid.className = 'image-flow-grid';
 
             for (let i = 0; i < item.maxCount; i++) {
+                // 检查当前位置在公共路由表里有没有被激活部署
+                const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
+
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                // 💡 关键微调：默认让卡片隐藏，不占位，不引发无效报错
-                card.style.display = 'none'; 
-                card.id = `card-${item.id}-${i}`;
-                card.innerHTML = `
-                    <div class="img-container">
-                        <img id="img-${item.id}-${i}" loading="lazy" />
-                    </div>
-                    <span class="badge">索引位置 [${i}]</span>
-                `;
-                grid.appendChild(card);
-
-                // 在后台默默建立探测流
-                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
                 
-                const tester = new Image();
-                tester.onload = function() {
-                    // 只有图片真实存在且加载成功，才亮起这个卡片，挂载图片
-                    const targetImg = document.getElementById(`img-${item.id}-${i}`);
-                    const targetCard = document.getElementById(`card-${item.id}-${i}`);
-                    if (targetImg && targetCard) {
-                        targetImg.src = liveImgUrl;
-                        targetCard.style.display = 'block';
-                    }
-                };
-                tester.onerror = function() {
-                    // 找不到图片则默默跳过，不阻塞任何前端渲染线程
-                    console.log(`位置 [${item.id}_${i}] 暂无线上图片，已平滑忽略。`);
-                };
-                tester.src = liveImgUrl; // 触发后台异步请求
+                if (match) {
+                    // 只有云端表里确认存在的图片，才渲染容器和加载图片，断绝 404
+                    card.innerHTML = `
+                        <div class="img-container">
+                            <img id="img-${item.id}-${i}" src="${match.storage_url}?t=${new Date().getTime()}" loading="lazy" />
+                        </div>
+                        <span class="badge active" style="background:#2ecc71;">● 已上线 [索引 ${i}]</span>
+                    `;
+                } else {
+                    // 如果没有部署过，只显示一个干净的占位待上传卡片，绝对不发起无效的图片 HTTP 请求
+                    card.innerHTML = `
+                        <div class="img-container placeholder" style="background:#f5f6fa; display:flex; align-items:center; justify-content:center; height:120px; color:#b2bec3;">
+                            <span>📷 席位空缺</span>
+                        </div>
+                        <span class="badge" style="background:#b2bec3;">未部署 [索引 ${i}]</span>
+                    `;
+                }
+                grid.appendChild(card);
             }
 
             block.appendChild(grid);
