@@ -432,7 +432,7 @@
                 window.renderAdminBannerList(cleanedUrls);
             } catch (err) {
                 alert('同步保存失败: ' + err.message);
-            } finaly { saveConfigBtn.disabled = false; }
+            } finally { saveConfigBtn.disabled = false; }
         });
 
         deployLiveBtn.addEventListener('click', async () => {
