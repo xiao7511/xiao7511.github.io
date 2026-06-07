@@ -20,7 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const postsList = document.getElementById('posts-list');
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
 
-  const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
+  //const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
+  const REDIRECT_URL = 'https://www.nobistudio.com/index.html';
   let selectedAvatar = avatarOptions[0]?.dataset.avatar || '';
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -606,10 +607,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 🎯 论坛加固：点赞安全判别
+  // 🎯 论坛加固：点赞安全判别（带报错监控版）
   // ==========================================
   window.toggleLike = async function(postId, currentLikes) {
-    // 💡 实时获取底层最新的 Auth 状态，防止变量断连
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
 
@@ -620,10 +620,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let updatedLikes = Array.isArray(currentLikes) ? [...currentLikes] : [];
     if (updatedLikes.includes(user.email)) {
-      // 已赞过 -> 取消赞
       updatedLikes = updatedLikes.filter(email => email !== user.email);
     } else {
-      // 未赞过 -> 追加赞
       updatedLikes.push(user.email);
     }
 
@@ -633,10 +631,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .update({ likes_users: updatedLikes })
         .eq('id', postId);
 
-      if (error) throw error;
-      await fetchPosts(); // 刷新视图
+      if (error) {
+        // 🎯 核心监控：如果数据库报错（比如因 RLS 策略拒绝），这里会直接弹窗告诉你原因！
+        console.error("数据库拒绝了点赞更新:", error);
+        alert(`点赞失败，数据库返回: ${error.message} (代码: ${error.code})`);
+        return;
+      }
+      
+      // 成功后重新拉取
+      await fetchPosts(); 
     } catch(err) {
-      console.error("点赞写入失败:", err);
+      console.error("网络或流阻断:", err);
     }
   };
 
