@@ -520,6 +520,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 启动应用
   initApp();
+  // ==========================================================
+  // 🔄 智能页面唤醒监听器（深度解决从 admin.html 返回主页时的数据断层与按钮消失）
+  // ==========================================================
+  window.addEventListener('pageshow', async (event) => {
+    // 当从后台管理页面后退返回、或者页面从缓存中恢复时触发
+    if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+      console.log('🔄 检测到从管理后台返回，正在无缝重载主页权限与最新云端图片...');
+      
+      // 1. 强行让 Supabase 重新检查一次主页原有的用户状态，把消失的控制台按钮捞回来
+      if (typeof initApp === 'function') {
+        // 清除旧的轮播定时器防止叠加
+        if (carouselTimer) clearInterval(carouselTimer);
+        // 重新初始化主页数据流
+        await initApp();
+      }
+    }
+  });
 
   // 全局智能拦截器
   const globalTriggerModal = (e) => {
