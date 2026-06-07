@@ -298,7 +298,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const isAdmin = await checkIsAdminSilent();
             if (isAdmin) {
               const entrance = document.getElementById('admin-entrance-wrapper');
-              if (entrance) entrance.style.display = 'block';
+              //if (entrance) entrance.style.display = 'block';
+              if(entrance){
+                entrance.style.setProperty('display', 'block', 'important');
+                console.log('👑 欢迎管理员 Xiao Ye，控制台已安全就位。');
+              }
+            }else{
+              // 普通用户或未登录状态，双重锁死
+              entrance.style.setProperty('display', 'none', 'important');
             }
           } catch (bgErr) {
             console.warn('后台更新遇到轻微延迟:', bgErr);
