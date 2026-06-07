@@ -123,12 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================
-  // 🔐 APP 核心初始化流水线 (高精度重构，消除时序死锁)
+  // 🔐 APP 核心初始化流水线 (高精度重构：理顺时序与状态锁)
   // =========================================================
-  /*async function initApp() {
+  async function initApp() {
     showSlide(0);
     startCarousel();
-    updateUserUI(null); 
 
     if (typeof supabase === 'undefined') {
       console.error("Supabase SDK 尚未加载，中断初始化。");
@@ -138,9 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
     let config = null;
 
-    // 1. 第一步：优先向 Cloudflare Worker 获取最新的动态安全证书
     try {
-      // 设定 2.5 秒超短网络超时，防止由于国内手机网络阻断导致主页无限假死
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2500);
 
@@ -156,204 +153,79 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (e) {
       console.warn("⚠️ Cloudflare Worker 握手受阻，自动激活免配置直连沙箱通道。");
-      // 直连兜底配置，确保网络不佳时依然能够稳定渲染
       config = {
         SUPABASE_URL: 'https://kogjjfccyncdszuuwlun.supabase.co',
         SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
       };
     }
 
-    // 2. 第二步：在全生命周期内【仅创建唯一一次】标准的客户端实例，开启持久化缓存解密
     window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
       auth: {
-        persistSession: true, // 核心加固：进出管理后台免密、保持持久登录态
+        persistSession: true, 
         autoRefreshToken: true
       }
     });
 
-    // 3. 第三步：客户端建立完毕后，立即激活状态监听流，彻底断绝 Invalid API key 或 Pending 状态
+    // ✨ 核心机制：激活状态监听流。Supabase 会在初始化后自动向此流广播 INITIAL_SESSION 事件
     activateAuthStateListener();
 
-    // 4. 第四步：拉取内容展现层数据
     await syncLiveImagesFromDB();
     await fetchPosts();
-  }*/
-    // =========================================================
-    // 🔐 APP 核心初始化流水线 (高精度重构：加入返回主页的强制状态捕获)
-    // =========================================================
-    async function initApp() {
-      showSlide(0);
-      startCarousel();
-      updateUserUI(null); 
+  }
 
-      if (typeof supabase === 'undefined') {
-        console.error("Supabase SDK 尚未加载，中断初始化。");
+  // =========================================================
+  // 🎯 鉴权核心函数
+  // =========================================================
+  async function checkAdminPermission(session) {
+    updateUserUI(session?.user || null);
+
+    const adminBtn = document.getElementById('admin-entrance-wrapper');
+    if (!adminBtn) return;
+
+    if (!session || !session.user) {
+        adminBtn.style.setProperty('display', 'none', 'important');
         return;
-      }
+    }
 
-      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
-      let config = null;
+    if (typeof window.supabaseClient.from !== 'function') {
+        adminBtn.style.setProperty('display', 'none', 'important');
+        return;
+    }
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+    try {
+        const { data: userData, error } = await window.supabaseClient
+            .from('users')
+            .select('is_admin')
+            .eq('email', session.user.email)
+            .maybeSingle();
 
-        const response = await fetch(workerUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        if (error) {
+            console.error("Supabase 鉴权发生底层错误:", error.message);
+            adminBtn.style.setProperty('display', 'none', 'important');
+            return;
+        }
 
-        if (response.ok) {
-          config = await response.json();
-          window.sysConfig = config;
-          console.log("🔒 已通过 Cloudflare Workers 安全通道下发动态链路凭证。");
+        if (userData && userData.is_admin === true) {
+            adminBtn.style.setProperty('display', 'block', 'important');
+            console.log(`👑 管理员权限核验通过: [${session.user.email}]`);
         } else {
-          throw new Error();
+            adminBtn.style.setProperty('display', 'none', 'important');
         }
-      } catch (e) {
-        console.warn("⚠️ Cloudflare Worker 握手受阻，自动激活免配置直连沙箱通道。");
-        config = {
-          SUPABASE_URL: 'https://kogjjfccyncdszuuwlun.supabase.co',
-          SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
-        };
-      }
-
-      window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
-        auth: {
-          persistSession: true, 
-          autoRefreshToken: true
-        }
-      });
-
-      // A. 先激活被动状态监听（管后续的手动操作）
-      activateAuthStateListener();
-
-      // 🎯 B. 核心修复：返回主页时，立刻主动去掏一次 LocalStorage 缓存，防止错过广播
-      try {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session && session.user) {
-          console.log("🚀 检测到页面重载/返回，正在直接处理本地持久化 Session...");
-          await checkAdminPermission(session);
-        }
-      } catch (sessionErr) {
-        console.warn("主动读取本地 Session 失败:", sessionErr);
-      }
-
-      await syncLiveImagesFromDB();
-      await fetchPosts();
+    } catch (err) {
+        console.error('审查管理员权限时发生异常:', err);
+        adminBtn.style.setProperty('display', 'none', 'important');
     }
+  }
 
-    // =========================================================
-    // 🎯 提取出独立的鉴权核心函数（供被动监听和主动恢复共用）
-    // =========================================================
-    async function checkAdminPermission(session) {
-      // 安全更新主页的欢迎UI
-      updateUserUI(session?.user || null);
-
-      const adminBtn = document.getElementById('admin-entrance-wrapper');
-      if (!adminBtn) return;
-
-      if (!session || !session.user) {
-          adminBtn.style.setProperty('display', 'none', 'important');
-          return;
-      }
-
-      if (typeof window.supabaseClient.from !== 'function') {
-          adminBtn.style.setProperty('display', 'none', 'important');
-          return;
-      }
-
-      try {
-          const { data: userData, error } = await window.supabaseClient
-              .from('users')
-              .select('is_admin')
-              .eq('email', session.user.email)
-              .maybeSingle();
-
-          if (error) {
-              console.error("Supabase 鉴权发生底层错误:", error.message);
-              adminBtn.style.setProperty('display', 'none', 'important');
-              return;
-          }
-
-          if (userData && userData.is_admin === true) {
-              adminBtn.style.setProperty('display', 'block', 'important');
-              console.log(`👑 管理员权限核验通过: [${session.user.email}]`);
-          } else {
-              adminBtn.style.setProperty('display', 'none', 'important');
-          }
-      } catch (err) {
-          console.error('审查管理员权限时发生异常:', err);
-          adminBtn.style.setProperty('display', 'none', 'important');
-      }
-    }
-
-    function activateAuthStateListener() {
-      if (!window.supabaseClient) return;
-
-      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-          console.log(`🔄 捕获到 Auth 状态变更事件: ${event}`);
-          // 遇到 INITIAL_SESSION 或 SIGNED_IN 等事件时统一交由核心函数审查
-          await checkAdminPermission(session);
-      });
-    }
-
-  // =========================================================
-  // 🎯 核心加固：将监听逻辑封装，确保其在客户端完全创建成功后运作
-  // =========================================================
-  /*function activateAuthStateListener() {
+  function activateAuthStateListener() {
     if (!window.supabaseClient) return;
 
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        // 先安全执行你原有的更新用户头像、昵称等主页UI逻辑
-        updateUserUI(session?.user || null);
-
-        // 获取主页控制台按钮
-        const adminBtn = document.getElementById('admin-entrance-wrapper');
-        if (!adminBtn) return;
-
-        // 如果用户根本没有登录，利索地隐藏控制台，切断网络请求，防止卡死
-        if (!session || !session.user) {
-            adminBtn.style.setProperty('display', 'none', 'important');
-            return;
-        }
-
-        // 🛡️ 运行时防假死双重锁保护：如果此时底层方法没准备好，暂缓鉴权
-        if (typeof window.supabaseClient.from !== 'function') {
-            console.warn("⚠️ 数据库底层网络映射未就绪，暂缓鉴权...");
-            adminBtn.style.setProperty('display', 'none', 'important');
-            return;
-        }
-
-        try {
-            console.log("⏳ 正在前往 users 安全加固表中检索管理员状态...");
-
-            // 前往新创建的 users 表中检索管理员状态
-            const { data: userData, error } = await window.supabaseClient
-                .from('users')
-                .select('is_admin')
-                .eq('email', session.user.email)
-                .maybeSingle();
-
-            if (error) {
-                console.error("Supabase 鉴权发生底层握手错误:", error.message);
-                adminBtn.style.setProperty('display', 'none', 'important');
-                return;
-            }
-
-            // 判定：必须确保 userData 实体存在，且 is_admin 字段真值为 true
-            if (userData && userData.is_admin === true) {
-                adminBtn.style.setProperty('display', 'block', 'important');
-                console.log(`👑 欢迎回来，超级管理员 [${session.user.email}]！控制台已安全就位。`);
-            } else {
-                // 普通用户或者新注册用户（userData 为空或 false）
-                adminBtn.style.setProperty('display', 'none', 'important');
-                console.warn(`⚠️ 账号 [${session.user.email}] 属于普通访客，无权显示控制台。`);
-            }
-        } catch (err) {
-            console.error('审查管理员权限时发生致命异常:', err);
-            adminBtn.style.setProperty('display', 'none', 'important');
-        }
+        console.log(`🔄 捕获到 Auth 状态变更事件: ${event}`);
+        // 无论是初始化会话、登录、还是凭证刷新，统一交由核心函数审查
+        await checkAdminPermission(session);
     });
-  }*/
+  }
 
   function openModal(mode) {
     if (!modal) return;
@@ -396,13 +268,17 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
 
-      const isLogged = userButton.textContent.includes('欢迎回来');
+      // 精准判断当前状态，防止被文字混淆
+      const isLogged = window.supabaseClient && (await window.supabaseClient.auth.getSession()).data.session !== null;
 
       if (isLogged) {
         if (confirm('确定要退出登录吗？')) {
-          if (window.supabaseClient) await window.supabaseClient.auth.signOut();
-          updateUserUI(null); 
-          window.location.reload();
+          if (window.supabaseClient) {
+            await window.supabaseClient.auth.signOut();
+            localStorage.clear(); // 清理残留缓存
+            updateUserUI(null); 
+            window.location.reload();
+          }
         }
       } else {
         openModal('login');
@@ -456,8 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         closeModal();
-        // 成功登录后，系统会自动触发外层的 onAuthStateChange 鉴权逻辑，此处不需重复编写复杂的 UI 显示逻辑
-
       } catch (err) {
         alert('登录遭遇未知网络异常，请重试');
         submitBtn.disabled = false;
@@ -622,9 +496,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================================================
-  // ❌ 7. 管理控制台：动态生成配置列表并提供一键删除闭环
-  // ==========================================================
   window.renderAdminBannerList = function(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
     if (!container) return; 
@@ -649,7 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
       container.appendChild(itemDiv);
     });
 
-    // 绑定删除按钮点击事件
     container.querySelectorAll('.admin-image-delete-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -663,32 +533,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // 启动核心应用
+  // 启动应用
   initApp();
 
-  // 全局智能拦截器
+  // ✨ 拦截器加固：只有处于登出状态、且点击了包含特定文案的按钮时才拦截弹窗
   const globalTriggerModal = (e) => {
     const targetBtn = e.target.closest('#user-btn');
     if (!targetBtn) return;
 
-    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
+    const text = targetBtn.textContent;
+    if (text.includes('登录') || text.includes('注册专区')) {
       e.preventDefault();
       e.stopPropagation();
 
       const authModal = document.getElementById('auth-modal');
-      const loginForm = document.getElementById('login-form');
-      const regForm = document.getElementById('reg-form');
-
       if (authModal) {
         authModal.removeAttribute('hidden');
         authModal.style.setProperty('display', 'grid', 'important');
-        if (loginForm) loginForm.removeAttribute('hidden');
-        if (regForm) regForm.setAttribute('hidden', '');
-        
-        const tabLogin = document.getElementById('tab-login');
-        const tabReg = document.getElementById('tab-reg');
-        if (tabLogin) tabLogin.classList.add('is-active');
-        if (tabReg) tabReg.classList.remove('is-active');
+        switchMode('login');
       }
     }
   };

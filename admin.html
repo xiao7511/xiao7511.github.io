@@ -6,9 +6,6 @@
     <title>内容管理后台 —— 终极自适应控制台</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ==========================================
-           🎨 二次元/像素现代主义：高级深色系后台主题样式 
-           ========================================== */
         :root {
             --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 100%);
             --panel-bg: rgba(25, 20, 45, 0.75);
@@ -78,7 +75,6 @@
             transition: all 0.2s;
         }
         .back-home-btn:hover { background: var(--primary-glow); border-color: transparent; }
-
         .back-arrow { margin-right: 6px; }
 
         .upload-card {
@@ -189,7 +185,6 @@
             white-space: nowrap;
             box-shadow: 0 4px 8px rgba(0, 206, 201, 0.2);
         }
-        .deploy-btn:active { opacity: 0.9; }
 
         .image-flow-grid {
             display: grid; 
@@ -201,6 +196,7 @@
             background: #110d24; border-radius: 8px; padding: 8px; text-align: center;
             border: 1px solid rgba(255,255,255,0.03);
             box-sizing: border-box;
+            display: none; /* 💡 默认隐藏，确定有图才显示 */
         }
 
         .img-container { 
@@ -218,7 +214,7 @@
             width: 100%; 
             height: auto; 
             max-height: 180px;
-            object-fit: contain; /* 💡 完美保留按比例缩放，不剪裁 */
+            object-fit: contain;
         }
         
         .badge {
@@ -246,7 +242,6 @@
     <div class="container">
         <div class="header-box">
             <h1>内容管理后台 —— 终极自适应控制台</h1>
-            <!-- 💡 移除了重新登录冲突，利用共享 Session 实现平滑直接返回 -->
             <a href="index.html" class="back-home-btn"><span class="back-arrow">←</span> 返回站点主页</a>
         </div>
 
@@ -285,18 +280,16 @@
 
     async function initWorkflow() {
         try {
-            // 🚀 直接采用标准的本地持久化机制（跨页面共用登录态）
             const SUPABASE_URL = "https://kogjjfccyncdszuuwlun.supabase.co";
             const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec";
             
             window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
                 auth: {
-                    persistSession: true, // 保持持久登录态，这样进出主页都不用反复制动重新登录
+                    persistSession: true, 
                     autoRefreshToken: true
                 }
             });
             
-            // 🔒 智能静默鉴权流水线
             const session = await verifyAdminAuth();
             if (!session) return; 
 
@@ -311,11 +304,8 @@
         }
     }
 
-    // 🛡️ 免密码纯会话级特权验证
     async function verifyAdminAuth() {
         if (!window.supabaseClient) return null;
-        
-        // 抓取主页传过来的活跃 Session
         const { data: { session }, error } = await window.supabaseClient.auth.getSession();
 
         if (error || !session) {
@@ -324,7 +314,6 @@
             return null;
         }
 
-        // 去 users 表校验该登录邮箱是否拥有管理员身份
         const { data: userPermission, error: dbError } = await window.supabaseClient
             .from('users')
             .select('is_admin')
@@ -386,6 +375,7 @@
         });
     }
 
+    // 💡 高性能非阻塞渲染重构
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -399,37 +389,58 @@
 
         wrapper.innerHTML = '';
 
+        // 采用异步图片探测代理，防网络死锁
+        const checkImageExists = (url) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = () => resolve(false);
+                img.src = url;
+            });
+        };
+
         for (const item of sections) {
             const block = document.createElement('div');
             block.className = 'dashboard-section';
-
-            const header = document.createElement('div');
-            header.className = 'section-header';
-            header.innerHTML = `
-                <div class="section-title">📺 ${item.name}</div>
-                <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
+            block.innerHTML = `
+                <div class="section-header">
+                    <div class="section-title">📺 ${item.name}</div>
+                    <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
+                </div>
             `;
 
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
+            // 先把架构生成出来，图片载入交给后台异步流
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                
-                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
-                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png${cacheBuster}`;
-
+                card.id = `card-${item.id}-${i}`;
                 card.innerHTML = `
                     <div class="img-container">
-                        <img src="${liveImgUrl}" onerror="this.parentElement.parentElement.style.visibility='hidden'"/>
+                        <img loading="lazy" id="img-${item.id}-${i}" />
                     </div>
                     <span class="badge">索引位置 [${i}]</span>
                 `;
                 grid.appendChild(card);
+
+                // 异步探测网络
+                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
+                const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png${cacheBuster}`;
+                
+                checkImageExists(liveImgUrl).then((exists) => {
+                    if (exists) {
+                        const targetImg = document.getElementById(`img-${item.id}-${i}`);
+                        const targetCard = document.getElementById(`card-${item.id}-${i}`);
+                        if (targetImg && targetCard) {
+                            targetImg.src = liveImgUrl;
+                            targetCard.style.display = 'block'; // 确认有图，平滑显现
+                        }
+                    }
+                });
             }
 
-            block.appendChild(header);
             block.appendChild(grid);
             wrapper.appendChild(block);
         }
@@ -462,6 +473,7 @@
 
     function showStatus(msg, type) {
         const el = document.getElementById('upload-status');
+        if (!el) return;
         el.style.display = 'block'; 
         el.innerText = msg;
         el.className = ''; 
