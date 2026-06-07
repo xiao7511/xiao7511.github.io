@@ -375,7 +375,7 @@
         });
     }
 
-    // admin.html -> 修改后的 refreshLiveDashboard 函数
+    // 🎯 修复方案：动态异步探测，彻底解决并发 404 导致控制台白屏、加载慢的问题
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -388,16 +388,6 @@
         ];
 
         wrapper.innerHTML = '';
-
-        // 🎯 核心修复：定义一个轻量级的图片存在性异步探测器
-        const probeImage = (url) => {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => resolve(true);
-                img.onerror = () => resolve(false);
-                img.src = url;
-            });
-        };
 
         for (const item of sections) {
             const block = document.createElement('div');
@@ -415,7 +405,7 @@
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                // 💡 默认先设为隐藏，避免触发 404 挂起页面
+                // 💡 关键微调：默认让卡片隐藏，不占位，不引发无效报错
                 card.style.display = 'none'; 
                 card.id = `card-${item.id}-${i}`;
                 card.innerHTML = `
@@ -426,19 +416,24 @@
                 `;
                 grid.appendChild(card);
 
-                // 发起后台异步探测，不阻塞主线程渲染
+                // 在后台默默建立探测流
                 const liveImgUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${item.id}_${i}.png?t=${new Date().getTime()}`;
                 
-                probeImage(liveImgUrl).then((isExist) => {
-                    if (isExist) {
-                        const targetImg = document.getElementById(`img-${item.id}-${i}`);
-                        const targetCard = document.getElementById(`card-${item.id}-${i}`);
-                        if (targetImg && targetCard) {
-                            targetImg.src = liveImgUrl;
-                            targetCard.style.display = 'block'; // 只有真实的图片存在才显示容器
-                        }
+                const tester = new Image();
+                tester.onload = function() {
+                    // 只有图片真实存在且加载成功，才亮起这个卡片，挂载图片
+                    const targetImg = document.getElementById(`img-${item.id}-${i}`);
+                    const targetCard = document.getElementById(`card-${item.id}-${i}`);
+                    if (targetImg && targetCard) {
+                        targetImg.src = liveImgUrl;
+                        targetCard.style.display = 'block';
                     }
-                });
+                };
+                tester.onerror = function() {
+                    // 找不到图片则默默跳过，不阻塞任何前端渲染线程
+                    console.log(`位置 [${item.id}_${i}] 暂无线上图片，已平滑忽略。`);
+                };
+                tester.src = liveImgUrl; // 触发后台异步请求
             }
 
             block.appendChild(grid);
