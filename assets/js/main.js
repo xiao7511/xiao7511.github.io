@@ -209,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     await syncLiveImagesFromDB();
     await fetchPosts();
+    // 在你的前台主页加载完毕、且 supabaseClient 握手成功后，立刻调用它：
+    await loadDeployedSections();
   }
 
   // =========================================================
@@ -828,6 +830,117 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   };
+
+  // ==========================================
+  // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
+  // ==========================================
+  async function loadDeployedSections() {
+      console.log("⚡ 正在从 site_config 路由表拉取最新版面部署数据...");
+      try {
+          if (!window.supabaseClient) {
+              console.warn("Supabase 客户端未初始化，延迟加载版面...");
+              return;
+          }
+
+          // 1. 一次性从 site_config 表中捞取所有区域的部署配置
+          const { data: configs, error } = await window.supabaseClient
+              .from('site_config')
+              .select('section, url');
+
+          if (error) {
+              console.error("拉取前台版面配置失败:", error);
+              return;
+          }
+
+          if (!configs || configs.length === 0) {
+              console.log("💡 暂无任何版面部署记录，保持前台默认静态占位。");
+              return;
+          }
+
+          // 2. 依次遍历并动态对齐四大区域
+          configs.forEach(cfg => {
+              const sectionId = cfg.section;
+              let imageUrls = [];
+              
+              try {
+                  imageUrls = typeof cfg.url === 'string' ? JSON.parse(cfg.url) : cfg.url;
+              } catch (e) {
+                  console.error(`解析区域 [${sectionId}] 的 URL 数组失败:`, e);
+                  return;
+              }
+
+              if (!Array.isArray(imageUrls) || imageUrls.length === 0) return;
+
+              // 🎯 针对四大不同的板块进行精准的前台 DOM 元素打通与无损拼接
+              switch (sectionId) {
+                  
+                  // 🔹 板块 1：首页 Banner 大图轮播区
+                  case 'section_banner':
+                      // 假设你的首页轮播容器 ID 是 banner-slider 或类似的名字
+                      const bannerContainer = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper'); 
+                      if (bannerContainer) {
+                          // 动态拼装轮播图的 HTML 结构（保留你原有的样式类名，这里以标准的 Swiper/Slider 为例）
+                          bannerContainer.innerHTML = imageUrls.map(url => `
+                              <div class="swiper-slide">
+                                  <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
+                              </div>
+                          `).join('');
+                      }
+                      break;
+
+                  // 🔹 板块 2：动漫版面轮播区
+                  case 'section_anime':
+                      const animeContainer = document.getElementById('anime-section-grid') || document.querySelector('.anime-grid');
+                      if (animeContainer) {
+                          animeContainer.innerHTML = imageUrls.map((url, idx) => `
+                              <div class="anime-card" style="border-radius:8px; overflow:hidden;">
+                                  <img src="${url}" style="width:100%; display:block;" />
+                                  <div class="anime-title" style="padding:8px; font-size:0.85rem; text-align:center;">动漫热播推荐 ${idx + 1}</div>
+                              </div>
+                          `).join('');
+                      }
+                      break;
+
+                  // 🔹 板块 3：社区交流轮播区
+                  case 'section_community':
+                      const commContainer = document.getElementById('community-section-images') || document.querySelector('.community-banners');
+                      if (commContainer) {
+                          commContainer.innerHTML = imageUrls.map(url => `
+                              <div class="community-banner-item">
+                                  <img src="${url}" style="width:100%; border-radius:6px;" />
+                              </div>
+                          `).join('');
+                      }
+                      break;
+
+                  // 🔹 板块 4：热门强推卡牌轮播区
+                  case 'section_recommend':
+                      const recommendContainer = document.getElementById('recommend-section-cards') || document.querySelector('.recommend-grid');
+                      if (recommendContainer) {
+                          recommendContainer.innerHTML = imageUrls.map((url, idx) => `
+                              <div class="recommend-card-item">
+                                  <img src="${url}" style="width:100%; border-radius:10px; border:1px solid rgba(255,255,255,0.1);" />
+                              </div>
+                          `).join('');
+                      }
+                      break;
+
+                  default:
+                      console.warn(`未知的版面标识符: ${sectionId}`);
+              }
+          });
+
+          console.log("🎉 前台四大板块已全部无缝查表对齐并动态刷新完成！");
+
+          // 💡 温馨提示：如果你的首页使用了 Swiper 等轮播图组件，渲染完后需要手动重新初始化一下
+          if (window.mySwiperInstance && typeof window.mySwiperInstance.update === 'function') {
+              window.mySwiperInstance.update();
+          }
+
+      } catch (globalErr) {
+          console.error("前台同步对齐发生严重阻断:", globalErr);
+      }
+  }
 
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
