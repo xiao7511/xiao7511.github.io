@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
-  /*======================================================*/
+  /*======================================================
   if (userButton) {
     userButton.addEventListener('click', async (e) => {
       // 🎯 核心加固：100% 掐断冒泡和捕获，不给最底部的全局拦截器任何卡死它的机会
@@ -337,7 +337,49 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal('login');
       }
     });
-  }
+  }*/
+  if (userButton) {
+      userButton.addEventListener('click', async (e) => {
+        // 🎯 1. 彻底切断冒泡，不给外层全局拦截器任何干扰的机会
+        e.preventDefault();
+        e.stopPropagation();
+
+        // 🎯 2. 使用更稳固的模糊文本检索判定登录态
+        const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
+
+        if (isLogged) {
+          if (confirm('确定要退出登录吗？')) {
+            console.log("正在执行安全注销流...");
+            
+            // 🚨 【核心修复】：绝对不能直接调用 localStorage.clear() 盲目全清！
+            // 我们只精准清除我们自己写的管理和用户缓存，保留 Supabase 的底层握手
+            document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
+            localStorage.removeItem('is_admin');
+            localStorage.removeItem('user_nickname');
+            localStorage.removeItem('user_avatar');
+            sessionStorage.clear();
+            
+            try {
+              if (window.supabaseClient && window.supabaseClient.auth) {
+                // 限制 1.5 秒超时注销，防止云端长连接网络挂起
+                await Promise.race([
+                  window.supabaseClient.auth.signOut(),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500))
+                ]);
+              }
+            } catch (signOutErr) {
+              console.warn("云端注销略有延迟，本地已强制安全清退:", signOutErr);
+            }
+
+            alert('已安全退出登录！');
+            window.location.reload(); // 刷新页面
+          }
+        } else {
+          // 未登录状态下，唤起标准的登录弹窗
+          if (typeof openModal === 'function') openModal('login');
+        }
+      });
+    }
 
   if (modalClose) modalClose.addEventListener('click', closeModal);
   if (tabLogin) tabLogin.addEventListener('click', () => switchMode('login'));
@@ -552,21 +594,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 🎯 全局辅助交互：点赞/取消赞防刷机制
+  // 🎯 论坛加固：点赞安全判别
   // ==========================================
   window.toggleLike = async function(postId, currentLikes) {
-    const user = window.supabaseClient.auth.currentUser;
+    // 💡 实时获取底层最新的 Auth 状态，防止变量断连
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const user = session?.user;
+
     if (!user) {
       alert("请先登录再参与社区点赞互动哦！");
       return;
     }
 
-    let updatedLikes = [...currentLikes];
+    let updatedLikes = Array.isArray(currentLikes) ? [...currentLikes] : [];
     if (updatedLikes.includes(user.email)) {
-      // 已经点过赞，点击则是取消赞
+      // 已赞过 -> 取消赞
       updatedLikes = updatedLikes.filter(email => email !== user.email);
     } else {
-      // 没点过赞，追加进去
+      // 未赞过 -> 追加赞
       updatedLikes.push(user.email);
     }
 
@@ -577,9 +622,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('id', postId);
 
       if (error) throw error;
-      await fetchPosts(); // 毫秒级强刷看效果
+      await fetchPosts(); // 刷新视图
     } catch(err) {
-      console.error(err);
+      console.error("点赞写入失败:", err);
     }
   };
 
@@ -594,9 +639,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // 提交二级回复盖楼
+  // ==========================================
+  // 🎯 论坛加固：提交二级评论回复
+  // ==========================================
   window.submitReply = async function(postId) {
-    const user = window.supabaseClient.auth.currentUser;
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const user = session?.user;
+
     if (!user) {
       alert("请先登录再发表评论回复！");
       return;
@@ -609,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      // 获取当前用户主页登录留下的昵称和头像缓存（这里复用你原 publishBtn 里的获取逻辑）
+      // 勾兑昵称与头像
       const nickname = localStorage.getItem('user_nickname') || user.email.split('@')[0];
       const avatarUrl = localStorage.getItem('user_avatar') || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko';
 
@@ -619,12 +668,12 @@ document.addEventListener('DOMContentLoaded', () => {
           content: input.value.trim(),
           nickname: nickname,
           avatar_url: avatarUrl,
-          parent_id: postId // 🎯 核心注入：将其牢牢绑定为该主贴的子回复
+          parent_id: postId // 牢牢绑定父级 ID
         }]);
 
       if (error) throw error;
       input.value = '';
-      await fetchPosts(); // 重新拉取盖楼视图
+      await fetchPosts(); // 重新加载盖楼树状图
     } catch (err) {
       alert("回复失败: " + err.message);
     }
