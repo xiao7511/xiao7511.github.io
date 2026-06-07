@@ -456,6 +456,9 @@
             alert('图片已上传，但动态预览刷新失败，请手动刷新页面。');
         }
     }
+    /*========================================================== */
+    /**********增加删除键************/
+    /* ==========================================================*/
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
@@ -469,7 +472,7 @@
 
         wrapper.innerHTML = '';
 
-        // 🎯 一次性拉取最新的线上路由表
+        // 一次性拉取最新的线上路由表
         let deployedList = [];
         try {
             const { data, error } = await window.supabaseClient
@@ -479,7 +482,7 @@
                 deployedList = data;
             }
         } catch (err) {
-            console.error("读取线上图片路由表失败:", err);
+            console.error("读取线上图片路由表失败, 降级为默认渲染:", err);
         }
 
         for (const item of sections) {
@@ -500,23 +503,25 @@
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
                 card.id = `card-${item.id}-${i}`; 
+                card.style.display = 'block'; // 强行让卡片容器亮起
 
                 // 检查当前位置在数据库里有没有成功记录
                 const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
                 const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
 
                 if (match) {
-                    // 🎯 核心修复 1：表里有图，强制将卡片从 display: none 调整为 block 亮起展现！
-                    card.style.display = 'block';
+                    // 🌟 核心优化 1：若有图，渲染出图片，并附带一个高级感十足的独立红底删除按钮
                     card.innerHTML = `
                         <div class="img-container">
                             <img id="img-${item.id}-${i}" src="${match.storage_url}${cacheBuster}" />
                         </div>
-                        <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [索引 ${i}]</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 0 4px;">
+                            <span class="badge" style="background:#2ecc71; color:#fff; margin:0;">● 已上线 [${i}]</span>
+                            <button onclick="deleteImage('${item.id}', ${i}, '${supabaseUrl}')" style="background:#ff4757; color:#fff; border:none; padding:2px 8px; font-size:0.7rem; border-radius:4px; cursor:pointer; font-weight:600;">❌ 删除</button>
+                        </div>
                     `;
                 } else {
-                    // 🎯 核心修复 2：即使没传过，也将卡片亮起，作为“空缺占位”让管理员知道可以在这里传图！
-                    card.style.display = 'block';
+                    // 📷 若没传过，显示一个像素风占位席位
                     card.innerHTML = `
                         <div class="img-container" style="background:#090616; height:90px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;">
                             <span>📷 席位空缺</span>
@@ -568,8 +573,37 @@
         if (type === 'success') el.className = 'status-success';
         if (type === 'error') el.className = 'status-error';
     }
+    // 🎯 核心优化：单张图片路由安全退线与清除机制
+    window.deleteImage = async function(sectionId, index, supabaseUrl) {
+        if (!confirm(`确定要将当前版面 [${sectionId}] 的第 ${index + 1} 张图片退线并清除预览吗？`)) {
+            return;
+        }
 
+        try {
+            showStatus(`正在注销路由记录... [位置: ${sectionId}_${index}]`, 'info');
+
+            // 1. 从 deployed_images 路由表中彻底抹去这一行记录
+            const { error: dbError } = await window.supabaseClient
+                .from('deployed_images')
+                .delete()
+                .eq('section_id', sectionId)
+                .eq('image_index', index);
+
+            if (dbError) throw dbError;
+
+            // 2. 刷新画布看板，使其立刻无缝变为 “📷 席位空缺”
+            await refreshLiveDashboard(supabaseUrl);
+            showStatus('🎉 单图注销成功！请在核对无误后重新点击“一键部署”刷新前台。', 'success');
+            alert('图片已成功在预览库下线！温馨提示：请记得点击对应区域的“一键部署”按钮，将删除后的最新空缺状态同步发布到前台。');
+
+        } catch (err) {
+            console.error("图片注销失败:", err);
+            alert('删除路由失败: ' + err.message);
+        }
+    };
     document.addEventListener('DOMContentLoaded', initWorkflow);
+
+
 </script>
 </body>
 </html>
