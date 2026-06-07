@@ -463,45 +463,172 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ==========================================
+  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
+  // ==========================================
   async function fetchPosts() {
-    if (!postsList || !window.supabaseClient) return;
+    if (!postsList) return;
+    
     try {
-      const { data: posts, error } = await window.supabaseClient
+      // 一次性查出所有主贴和回复，并按时间正序排列
+      const { data: allPosts, error } = await window.supabaseClient
         .from('posts')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) throw error;
-      postsList.innerHTML = posts.length === 0 
-        ? '<p style="text-align:center; color:var(--text-muted); padding:20px;">暂无漫友发言，快来抢沙发吧~</p>'
-        : '';
 
-      posts.forEach(post => {
-        const li = document.createElement('div');
-        li.className = 'post';
-        const formattedTime = new Date(post.created_at).toLocaleString('zh-CN', { hour12: false });
-        
-        li.innerHTML = `
-          <img class="post__avatar" src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=default'}" alt="头像" loading="lazy">
-          <div class="post__body">
-            <div class="post__name">${escapeHtml(post.nickname)}</div>
-            <p class="post__content">${escapeHtml(post.content)}</p>
-            <div class="post__meta">
-              <span>⏱️ ${formattedTime}</span>
-              <button class="like-btn ${hasLiked(post.id) ? 'has-liked' : ''}" data-id="${post.id}" style="background:transparent; border:0; margin-left:12px; padding:0; color:inherit;">
-                <span class="like-icon">❤️</span> <span class="like-count">${post.likes || 0}</span>
-              </button>
+      postsList.innerHTML = '';
+      
+      // 1. 分离主贴和回复
+      const mainPosts = allPosts.filter(p => !p.parent_id);
+      const replies = allPosts.filter(p => p.parent_id);
+
+      // 2. 依次渲染主贴和它附属的二级回复
+      mainPosts.forEach(post => {
+        const postCard = document.createElement('div');
+        postCard.className = 'post-card';
+        postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
+
+        // 检查当前登录用户是否点过赞
+        const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
+        const likesArray = post.likes_users || [];
+        const isLiked = likesArray.includes(currentEmail);
+        const likeCount = likesArray.length;
+
+        // 拼接主贴 DOM
+        let htmlContent = `
+          <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%;" />
+            <div>
+              <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
+              <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
             </div>
           </div>
-        `;
-        postsList.appendChild(li);
-      });
+          <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
+          
+          <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
+            <button onclick="toggleLike('${post.id}', ${JSON.stringify(likesArray)})" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold;">
+              ${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
+            </button>
+            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold;">
+              💬 回复
+            </button>
+          </div>
 
-      setupLikeButtons();
+          <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
+        `;
+
+        // 找出属于这条主贴的所有二级回复并渲染
+        const currentReplies = replies.filter(r => r.parent_id === post.id);
+        currentReplies.forEach(reply => {
+          htmlContent += `
+            <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                <img src="${reply.avatar_url}" style="width:20px; height:20px; border-radius:50%;" />
+                <span style="font-weight:bold; color:#ffe066;">${reply.nickname}</span>
+                <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
+              </div>
+              <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
+            </div>
+          `;
+        });
+
+        // 闭合容器并拼接动态回复输入框
+        htmlContent += `
+          </div>
+          <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
+            <input type="text" id="reply-input-${post.id}" placeholder="写下你的精彩回复..." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;" />
+            <button onclick="submitReply('${post.id}')" style="background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">发送</button>
+          </div>
+        `;
+
+        postCard.innerHTML = htmlContent;
+        postsList.appendChild(postCard);
+      });
     } catch (err) {
-      postsList.innerHTML = `<p style="text-align:center; color:#ff4757; padding:20px;">帖子加载失败: ${err.message}</p>`;
+      console.error("加载论坛卡死:", err);
     }
   }
+
+  // ==========================================
+  // 🎯 全局辅助交互：点赞/取消赞防刷机制
+  // ==========================================
+  window.toggleLike = async function(postId, currentLikes) {
+    const user = window.supabaseClient.auth.currentUser;
+    if (!user) {
+      alert("请先登录再参与社区点赞互动哦！");
+      return;
+    }
+
+    let updatedLikes = [...currentLikes];
+    if (updatedLikes.includes(user.email)) {
+      // 已经点过赞，点击则是取消赞
+      updatedLikes = updatedLikes.filter(email => email !== user.email);
+    } else {
+      // 没点过赞，追加进去
+      updatedLikes.push(user.email);
+    }
+
+    try {
+      const { error } = await window.supabaseClient
+        .from('posts')
+        .update({ likes_users: updatedLikes })
+        .eq('id', postId);
+
+      if (error) throw error;
+      await fetchPosts(); // 毫秒级强刷看效果
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  // 唤起特定帖子的回复输入框
+  window.showReplyBox = function(postId) {
+    const box = document.getElementById(`reply-box-${postId}`);
+    if (box) {
+      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+      if (box.style.display === 'flex') {
+        document.getElementById(`reply-input-${postId}`).focus();
+      }
+    }
+  };
+
+  // 提交二级回复盖楼
+  window.submitReply = async function(postId) {
+    const user = window.supabaseClient.auth.currentUser;
+    if (!user) {
+      alert("请先登录再发表评论回复！");
+      return;
+    }
+
+    const input = document.getElementById(`reply-input-${postId}`);
+    if (!input || !input.value.trim()) {
+      alert("回复内容不能为空哦！");
+      return;
+    }
+
+    try {
+      // 获取当前用户主页登录留下的昵称和头像缓存（这里复用你原 publishBtn 里的获取逻辑）
+      const nickname = localStorage.getItem('user_nickname') || user.email.split('@')[0];
+      const avatarUrl = localStorage.getItem('user_avatar') || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko';
+
+      const { error } = await window.supabaseClient
+        .from('posts')
+        .insert([{
+          content: input.value.trim(),
+          nickname: nickname,
+          avatar_url: avatarUrl,
+          parent_id: postId // 🎯 核心注入：将其牢牢绑定为该主贴的子回复
+        }]);
+
+      if (error) throw error;
+      input.value = '';
+      await fetchPosts(); // 重新拉取盖楼视图
+    } catch (err) {
+      alert("回复失败: " + err.message);
+    }
+  };
 
   function setupLikeButtons() {
     const buttons = Array.from(document.querySelectorAll('.like-btn'));
