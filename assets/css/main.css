@@ -49,12 +49,12 @@ main {
 }
 
 /* ==========================================================
-   🧱 1. 顶部导航核心区（彻底解决并排与手机端无法点击问题）
+   🧱 1. 顶部导航核心区
    ========================================================== */
 .site-header {
   position: fixed !important;
   inset: 0 0 auto !important;
-  z-index: 999999 !important; /* 提到绝对最高的物理图层，绝不被轮播图遮挡 */
+  z-index: 999999 !important; 
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -64,7 +64,6 @@ main {
   -webkit-backdrop-filter: blur(16px) !important;
   background: rgba(0, 0, 0, 0.6) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: auto !important;
 }
 
 .logo {
@@ -74,24 +73,24 @@ main {
   white-space: nowrap;
 }
 
-/* 🎯 导航栏容器：不论 PC 还是手机，内部元素全部强制横向并排 */
+/* PC 端默认横向紧凑布局 */
 .nav {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
-  flex-wrap: nowrap !important; /* 禁止换行，保证并排 */
-  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
 }
 
 .nav__link {
   border: 0;
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   color: var(--text-main);
   background: transparent;
   font-size: 0.9rem;
   font-weight: 500;
-  white-space: nowrap; /* 防止文字折行 */
+  white-space: nowrap;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -101,8 +100,8 @@ main {
   background: var(--accent);
 }
 
-/* 🎯 登录/注册按钮：改造成独立的醒目胶囊，并提升触控灵敏度 */
-.nav__button, #user-btn {
+/* 独立按钮胶囊 */
+.nav__button, #user-btn, .admin-entrance-btn {
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
   border-radius: 999px !important;
   padding: 6px 14px !important;
@@ -111,32 +110,34 @@ main {
   font-size: 0.85rem !important;
   font-weight: 600 !important;
   white-space: nowrap !important;
-  position: relative !important;
-  z-index: 1000000 !important; /* 确保层级高于一切 */
-  touch-action: manipulation !important; /* 彻底移除手机浏览器 300ms 点击延迟 */
+  touch-action: manipulation !important;
   transition: all 0.2s ease !important;
 }
 
-.nav__button:hover, #user-btn:hover {
+.nav__button:hover, #user-btn:hover, .admin-entrance-btn:hover {
   color: #111 !important;
   background: var(--accent) !important;
   border-color: var(--accent) !important;
 }
 
+#admin-entrance-wrapper {
+  display: inline-block;
+}
+
 /* ==========================================================
-   📺 2. 轮播图区域自适应极致精修（背景全透明、文字完美悬浮）
+   📺 2. 轮播图区域自适应（全面覆盖、满屏无黑边）
    ========================================================== */
 .hero {
   position: relative !important;
-  z-index: 10 !important; /* 乖乖待在下方层级 */
+  z-index: 10 !important;
   overflow: hidden !important;
-  border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #000;
+  background: #111;
   touch-action: pan-y;
   margin: 16px 5% 0;
-  height: 380px; /* PC 端大图视界 */
+  height: 460px; /* PC 端大气大图视界高度 */
 }
 
 .hero__slides {
@@ -154,7 +155,7 @@ main {
   height: 100%;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
 }
 
 .hero__slide.is-active {
@@ -162,32 +163,32 @@ main {
   visibility: visible;
 }
 
+/* 🎯 终极突破：强力干掉 contain，切换至 100% 铺满平铺不留白 */
 .hero__slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important; 
+  object-position: center center !important; 
+  image-rendering: -webkit-optimize-contrast;
 }
 
-/* 磨砂阴影滤镜：确保悬浮文字易读 */
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.55));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
 
-/* 🎯 文字区域：绝对定位直接浮动在图片正上方，背景完全透明 */
 .hero__content {
   position: absolute !important;
   bottom: 0;
   left: 0;
   width: 100%;
   z-index: 3;
-  padding: 24px 20px !important;
-  background: transparent !important; /* 彻底剔除黑框背景 */
+  padding: 30px 24px !important;
+  background: transparent !important;
   pointer-events: none;
 }
 
@@ -218,7 +219,7 @@ main {
 }
 
 /* ==========================================================
-   🖼3. 推荐卡牌流
+   🖼 3. 推荐卡牌流 & 社区版面
    ========================================================== */
 .section {
   padding: 30px 5%;
@@ -275,9 +276,6 @@ main {
   font-size: 0.78rem;
 }
 
-/* ==========================================================
-   💬 4. 动漫社区版面精修（强制规范小头像）
-   ========================================================== */
 .section--community {
   padding-top: 10px;
 }
@@ -342,7 +340,6 @@ main {
   align-items: flex-start;
 }
 
-/* 🎯 极致锁死头像：杜绝大图污染，不论哪个 class 渲染，全部重置为完美尺寸 */
 .post__avatar, .post img, #posts-list img {
   width: 42px !important;
   height: 42px !important;
@@ -385,14 +382,8 @@ main {
 }
 
 /* ==========================================================
-   🔒 5. 模态框与基础组件
+   🔒 4. 模态框与基础组件
    ========================================================== */
-.loading-state {
-  margin: 0;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.65);
-}
-
 .site-footer {
   padding: 24px 20px;
   text-align: center;
@@ -404,7 +395,7 @@ main {
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 2000000 !important; /* 极高遮罩层 */
+  z-index: 2000000 !important; 
   display: grid;
   place-items: center;
   padding: 20px;
@@ -422,6 +413,9 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 20px;
   background: #1b1b1b;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal__close {
@@ -469,10 +463,12 @@ main {
   padding: 12px 14px;
 }
 
-.form__hint {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--text-muted);
+#login-form button[type="submit"] {
+  padding: 12px 20px !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  touch-action: manipulation !important;
 }
 
 .avatar-selector p {
@@ -510,82 +506,7 @@ main {
   transform: scale(1.06);
 }
 
-/* ==========================================================
-   📱 6. 移动端专属适配响应式（实现横向平滑滚动并排）
-   ========================================================== */
-@media (max-width: 768px) {
-  .site-header {
-    flex-direction: column !important; /* 手机端上方一行标题Logo，下方一行导航排 */
-    align-items: center !important;
-    padding: 10px 8px !important;
-  }
-
-  .logo {
-    margin-bottom: 6px !important;
-    font-size: 1.05rem !important;
-  }
-
-  /* 📱 关键点：在手机端将菜单和登录按钮横向排成一列，若超出则允许手指横向滑动，防止折行重叠 */
-  .nav {
-    width: 100% !important;
-    justify-content: flex-start !important;
-    overflow-x: auto !important; /* 开启横向平滑滑动 */
-    scrollbar-width: none !important; /* 隐藏滚动条 */
-    padding: 2px 4px !important;
-  }
-  
-  .nav::-webkit-scrollbar {
-    display: none !important; /* 隐藏苹果/谷歌浏览器滚动条 */
-  }
-
-  .nav__link {
-    padding: 4px 10px !important;
-    font-size: 0.85rem !important;
-  }
-
-  /* 登录按钮在手机端保持完美并排尺寸 */
-  #user-btn, .nav__button {
-    padding: 4px 12px !important;
-    font-size: 0.82rem !important;
-    /* 强行告诉移动端浏览器：该按钮不需要任何双击缩放手势，直接触发点击！ */
-    touch-action: manipulation !important; 
-    /* 允许提升硬件加速，减少渲染层级计算时间 */
-    will-change: transform, opacity;
-  }
-
-  /* 让主页内容自适应下移，完美避开双行头部空间 */
-  main {
-    padding-top: 106px !important;
-  }
-
-  /* 手机端轮播图精致紧凑占比 */
-  .hero {
-    margin-top: 4px !important;
-    height: 200px !important;
-  }
-
-  .hero__content {
-    padding: 12px 14px !important;
-  }
-
-  .section {
-    padding-inline: 12px;
-    padding-top: 20px;
-    padding-bottom: 20px;
-  }
-}
-
-@media (min-width: 769px) {
-  .hero {
-    height: 400px;
-  }
-}
-
 /* 后台管理快捷键 */
-#admin-entrance-wrapper {
-    display: none;
-    margin-left: 6px;
-}
 .admin-entrance-btn {
     display: inline-flex;
     align-items: center;
@@ -603,130 +524,23 @@ main {
     height: 13px;
     fill: currentColor;
 }
-/* 🚨 触控热区绝对加固 */
+
 #user-btn, .nav__button {
     pointer-events: auto !important;
     cursor: pointer !important;
-    touch-action: manipulation !important; /* 彻底抹除双击等待延迟 */
+    touch-action: manipulation !important; 
     position: relative !important;
-    z-index: 9999999 !important; /* 提到全站最高物理层 */
+    z-index: 9999999 !important; 
 }
 
-/* 确保模态弹窗一旦激活，必须盖在最上面 */
 #auth-modal:not([hidden]) {
     display: grid !important;
     z-index: 10000000 !important;
 }
-/* 📱 登录框防软键盘遮挡及触控加固 */
-.modal__panel {
-    max-height: 90vh !important; /* 确保在手机键盘弹起时，表单可以自适应滚动 */
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-}
 
-/* 让登录表单中的提交按钮在手机上更大、更容易被手指捕捉 */
-#login-form button[type="submit"] {
-    padding: 12px 20px !important;
-    font-size: 1rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em;
-    touch-action: manipulation !important;
-}
-
-/* ========================================================= */
-/* 📱 1. 移动端导航栏强力优化：自适应两行布局，第二行完美居中 */
-/* ========================================================= */
-@media (max-width: 768px) {
-  .nav {
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 12px !important;
-    padding: 12px 16px !important;
-  }
-
-  /* 第一行：通常是 Logo 区域或品牌区自动填满 */
-  .nav__brand {
-    text-align: center;
-    width: 100%;
-  }
-
-  /* 第二行：将所有控制按钮、登录按钮聚拢成一排，在正中间呈现 */
-  .nav__menu, .nav__actions, .nav__buttons-container,
-  div:has(> #user-btn) {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    flex-wrap: wrap !important;
-    gap: 10px !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-  }
-
-  /* 移动端特殊微调，确保按钮大小适中且不撑破版面 */
-  #user-btn, .admin-entrance-btn {
-    padding: 6px 14px !important;
-    font-size: 0.8rem !important;
-    margin: 0 !important;
-  }
-}
-
-/* ========================================================= */
-/* 🖼️ 2. 首页 Banner 轮播区高级感加固：变大、高保真完整呈现 */
-/* ========================================================= */
-.hero {
-  position: relative;
-  width: 100%;
-  /* 扩大整体高度：PC端提升到 480px 更加高档大气 */
-  height: 480px; 
-  overflow: hidden;
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-  background: rgba(0, 0, 0, 0.4); /* 深色底色，为图片高保真留白做完美衬底 */
-}
-
-/* 移动端视网膜屏幕自适应高度调整 */
-@media (max-width: 768px) {
-  .hero {
-    height: 260px; /* 移动端调大到 260px，给图片充足的立足空间 */
-    border-radius: 16px;
-  }
-}
-
-.hero__slide {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(4px); /* 极为高档的二次元幻灯片背景虚化效果 */
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.hero__slide.is-active {
-  opacity: 1;
-  z-index: 2;
-}
-
-/* 核心高保真非裁剪控制 */
-.hero__slide img {
-  width: 100%;
-  height: 100%;
-  /* 🎯 绝技：改为 contain，确保图片全貌完整显示，绝不裁剪损失边缘 */
-  object-fit: contain !important; 
-  /* 保持极致原图画质 */
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-}
-
-/* ========================================================= */
-/* ❌ 3. 管理控制台：预览图删除功能专属高级 UI 样式 */
-/* ========================================================= */
+/* ==========================================================
+   📱 5. 后台管理：预览图删除功能专属高级样式
+   ========================================================== */
 .admin-image-item {
   position: relative;
   display: flex;
@@ -738,11 +552,6 @@ main {
   border-radius: 12px;
   margin-bottom: 12px;
   transition: all 0.2s ease;
-}
-
-.admin-image-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .admin-preview-wrapper {
@@ -761,11 +570,10 @@ main {
   object-fit: cover;
 }
 
-/* ❌ 极简磨砂悬浮删除按钮 */
 .admin-image-delete-btn {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -4px;
+  right: -4px;
   width: 20px;
   height: 20px;
   background: #ff4757 !important;
@@ -778,13 +586,72 @@ main {
   justify-content: center !important;
   cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(255, 71, 87, 0.4);
-  transition: transform 0.2s ease !important;
   z-index: 10;
   padding: 0 !important;
-  line-height: 1 !important;
 }
 
-.admin-image-delete-btn:hover {
-  transform: scale(1.15);
-  background: #ff6b81 !important;
+/* ==========================================================
+   📱 6. 移动端专属极致响应式断点（核心升级区）
+   ========================================================== */
+@media (max-width: 768px) {
+  /* 🎯 极其精准的黄金空白占位：完美容纳高度增加的双行头部，并顶出舒适间距 */
+  main {
+    padding-top: 154px !important; 
+  }
+
+  .site-header {
+    flex-direction: column !important; /* 开启纵向列排布：标题在上，导航在下 */
+    align-items: center !important;
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+
+  .logo {
+    margin-bottom: 0 !important;
+    font-size: 1.1rem !important;
+  }
+
+  /* 🎯 导航网格重组：开启换行，丢弃横向滚动条，让其自然分行 */
+  .nav {
+    width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important; 
+    justify-content: center !important;
+    overflow-x: visible !important; 
+    gap: 10px 8px !important; 
+    padding: 0 !important;
+  }
+
+  /* 🛠️ 这一步非常重要：前4个基础链接不设满宽，而是通过 Flex 基础控制让其整齐在第一行排开 */
+  .nav__link {
+    padding: 5px 10px !important;
+    font-size: 0.85rem !important;
+    flex: 0 1 auto !important;
+  }
+
+  /* 🛠️ 终极隔离：将第2行的两个动作元素通过强制前置换行（或者独立边距提升）另起一行并居中 */
+  #user-btn, #admin-entrance-wrapper {
+    margin-top: 2px !important;
+  }
+
+  #user-btn, .admin-entrance-btn {
+    padding: 5px 12px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* 📱 手机端 Banner 高保真炫目满屏自适应（绝无留白） */
+  .hero {
+    margin: 12px 14px 0 !important; 
+    height: 240px !important; /* 调大至优雅的 240px */
+  }
+
+  .hero__content {
+    padding: 16px 16px !important;
+  }
+
+  .section {
+    padding-inline: 12px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
 }
