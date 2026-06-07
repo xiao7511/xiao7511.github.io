@@ -384,8 +384,15 @@
                     const targetImg = document.getElementById(`img-${section}-${i}`);
                     const targetCard = document.getElementById(`card-${section}-${i}`);
                     
-                    if (targetImg) {
-                        targetImg.src = `${storageUrl}?t=${new Date().getTime()}`;
+                    if (targetCard) {
+                        targetCard.style.display = 'block';
+                        // 如果原本是席位空缺，则需要动态生成里面的图片结构
+                        targetCard.innerHTML = `
+                            <div class="img-container">
+                                <img id="img-${section}-${i}" src="${storageUrl}?t=${new Date().getTime()}" />
+                            </div>
+                            <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [索引 ${i}]</span>
+                        `;
                     }
                 }
 
@@ -462,7 +469,7 @@
 
         wrapper.innerHTML = '';
 
-        // 🎯 核心改变：一次性拉取最新的线上路由表，绝不盲目去撞 404
+        // 🎯 一次性拉取最新的线上路由表
         let deployedList = [];
         try {
             const { data, error } = await window.supabaseClient
@@ -472,7 +479,7 @@
                 deployedList = data;
             }
         } catch (err) {
-            console.error("读取线上图片路由表失败，降级为默认渲染:", err);
+            console.error("读取线上图片路由表失败:", err);
         }
 
         for (const item of sections) {
@@ -492,14 +499,15 @@
             for (let i = 0; i < item.maxCount; i++) {
                 const card = document.createElement('div');
                 card.className = 'img-preview-card';
-                card.id = `card-${item.id}-${i}`; // 🎯 给卡片加上唯一 ID，方便上传成功后一瞬间精准定位刷新
+                card.id = `card-${item.id}-${i}`; 
 
                 // 检查当前位置在数据库里有没有成功记录
                 const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
                 const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
 
                 if (match) {
-                    // 🌟 如果表里有记录，完美高亮渲染图片，去掉恶心的隐藏逻辑
+                    // 🎯 核心修复 1：表里有图，强制将卡片从 display: none 调整为 block 亮起展现！
+                    card.style.display = 'block';
                     card.innerHTML = `
                         <div class="img-container">
                             <img id="img-${item.id}-${i}" src="${match.storage_url}${cacheBuster}" />
@@ -507,7 +515,8 @@
                         <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [索引 ${i}]</span>
                     `;
                 } else {
-                    // 📷 如果没传过，显示一个高档舒适的二次元像素风占位席位，绝不发起死锁网络请求
+                    // 🎯 核心修复 2：即使没传过，也将卡片亮起，作为“空缺占位”让管理员知道可以在这里传图！
+                    card.style.display = 'block';
                     card.innerHTML = `
                         <div class="img-container" style="background:#090616; height:90px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;">
                             <span>📷 席位空缺</span>
