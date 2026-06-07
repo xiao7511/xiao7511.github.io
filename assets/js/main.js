@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (session && session.user) {
             try {
                 // 前往刚刚建立好的 public.users 表，检索当前登录邮箱的管理员标签
-                const { data: userData, error } = await window.supabaseClient
+                const { data: userData, error } = window.supabaseClient
                     .from('users')
                     .select('is_admin')
                     .eq('email', session.user.email)
