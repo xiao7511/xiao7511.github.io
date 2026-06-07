@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';[cite: 1]
+    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
     let config = null;
 
     try {
