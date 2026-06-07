@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   // 🔐 APP 核心初始化流水线 (高精度重构，消除时序死锁)
   // =========================================================
-  async function initApp() {
+  /*async function initApp() {
     showSlide(0);
     startCarousel();
     updateUserUI(null); 
@@ -177,7 +177,124 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. 第四步：拉取内容展现层数据
     await syncLiveImagesFromDB();
     await fetchPosts();
-  }
+  }*/
+    // =========================================================
+    // 🔐 APP 核心初始化流水线 (高精度重构：加入返回主页的强制状态捕获)
+    // =========================================================
+    async function initApp() {
+      showSlide(0);
+      startCarousel();
+      updateUserUI(null); 
+
+      if (typeof supabase === 'undefined') {
+        console.error("Supabase SDK 尚未加载，中断初始化。");
+        return;
+      }
+
+      const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+      let config = null;
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+        const response = await fetch(workerUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          config = await response.json();
+          window.sysConfig = config;
+          console.log("🔒 已通过 Cloudflare Workers 安全通道下发动态链路凭证。");
+        } else {
+          throw new Error();
+        }
+      } catch (e) {
+        console.warn("⚠️ Cloudflare Worker 握手受阻，自动激活免配置直连沙箱通道。");
+        config = {
+          SUPABASE_URL: 'https://kogjjfccyncdszuuwlun.supabase.co',
+          SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec'
+        };
+      }
+
+      window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.SUPABASE_ANON_KEY.trim(), {
+        auth: {
+          persistSession: true, 
+          autoRefreshToken: true
+        }
+      });
+
+      // A. 先激活被动状态监听（管后续的手动操作）
+      activateAuthStateListener();
+
+      // 🎯 B. 核心修复：返回主页时，立刻主动去掏一次 LocalStorage 缓存，防止错过广播
+      try {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (session && session.user) {
+          console.log("🚀 检测到页面重载/返回，正在直接处理本地持久化 Session...");
+          await checkAdminPermission(session);
+        }
+      } catch (sessionErr) {
+        console.warn("主动读取本地 Session 失败:", sessionErr);
+      }
+
+      await syncLiveImagesFromDB();
+      await fetchPosts();
+    }
+
+    // =========================================================
+    // 🎯 提取出独立的鉴权核心函数（供被动监听和主动恢复共用）
+    // =========================================================
+    async function checkAdminPermission(session) {
+      // 安全更新主页的欢迎UI
+      updateUserUI(session?.user || null);
+
+      const adminBtn = document.getElementById('admin-entrance-wrapper');
+      if (!adminBtn) return;
+
+      if (!session || !session.user) {
+          adminBtn.style.setProperty('display', 'none', 'important');
+          return;
+      }
+
+      if (typeof window.supabaseClient.from !== 'function') {
+          adminBtn.style.setProperty('display', 'none', 'important');
+          return;
+      }
+
+      try {
+          const { data: userData, error } = await window.supabaseClient
+              .from('users')
+              .select('is_admin')
+              .eq('email', session.user.email)
+              .maybeSingle();
+
+          if (error) {
+              console.error("Supabase 鉴权发生底层错误:", error.message);
+              adminBtn.style.setProperty('display', 'none', 'important');
+              return;
+          }
+
+          if (userData && userData.is_admin === true) {
+              adminBtn.style.setProperty('display', 'block', 'important');
+              console.log(`👑 管理员权限核验通过: [${session.user.email}]`);
+          } else {
+              adminBtn.style.setProperty('display', 'none', 'important');
+          }
+      } catch (err) {
+          console.error('审查管理员权限时发生异常:', err);
+          adminBtn.style.setProperty('display', 'none', 'important');
+      }
+    }
+
+    function activateAuthStateListener() {
+      if (!window.supabaseClient) return;
+
+      window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          console.log(`🔄 捕获到 Auth 状态变更事件: ${event}`);
+          // 遇到 INITIAL_SESSION 或 SIGNED_IN 等事件时统一交由核心函数审查
+          await checkAdminPermission(session);
+      });
+    }
 
   // =========================================================
   // 🎯 核心加固：将监听逻辑封装，确保其在客户端完全创建成功后运作
