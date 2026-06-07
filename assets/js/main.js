@@ -161,16 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 🎯 核心修复：完全由监听器驱动状态，消灭 getSession() 造成的几百毫秒时间差
+  // 🎯 修复方案：用标准的事件广播机制流替换，百分之百捕获初始化状态和退出状态
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      console.log(`Auth 状态变更: ${event}`);
-      if (session) {
+      console.log("Auth状态流变更:", event, session);
+      
+      if (session && session.user) {
+        // 只要有会话（无论是初始化恢复、还是刚登录），立刻刷出用户信息并验权
         updateUserUI(session.user);
-        await checkAdminPermission(session); // 确保每次回来都能重新验证并显示控制台
+        await checkAdminPermission(session);
       } else {
+        // 只要退出了，立刻抹除状态，隐藏后台按钮
         updateUserUI(null);
         const adminBtn = document.getElementById('admin-entrance-wrapper');
-        if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
+        if (adminBtn) {
+          adminBtn.style.setProperty('display', 'none', 'important');
+        }
       }
     });
 
