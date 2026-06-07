@@ -59,7 +59,6 @@
             margin: 0;
         }
 
-        /* 🔮 高级毛玻璃面板卡片 */
         .panel {
             background: var(--panel-bg);
             border: 1px solid var(--border-glow);
@@ -85,7 +84,6 @@
             padding-bottom: 8px;
         }
 
-        /* 🛠️ 表单与操作核心结构 */
         .form-group {
             display: flex;
             flex-direction: column;
@@ -114,7 +112,6 @@
             box-shadow: 0 0 10px rgba(0, 245, 255, 0.15);
         }
 
-        /* 🚀 赛博朋克流线质感按钮 */
         .btn {
             background: var(--primary-glow);
             color: white;
@@ -138,28 +135,14 @@
             filter: brightness(1.1);
         }
 
-        .btn:active {
-            transform: translateY(1px);
-        }
-
         .btn-secondary {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-main);
-            box-shadow: none;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.14);
-            box-shadow: none;
         }
 
         .btn-danger {
             background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
-            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.25);
-        }
-        .btn-danger:hover {
-            box-shadow: 0 6px 16px rgba(255, 71, 87, 0.4);
         }
 
         .btn-group {
@@ -168,32 +151,19 @@
             gap: 10px;
         }
 
-        /* 📱 状态反馈灯 */
         .status-bar {
             padding: 10px 12px;
             border-radius: 8px;
             font-size: 0.82rem;
             display: none;
-            animation: fadeIn 0.3s ease;
         }
 
         .status-info { background: rgba(37, 117, 252, 0.15); border: 1px solid rgba(37, 117, 252, 0.3); color: #70a1ff; }
         .status-success { background: rgba(46, 213, 115, 0.15); border: 1px solid rgba(46, 213, 115, 0.3); color: #2ed573; }
         .status-error { background: rgba(255, 71, 87, 0.15); border: 1px solid rgba(255, 71, 87, 0.3); color: #ff4757; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* 后台管理图片项删除按钮追加样式 */
-        .admin-image-item {
-            position: relative !important;
-        }
-        .admin-preview-wrapper {
-            position: relative !important;
-            overflow: visible !important;
-        }
+        .admin-image-item { position: relative !important; }
+        .admin-preview-wrapper { position: relative !important; overflow: visible !important; }
         .admin-image-delete-btn {
             position: absolute !important;
             top: -5px !important;
@@ -209,16 +179,7 @@
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            cursor: pointer !important;
-            box-shadow: 0 2px 6px rgba(255, 71, 87, 0.6) !important;
-            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
             z-index: 99 !important;
-            padding: 0 !important;
-            line-height: 1 !important;
-        }
-        .admin-image-delete-btn:hover {
-            transform: scale(1.25) !important;
-            background: #ff6b81 !important;
         }
     </style>
 </head>
@@ -245,7 +206,6 @@
 
     <div class="panel" id="control-panel" style="display: none;">
         <div class="panel-title">📺 主页多图轮播图配置中心</div>
-        
         <div class="form-group">
             <label>当前正在编辑的模块标识</label>
             <select id="config-section-select">
@@ -275,6 +235,19 @@
     let cachedLiveUrlsArray = []; 
     const FALLBACK_DEFAULT_URL = "images/IMG_4822.jpeg";
 
+    const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOY0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+
+    // 辅助初始化客户端函数
+    function createFreshClient() {
+        if (typeof supabase !== 'undefined') {
+            return supabase.createClient(SUPABASE_URL, ANON_KEY, {
+                auth: { persistSession: true, autoRefreshToken: true }
+            });
+        }
+        return null;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
         const passwordInput = document.getElementById('admin-password');
         const authBtn = document.getElementById('btn-auth-verify');
@@ -284,20 +257,10 @@
         const saveConfigBtn = document.getElementById('save-config-btn');
         const deployLiveBtn = document.getElementById('btn-deploy-live');
 
-        const SUPABASE_URL = 'https://kogjjfccyncdszuuwlun.supabase.co';
-        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOY0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec';
+        // 首次载入初始化实例
+        window.supabaseClient = createFreshClient();
 
-        // 初始化 Supabase
-        if (typeof supabase !== 'undefined') {
-            window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
-                auth: {
-                    persistSession: true,   // 开启持久化共享
-                    autoRefreshToken: true
-                }
-            });
-        }
-
-        // 检测会话初始化函数
+        // 承接 Session 核验
         async function checkSessionAndInitialize() {
             showStatus('🔐 正在智能检索并校对主页活动会话通行证...', 'info');
             try {
@@ -306,19 +269,18 @@
                 const currentEmail = session?.user?.email;
 
                 if (!error && currentEmail === 'xiao.ye751111@outlook.com') {
-                    console.log('👑 检测到主页管理员会话完美对齐，无缝免密解锁直通后台！');
+                    console.log('👑 检测到主页管理员会话完美对齐，免密直通后台！');
                     showStatus('🎉 欢迎回来，管理员 Xiao Ye！数据链路已全线激活。', 'success');
                     authPanel.style.display = 'none';
                     controlPanel.style.display = 'flex';
                     await fetchLatestBannerConfig();
                 } else {
-                    console.warn('⚠️ 暂未检测到活动的持久化管理员会话，切换至备用手动解锁机制。');
+                    console.warn('⚠️ 暂未检测到活动管理员会话，亮起密码箱备用。');
                     showStatus('🔒 请输入管理员安全密钥密码以激活全线数据链路...', 'info');
                     authPanel.style.display = 'flex';
                     controlPanel.style.display = 'none';
                 }
             } catch (err) {
-                console.error('会话检索发生底层异常:', err);
                 authPanel.style.display = 'flex';
                 controlPanel.style.display = 'none';
             }
@@ -327,7 +289,7 @@
         await checkSessionAndInitialize();
 
         // ==========================================
-        // 📍 核心修改位置：全面加固备用密码核验模块（自愈并防止 throw error）
+        // 📍 终极加固位置：重构密码登录以消灭 "Invalid API key" 报错
         // ==========================================
         authBtn.addEventListener('click', async () => {
             const password = passwordInput.value;
@@ -335,43 +297,44 @@
             showStatus('正在执行指纹对比与密码安全验证...', 'info');
 
             try {
-                // 1. 核心防御：登录前，先尝试登出残留或冲突的会话，彻底清除会话锁死状态
-                if (window.supabaseClient && window.supabaseClient.auth) {
-                    await window.supabaseClient.auth.signOut();
+                // 🎯 核心改变：绝不调用导致 API key 丢失注销的全局 signOut()。
+                // 而是直接原地生成一个全新的、100% 携带原始 anon 属性头部的纯净客户端，直接发起撞击认证。
+                window.supabaseClient = createFreshClient(); 
+
+                if (!window.supabaseClient) {
+                    throw new Error("Supabase 库未成功加载，请刷新页面重试。");
                 }
 
-                // 2. 发起全新的干净密码会话校验
+                // 发起登录校验
                 const { data, error } = await window.supabaseClient.auth.signInWithPassword({
                     email: 'xiao.ye751111@outlook.com',
                     password: password
                 });
 
-                // 3. 拦截特定报错，实现温和业务级反馈，不再抛出未处理异常
+                // 弱处理机制：优雅拦截，不再盲目 throw 导致白屏崩溃
                 if (error) {
-                    console.error('Supabase 认证底层返回错误:', error.message);
+                    console.error('Supabase 底层校验拒绝:', error.message);
                     showStatus('验证失败：' + error.message, 'error');
-                    alert('鉴权失败：密码输入不正确，请重新核对后再试！');
-                    return; // 优雅终止，拒绝 throw error
+                    alert('鉴权失败：' + (error.message === 'Invalid API key' ? '接口连接凭证受阻，请再次点击尝试或检查网络。' : '密码不正确，请重新核对！'));
+                    return; 
                 }
 
                 showStatus('👑 管理员密码验证通过！正在接管控制面板...', 'success');
                 authPanel.style.display = 'none';
                 controlPanel.style.display = 'flex';
 
-                // 4. 成功登录后重新加载配置
                 await fetchLatestBannerConfig();
             } catch (err) {
-                showStatus('系统高等级自愈防御生效: ' + err.message, 'error');
-                console.error('抓取到捕获链异常:', err);
+                showStatus('防御锁截获异常: ' + err.message, 'error');
+                console.error('捕获到未知运行时异常:', err);
             }
         });
 
-        // 动态图片预览区渲染核心（带一键删除功能）
+        // 渲染管理列表
         window.renderAdminBannerList = function(imageUrlsArray) {
             cachedLiveUrlsArray = imageUrlsArray || [];
             const container = document.getElementById('admin-banner-manager-list');
             if (!container) return;
-
             container.innerHTML = ''; 
 
             if (cachedLiveUrlsArray.length === 0) {
@@ -392,9 +355,9 @@
                 itemDiv.style.marginBottom = '12px';
 
                 itemDiv.innerHTML = `
-                    <div class="admin-preview-wrapper" style="position: relative; width: 80px; height: 50px; border-radius: 6px; overflow: visible; border: 1px solid rgba(255, 255, 255, 0.15); flex-shrink: 0;">
+                    <div class="admin-preview-wrapper" style="position: relative; width: 80px; height: 50px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.15); flex-shrink: 0;">
                         <img src="${url || FALLBACK_DEFAULT_URL}" alt="预览" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.src='images/IMG_4822.jpeg'">
-                        <button type="button" class="admin-image-delete-btn" data-index="${index}" title="点击从队列剔除这张图片">✕</button>
+                        <button type="button" class="admin-image-delete-btn" data-index="${index}">✕</button>
                     </div>
                     <input type="text" class="admin-banner-input" value="${url}" placeholder="请输入合法的高清大图 URL 线上链接" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
                 `;
@@ -403,8 +366,6 @@
 
             container.querySelectorAll('.admin-image-delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     const targetIndex = parseInt(btn.dataset.index);
                     if (confirm(`确定要从当前的轮播队列中删除第 ${targetIndex + 1} 张图片吗？`)) {
                         cachedLiveUrlsArray.splice(targetIndex, 1);
@@ -432,15 +393,11 @@
                     .maybeSingle();
 
                 if (error) throw error;
-
                 let liveUrls = [];
-                if (data && data.url) {
-                    liveUrls = JSON.parse(data.url);
-                }
+                if (data && data.url) { liveUrls = JSON.parse(data.url); }
                 window.renderAdminBannerList(liveUrls);
-                showStatus('🎉 成功接入 Supabase 配置流！多图预览管理层加载就位。', 'success');
+                showStatus('🎉 成功配置流管理层渲染就位。', 'success');
             } catch (err) {
-                showStatus('拉取云配置遇到延迟，启用本地空队列兜底。', 'info');
                 window.renderAdminBannerList([]);
             }
         }
@@ -448,30 +405,24 @@
         addNewBtn.addEventListener('click', () => {
             cachedLiveUrlsArray.push('');
             window.renderAdminBannerList(cachedLiveUrlsArray);
-            const allInputs = document.querySelectorAll('.admin-banner-input');
-            if (allInputs.length > 0) allInputs[allInputs.length - 1].focus();
         });
 
         saveConfigBtn.addEventListener('click', async () => {
             if (!window.supabaseClient) return;
             const cleanedUrls = cachedLiveUrlsArray.filter(u => u.trim() !== '');
-            showStatus('正在向云端核心配置表提交数据过滤并打包同步...', 'info');
+            showStatus('正在同步至云端数据库...', 'info');
             saveConfigBtn.disabled = true;
-
             try {
                 const { error } = await window.supabaseClient
                     .from('site_config')
                     .upsert([{ section: 'section_banner', url: JSON.stringify(cleanedUrls) }]);
-
                 if (error) throw error;
-                showStatus('💾 完美！最新的图片配置序列已安全存档至 site_config 数据表。', 'success');
+                showStatus('💾 完美存档至 site_config 数据表。', 'success');
                 alert('🎉 轮播项修改已成功同步上云存档！');
                 window.renderAdminBannerList(cleanedUrls);
             } catch (err) {
                 alert('同步保存失败: ' + err.message);
-            } finally {
-                saveConfigBtn.disabled = false;
-            }
+            } finally { saveConfigBtn.disabled = false; }
         });
 
         deployLiveBtn.addEventListener('click', async () => {
@@ -490,6 +441,28 @@
         el.className = `status-bar status-${type}`;
         el.textContent = msg;
     }
+</script>
+
+<script>
+    // 闪电部署覆盖引擎
+    window.deploySectionImages = async function(section, maxCount, supabaseUrl) {
+        let deployedUrls = [];
+        for (let i = 0; i < maxCount; i++) {
+            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
+            deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
+        }
+        try {
+            showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
+            const { error } = await window.supabaseClient
+                .from('site_config')
+                .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
+            if (error) throw error;
+            alert('✨ 部署指令已安全同步！主页对应版面已实时覆盖。');
+            showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
+        } catch (err) {
+            alert('部署同步失败: ' + err.message);
+        }
+    };
 </script>
 </body>
 </html>
