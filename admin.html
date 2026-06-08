@@ -217,46 +217,48 @@
             object-fit: contain;
         }*/
         /* 🎯 优化：PC端满屏、大图平铺，移动端保持自适应 */
+        /* 🎯 修复 1：严格限制隐形文件输入框的捕获范围，绝对不能让它盖住下拉菜单和下方的表单 */
+        #file-input {
+            display: none !important; /* 彻底移除隐形铺满，只让它通过点击 dropzone 触发 */
+        }
+
+        /* 🎯 修复 2：加固图片流网格，确保移动端绝不发生横向溢出 */
         .image-flow-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* PC端格子自动变宽撑满 */
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
             gap: 16px;
             margin-top: 12px;
-        }
-
-        .img-preview-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-glow);
-            border-radius: 12px;
-            padding: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .img-container {
             width: 100%;
-            height: 180px; /* 💡 从原本的 90px 提高到 180px，给大屏充足的展示空间 */
-            background: #090616;
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        .img-container img {
+        /* 🎯 修复 3：强力让所有的卡片内部输入框、按钮在移动端和PC端能够缩放，不撑爆版面 */
+        .img-preview-card input[type="text"] {
             width: 100%;
-            height: 100%;
-            object-fit: cover; /* 🎯 核心改变：撑满容器且不变形，实现完美的“满屏平铺”视觉 */
+            box-sizing: border-box; /* 锁死内边距，防止撑开宽度 */
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .img-preview-card input[type="text"]:focus {
+            border-color: var(--accent-neon);
         }
 
-        /* 移动端特殊保护：如果屏幕小于 768px，保持原本紧凑好看的高度 */
+        /* 🎯 修复 4：针对移动端的自适应进行绝对保护 */
         @media (max-width: 768px) {
             .image-flow-grid {
-                grid-template-columns: repeat(2, 1fr); /* 移动端保持一行两张图 */
-                gap: 8px;
+                grid-template-columns: 1fr !important; /* 移动端精细化卡片改成单列垂直排列，体验最棒 */
+                gap: 12px;
             }
             .img-container {
-                height: 100px; 
+                height: 140px; 
+            }
+            .panel {
+                padding: 16px;
             }
         }
         
@@ -581,7 +583,7 @@
         }
     }*/
     // ========================================================
-    // 🎯 全新业务看板：支持标题、连载标题、主题标签及不限张数详情图上传
+    // 🎯 黄金加固版看板：提供明晰的独立输入框与独立图片发布槽
     // ========================================================
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
@@ -595,30 +597,29 @@
             if (data && !error) managementData = data;
         } catch (err) { console.error(err); }
 
-        // 2. 拉取旧的 banner 路由数据
+        // 2. 拉取大图轮播路由数据
         let bannerList = [];
         try {
             const { data } = await window.supabaseClient.from('deployed_images').select('*').eq('section_id', 'section_banner');
             if (data) bannerList = data;
         } catch(e){}
 
-        // 定义咱们全新的三大核心管理区域
         const modules = [
             { id: 'section_banner', name: '🎪 首页 5 张大图轮播区', type: 'banner', maxCount: 5 },
-            { id: 'anime', name: '📺 热门动漫推荐区 (首页预览 + 详情配置)', type: 'content', maxCount: 4 },
-            { id: 'manga', name: '📖 漫画连载专区 (首页预览 + 连载主题配置)', type: 'content', maxCount: 4 }
+            { id: 'anime', name: '📺 热门动漫推荐专区 (支持精细化详情)', type: 'content', maxCount: 4 },
+            { id: 'manga', name: '📖 漫画连载专区 (支持多主题配置)', type: 'content', maxCount: 4 }
         ];
 
         for (const mod of modules) {
             const block = document.createElement('div');
             block.className = 'dashboard-section';
-            block.style = "background:var(--panel-bg); border:1px solid var(--border-glow); border-radius:16px; padding:20px; margin-bottom:24px;";
+            block.style = "background:var(--panel-bg); border:1px solid var(--border-glow); border-radius:16px; padding:20px; margin-bottom:24px; box-sizing:border-box;";
 
             block.innerHTML = `<div class="section-title" style="font-size:1.2rem; font-weight:bold; color:var(--accent-neon); margin-bottom:16px;">${mod.name}</div>`;
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
-            // 🔹 情况 A：如果是首页大图轮播，保持原功能不变（5张图上限）
+            // 🔹 模块 A：保持原汁原味的首页 5 张大图轮播
             if (mod.type === 'banner') {
                 for (let i = 0; i < mod.maxCount; i++) {
                     const card = document.createElement('div');
@@ -629,9 +630,9 @@
                     if (match) {
                         card.innerHTML = `
                             <div class="img-container"><img src="${match.storage_url}${cacheBuster}" /></div>
-                            <div style="display:flex; justify-content:space-between; margin-top:8px;">
-                                <span class="badge" style="background:#2ecc71; color:#fff;">● 轮播图 [${i+1}]</span>
-                                <button onclick="deleteImage('section_banner', ${i}, '${supabaseUrl}')" style="background:#ff4757; color:#fff; border:none; padding:2px 6px; border-radius:4px; cursor:pointer; font-size:0.7rem;">❌ 删除</button>
+                            <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
+                                <span class="badge" style="background:#2ecc71; color:#fff; margin:0;">● 轮播图 [${i+1}]</span>
+                                <button onclick="deleteImage('section_banner', ${i}, '${supabaseUrl}')" style="background:#ff4757; color:#fff; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">❌ 删除</button>
                             </div>
                         `;
                     } else {
@@ -643,49 +644,59 @@
                     grid.appendChild(card);
                 }
                 block.appendChild(grid);
-                // 增加一键部署按钮
                 const btnWrap = document.createElement('div');
                 btnWrap.style = "margin-top:16px; text-align:right;";
-                btnWrap.innerHTML = `<button class="deploy-btn" onclick="deploySection('section_banner', 5, '${supabaseUrl}')">🚀 一键部署大图轮播</button>`;
+                btnWrap.innerHTML = `<button class="deploy-btn" onclick="deploySection('section_banner', 5, '${supabaseUrl}')">🚀 一键同步大图轮播</button>`;
                 block.appendChild(btnWrap);
             } 
             
-            // 🔹 情况 B：热门动漫推荐与漫画连载（复合新需求）
+            // 🔹 模块 B：热门动漫推荐 / 漫画连载（全量输入与图片独立上传区域）
             else {
                 for (let i = 0; i < mod.maxCount; i++) {
                     const card = document.createElement('div');
                     card.className = 'img-preview-card';
-                    card.style = "background:rgba(0,0,0,0.2); padding:14px; border-radius:10px;";
+                    card.style = "background:rgba(0,0,0,0.25); padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;";
 
                     const record = managementData.find(d => d.category === mod.id && d.slot_index === i) || {
-                        title: mod.id === 'anime' ? '未命名动漫' : '未命名漫画',
-                        subtitle: '连载更新至第 1 话',
-                        theme_tags: [],
-                        cover_url: '',
-                        detail_urls: []
+                        title: '', subtitle: '', theme_tags: [], cover_url: '', detail_urls: []
                     };
 
                     const hasCover = !!record.cover_url;
                     const cacheBuster = `?t=${new Date().getTime()}`;
 
                     card.innerHTML = `
-                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">🖼️ 首页展示封面 [格子 ${i+1}]</div>
-                        <div class="img-container" style="height:130px;">
-                            ${hasCover ? `<img src="${record.cover_url}${cacheBuster}" />` : `<span style="font-size:0.8rem; color:#666;">📷 暂无封面(点击下方一键部署上传)</span>`}
+                        <div style="font-size:0.85rem; font-weight:600; color:var(--text-main);">🖼️ 首页展示封面 (位置 ${i+1})</div>
+                        <div class="img-container" style="height:140px;">
+                            ${hasCover ? `<img src="${record.cover_url}${cacheBuster}" />` : `<span style="font-size:0.8rem; color:var(--text-muted);">📷 暂无封面，请选择文件上传</span>`}
+                        </div>
+                        
+                        <div style="background:rgba(255,255,255,0.02); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.1);">
+                            <input type="file" id="cover-file-${mod.id}-${i}" accept="image/*" style="font-size:0.75rem; width:100%; color:var(--text-muted);" />
                         </div>
 
-                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
-                            <input type="text" id="title-${mod.id}-${i}" value="${record.title}" placeholder="修改主标题名称..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.85rem;" />
-                            <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle}" placeholder="修改连载标题/章节..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#var(--accent-neon); padding:4px 8px; border-radius:4px; font-size:0.8rem;" />
-                            <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join('，')}" placeholder="添加连载主题(用，逗号隔开)..." style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#ffe066; padding:4px 8px; border-radius:4px; font-size:0.8rem;" />
+                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                            <div>
+                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
+                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：死神 千年血战篇" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题/最新章节</label>
+                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 26 话" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 连载主题标签 (用逗号隔开)</label>
+                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,冒险,奇幻" />
+                            </div>
                         </div>
 
-                        <div style="margin-top:12px; background:rgba(0,0,0,0.3); padding:8px; border-radius:6px;">
-                            <div style="font-size:0.75rem; color:rgba(255,255,255,0.5); margin-bottom:4px;">📂 详情页大图集 (已传: ${ (record.detail_urls || []).length } 张)</div>
-                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="image/*" style="font-size:0.7rem; width:100%; color:var(--text-muted);" />
+                        <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+                            <div style="font-size:0.75rem; color:var(--accent-neon); font-weight:600;">📂 详情页内容图集 (已部署: ${(record.detail_urls || []).length} 张)</div>
+                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="image/*" style="font-size:0.75rem; width:100%; color:var(--text-muted);" />
                         </div>
 
-                        <button onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; margin-top:12px; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:6px; border-radius:6px; cursor:pointer; font-size:0.8rem;">💾 保存配置并同步部署</button>
+                        <button onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem; transition:opacity 0.2s; margin-top:auto;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
+                            💾 保存该格配置并发布
+                        </button>
                     `;
                     grid.appendChild(card);
                 }
@@ -756,6 +767,84 @@
         } catch (err) {
             console.error("图片注销失败:", err);
             alert('删除路由失败: ' + err.message);
+        }
+    };
+    // ========================================================
+    // 🎯 核心上传与同步引擎：分别捕获独立封面和不限张数详情图
+    // ========================================================
+    window.saveContentModule = async function(category, slotIndex, supabaseUrl) {
+        const titleVal = document.getElementById(`title-${category}-${slotIndex}`).value.trim();
+        const subtitleVal = document.getElementById(`sub-${category}-${slotIndex}`).value.trim();
+        const tagsRaw = document.getElementById(`tags-${category}-${slotIndex}`).value.trim();
+        const themeTags = tagsRaw ? tagsRaw.split(/[，,]/).map(t => t.trim()).filter(Boolean) : [];
+
+        // 获取该单元格专属的封面文件与详情图文件
+        const coverInput = document.getElementById(`cover-file-${category}-${slotIndex}`);
+        const detailInput = document.getElementById(`files-detail-${category}-${slotIndex}`);
+        
+        try {
+            showStatus(`正在处理发布 [${category === 'anime'?'热门动漫':'漫画连载'}] 第 ${slotIndex + 1} 格...`, 'info');
+
+            // 1. 处理独立封面的上传
+            let coverUrl = "";
+            if (coverInput && coverInput.files.length > 0) {
+                const cFile = coverInput.files[0];
+                const cName = `${category}_slot_${slotIndex}_cover_${Date.now()}.png`;
+                
+                const { error: errC } = await window.supabaseClient.storage.from('images').upload(`images/${cName}`, cFile, { upsert: true });
+                if (errC) throw new Error("封面上传存储桶失败: " + errC.message);
+                
+                coverUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${cName}`;
+            } else {
+                // 如果用户没有选择新封面，保留上一次的数据
+                const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).single();
+                if (data) coverUrl = data.cover_url;
+            }
+
+            // 2. 处理不限制张数的详情图集批量上传
+            let detailUrls = [];
+            if (detailInput && detailInput.files.length > 0) {
+                const files = detailInput.files;
+                for (let k = 0; k < files.length; k++) {
+                    const dFile = files[k];
+                    const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.png`;
+                    
+                    const { error: errD } = await window.supabaseClient.storage.from('images').upload(`images/${dName}`, dFile, { upsert: true });
+                    if (errD) console.warn(`详情图 [${k}] 上传失败`, errD);
+                    
+                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
+                    detailUrls.push(dUrl);
+                }
+            } else {
+                // 未重传详情图，则拉取老记录保留
+                const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).single();
+                if (data && data.detail_urls) detailUrls = data.detail_urls;
+            }
+
+            // 3. 全量打包写入到 content_management 精细化大表
+            const { error } = await window.supabaseClient
+                .from('content_management')
+                .upsert({
+                    category: category,
+                    slot_index: slotIndex,
+                    title: titleVal,
+                    subtitle: subtitleVal,
+                    theme_tags: themeTags,
+                    cover_url: coverUrl,
+                    detail_urls: detailUrls,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'category,slot_index' });
+
+            if (error) throw error;
+
+            alert('✨ 配置发布成功！前台主页和详情页已实时对齐上线！');
+            showStatus('🎉 同步下发成功！', 'success');
+            await refreshLiveDashboard(supabaseUrl); // 强刷看板看效果
+
+        } catch (err) {
+            console.error(err);
+            alert('发布故障: ' + err.message);
+            showStatus('发布阻断: ' + err.message, 'error');
         }
     };
     document.addEventListener('DOMContentLoaded', initWorkflow);
