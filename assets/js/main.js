@@ -945,51 +945,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadHomeContent() {
       try {
+          if (!window.supabaseClient) {
+              console.warn("SupabaseClient 尚未就绪，跳过内容渲染。");
+              return;
+          }
+
           // 1. 获取新版复合内容数据（热门动漫与漫画连载）
           const { data: managementData, error } = await window.supabaseClient
               .from('content_management')
               .select('*');
 
           if (error) throw error;
+          if (!managementData) return;
 
-          // 2. 渲染“热门动漫推荐”区域 (假设你的容器 ID 是 anime-container)
+          // 2. 渲染“热门动漫推荐”区域
           const animeContainer = document.getElementById('anime-container');
           if (animeContainer) {
-              animeContainer.innerHTML = ''; // 清空原本写死的静态 HTML
+              animeContainer.innerHTML = ''; // 清空原本写死的 4 个占位 HTML
 
-              // 过滤出动漫的数据，并按槽位升序排序
+              // 过滤出动漫的数据(anime)，并按槽位 0,1,2,3 升序排序
               const animeSlots = managementData
                   .filter(item => item.category === 'anime')
                   .sort((a, b) => a.slot_index - b.slot_index);
 
               animeSlots.forEach(slot => {
-                  const card = document.createElement('div');
-                  card.className = 'anime-card'; // 保持你原本的卡片样式类名
+                  // 创建最外层卡片 article
+                  const card = document.createElement('article');
+                  card.className = 'card'; // 🌟 沿用你主页原本的卡片样式类名
                   card.style.cursor = 'pointer';
                   
-                  // 点击后携带参数跳转到详情页
+                  // 点击后携带参数安全跳转到详情页
                   card.onclick = () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
 
-                  // 动态装填后台配置的封面、标题、副标题和标签
-                  const tagsHtml = (slot.theme_tags || []).map(tag => `<span class="tag-badge">${tag}</span>`).join('');
+                  // 拼接标签：如果是多标签数组，用 / 隔开
+                  const tagsText = (slot.theme_tags || []).join(' / ');
                   
+                  // 🌟 精准无损地复刻你 HTML 原始的 DOM 结构
                   card.innerHTML = `
-                      <div class="card-cover-wrapper">
-                          <img src="${slot.cover_url || 'placeholder.png'}" alt="${slot.title}" />
-                      </div>
-                      <div class="card-info">
-                          <h3>${slot.title || '未命名主题'}</h3>
-                          <p>${slot.subtitle || '暂无更新进度'}</p>
-                          <div class="tags-flex">${tagsHtml}</div>
+                      <img src="${slot.cover_url || 'images/IMG_4893.png'}" alt="${slot.title || '动漫主题'}" loading="lazy" decoding="async">
+                      <div class="card__body">
+                        <h3 class="card__title">${slot.title || '未命名主题'}</h3>
+                        <p class="card__tag">${tagsText || slot.subtitle || '暂无分类'}</p>
                       </div>
                   `;
                   animeContainer.appendChild(card);
               });
           }
 
-          // 3. 同理：如果你的漫画连载区也想动态化 (假设容器 ID 是 manga-container)
+          // 3. 【同理修复】如果你以后要开放底部的漫画连载区动态化，确保 HTML 里有 id="manga-container"
           const mangaContainer = document.getElementById('manga-container');
           if (mangaContainer) {
               mangaContainer.innerHTML = '';
@@ -998,17 +1003,19 @@ document.addEventListener('DOMContentLoaded', () => {
                   .sort((a, b) => a.slot_index - b.slot_index);
 
               mangaSlots.forEach(slot => {
-                  const card = document.createElement('div');
-                  card.className = 'manga-card';
+                  const card = document.createElement('article');
+                  card.className = 'card';
                   card.style.cursor = 'pointer';
                   card.onclick = () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
                   
                   card.innerHTML = `
-                      <img src="${slot.cover_url || 'placeholder.png'}" />
-                      <h4>${slot.title}</h4>
-                      <span>${slot.subtitle}</span>
+                      <img src="${slot.cover_url || 'placeholder.png'}" loading="lazy" decoding="async"/>
+                      <div class="card__body">
+                        <h3 class="card__title">${slot.title}</h3>
+                        <p class="card__tag">${slot.subtitle}</p>
+                      </div>
                   `;
                   mangaContainer.appendChild(card);
               });
