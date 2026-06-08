@@ -29,7 +29,7 @@
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 1000px;
             margin: auto;
             background: var(--panel-bg);
             backdrop-filter: blur(15px);
@@ -75,7 +75,6 @@
             transition: all 0.2s;
         }
         .back-home-btn:hover { background: var(--primary-glow); border-color: transparent; }
-        .back-arrow { margin-right: 6px; }
 
         .upload-card {
             background: rgba(0, 0, 0, 0.25);
@@ -86,7 +85,7 @@
         }
 
         h2 {
-            font-size: 1.05rem;
+            font-size: 1.1rem;
             margin-top: 0;
             margin-bottom: 16px;
             color: var(--text-main);
@@ -107,6 +106,7 @@
             box-sizing: border-box;
         }
 
+        /* 🎯 核心改良：dropzone 区域包裹隐形 input，确保绝对不会溢出到外面影响别人 */
         .dropzone-area {
             border: 2px dashed rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.02);
@@ -118,17 +118,13 @@
             position: relative;
             margin: 16px 0;
             box-sizing: border-box;
+            overflow: hidden;
         }
-        .dropzone-area:active {
-            border-color: var(--accent-neon);
-            background: rgba(0, 245, 255, 0.04);
-        }
-
-        input[type='file'] {
+        .dropzone-area input[type='file'] {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             opacity: 0; cursor: pointer;
-            z-index: 5;
+            z-index: 2;
         }
 
         .action-btn {
@@ -142,14 +138,11 @@
             border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(106, 17, 203, 0.3);
-            transition: opacity 0.2s;
         }
-        .action-btn:active { opacity: 0.8; }
-        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
 
         #upload-status {
             margin-top: 14px; padding: 12px; border-radius: 8px;
-            font-size: 0.85rem; text-align: center; line-height: 1.4;
+            font-size: 0.85rem; text-align: center;
         }
         .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; }
         .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; }
@@ -157,53 +150,31 @@
 
         .preview-dashboard { margin-top: 32px; }
         
-        .dashboard-section {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 20px;
-        }
-        
-        .section-header {
-            display: flex; 
-            flex-direction: row; 
-            justify-content: space-between; 
-            align-items: center;
-            margin-bottom: 14px; 
-            border-bottom: 1px solid rgba(255,255,255,0.05); 
-            padding-bottom: 10px;
-            gap: 10px;
-        }
-        
-        .section-title { font-weight: 700; color: var(--accent-neon); font-size: 0.95rem; }
-        
-        .deploy-btn {
-            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-            color: white; border: none; padding: 8px 14px; border-radius: 6px;
-            font-weight: 600; cursor: pointer; font-size: 0.8rem;
-            white-space: nowrap;
-            box-shadow: 0 4px 8px rgba(0, 206, 201, 0.2);
-        }
-
+        /* 🎯 核心改良：画看板大网格，PC端采用多列，移动端采用自适应强行回档 */
         .image-flow-grid {
             display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px;
+            width: 100%;
+            box-sizing: border-box;
         }
         
         .img-preview-card {
-            background: #110d24; border-radius: 8px; padding: 8px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.03);
+            background: #110d24; 
+            border-radius: 12px; 
+            padding: 16px; 
+            border: 1px solid rgba(255,255,255,0.05);
             box-sizing: border-box;
-            display: none; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-       /* .img-container { 
+        /* 🎯 核心修改：后台图片显示区统一，工整平铺不拉伸 */
+        .img-container { 
             width: 100%; 
-            min-height: 90px; 
-            max-height: 180px;
-            border-radius: 6px; 
+            height: 120px; 
+            border-radius: 8px; 
             overflow: hidden; 
             background: #090616;
             display: flex;
@@ -212,31 +183,40 @@
         }
         .img-container img { 
             width: 100%; 
-            height: auto; 
-            max-height: 180px;
-            object-fit: contain;
-        }*/
-
-        /* 后台看板容器，保持原样精致即可，不用跟着撑大 */
-        .img-container {
-            width: 100%;
-            height: 110px; /* 恢复成美观紧凑的110px，后台看起来更工整 */
-            background: #090616;
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .img-container img {
-            width: 100%;
-            height: 100%;
+            height: 100%; 
             object-fit: cover;
         }
-                
+
+        /* 🎯 精细化表单内部输入框规范加固，防止在移动端撑坏网格 */
+        .img-preview-card input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .img-preview-card input[type="text"]:focus {
+            border-color: var(--accent-neon);
+        }
+        
         .badge {
-            font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px;
+            font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-block;
             background: rgba(255,255,255,0.06); color: var(--text-muted);
+        }
+
+        /* 📱 移动端自适应硬核支撑 */
+        @media (max-width: 768px) {
+            .image-flow-grid {
+                grid-template-columns: 1fr !important; /* 移动端降级为单列垂直排列，绝不横向溢出 */
+                gap: 14px;
+            }
+            .img-container {
+                height: 140px;
+            }
         }
 
         @media (min-width: 600px) {
@@ -244,14 +224,7 @@
             .container { padding: 35px; border-radius: 24px; }
             .header-box { flex-direction: row; justify-content: space-between; align-items: center; }
             h1 { font-size: 1.6rem; }
-            h2 { font-size: 1.2rem; }
             .upload-card { padding: 25px; }
-            .dropzone-area { padding: 35px 20px; }
-            .image-flow-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-            .img-container { height: 90px; }
-            .badge { font-size: 0.75rem; }
-            .section-title { font-size: 1.05rem; }
-            .deploy-btn { font-size: 0.85rem; padding: 8px 16px; }
         }
     </style>
 </head>
@@ -259,34 +232,30 @@
     <div class="container">
         <div class="header-box">
             <h1>内容管理后台 —— 终极自适应控制台</h1>
-            <a href="index.html" class="back-home-btn"><span class="back-arrow">←</span> 返回站点主页</a>
+            <a href="index.html" class="back-home-btn">← 返回站点主页</a>
         </div>
 
         <div class="upload-card">
-            <h2><span>🔮</span> 批量上传文件 (手机端支持多选/拍照)</h2>
-            
+            <h2><span>🔮</span> 首页大图轮播批量上传缓冲区</h2>
             <div style="margin-bottom: 16px;">
-                <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">目标更新版面</label>
-                <select id="page-section">
-                    <option value="section_banner">首页Banner大图轮播</option>
-                    <option value="section_anime">动漫版面多图轮播</option>
-                    <option value="section_community">社区交流多图轮播</option>
-                    <option value="section_recommend">热门强推多图轮播</option>
+                <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">当前工作模式：首页大图批量推送位</label>
+                <select id="page-section" disabled>
+                    <option value="section_banner">首页Banner大图轮播 (5张联动区)</option>
                 </select>
             </div>
 
             <div class="dropzone-area" id="drop-zone">
                 <span style="font-size:2.2rem; display:block; margin-bottom:8px;">📥</span>
-                <span class="dropzone-text">点击批量选择相册文件或拍照</span>
+                <span class="dropzone-text">点击批量选择相册大图文件进行缓冲覆盖</span>
                 <input type="file" id="file-input" accept="image/*" multiple />
             </div>
 
-            <button id="upload-btn" class="action-btn" disabled>确认上传至下方预览库</button>
-            <div id="upload-status" class="status-info" style="display: block;">正在安全连接控制中心...</div>
+            <button id="upload-btn" class="action-btn" disabled>确认部署至下发大图轮播位</button>
+            <div id="upload-status" class="status-info">正在安全连接控制中心...</div>
         </div>
 
         <div class="preview-dashboard">
-            <h2><span>🖼️</span> 线上运行与待部署图库看板 (先预览，后部署)</h2>
+            <h2><span>🖼️</span> 线上复合内容控制面板 (支持多项编辑与独立多图发布)</h2>
             <div id="sections-wrapper"></div>
         </div>
     </div>
@@ -301,10 +270,7 @@
             const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec";
             
             window.supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY, {
-                auth: {
-                    persistSession: true, 
-                    autoRefreshToken: true
-                }
+                auth: { persistSession: true, autoRefreshToken: true }
             });
             
             const session = await verifyAdminAuth();
@@ -342,10 +308,10 @@
             window.location.href = 'index.html';
             return null;
         }
-        
         return session;
     }
 
+    // 针对顶部首页大图 5 张图的高保真批量处理
     function activateUploadListener(supabaseUrl) {
         const uploadBtn = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-input');
@@ -356,69 +322,45 @@
         fileInput.addEventListener('change', () => {
             selectedFilesCache = Array.from(fileInput.files);
             if (selectedFilesCache.length > 0) {
-                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张图片，准备就绪。`;
+                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张图片，准备覆盖大图轮播。`;
             }
         });
 
         uploadBtn.addEventListener('click', async () => {
             if (selectedFilesCache.length === 0) {
-                alert('请先拍照或选取相册图片！');
+                alert('请先选取相册图片！');
                 return;
             }
 
-            const section = document.getElementById('page-section').value;
-            showStatus(`⚡ 正在并发上传 ${selectedFilesCache.length} 张图片到云仓预览缓冲区...`, 'info');
+            showStatus(`⚡ 正在为首页大图进行并发覆盖同步...`, 'info');
 
             try {
-                for (let i = 0; i < selectedFilesCache.length; i++) {
+                const maxCount = Math.min(selectedFilesCache.length, 5);
+                for (let i = 0; i < maxCount; i++) {
                     const file = selectedFilesCache[i];
-                    const fileName = `${section}_${i}.png`; 
+                    const fileName = `section_banner_${i}.png`; 
                     
-                    // 1. 强力并发推送至云仓 Storage，开启覆盖写入机制
-                    const { error: storageError } = await window.supabaseClient.storage
+                    await window.supabaseClient.storage
                         .from('images')
                         .upload(`images/${fileName}`, file, { upsert: true });
 
-                    if (storageError) {
-                        alert(`索引 [${i}] 存储桶上传失败: ${storageError.message}`);
-                        continue;
-                    }
-
-                    // 2. 拼接公开的线上大图 URL
                     const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${fileName}`;
 
-                    // 3. 🎯 核心解决：同步写入 deployed_images 表
                     await window.supabaseClient
                         .from('deployed_images')
                         .upsert({
-                            section_id: section,
+                            section_id: 'section_banner',
                             image_index: i,
                             storage_url: storageUrl,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'section_id,image_index' });
-
-                    // 4. 🎯 核心解决：带上强制毫秒时间戳击穿浏览器缓存，实时点亮单张预览
-                    const targetImg = document.getElementById(`img-${section}-${i}`);
-                    const targetCard = document.getElementById(`card-${section}-${i}`);
-                    
-                    if (targetCard) {
-                        targetCard.style.display = 'block';
-                        // 如果原本是席位空缺，则需要动态生成里面的图片结构
-                        targetCard.innerHTML = `
-                            <div class="img-container">
-                                <img id="img-${section}-${i}" src="${storageUrl}?t=${new Date().getTime()}" />
-                            </div>
-                            <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [索引 ${i}]</span>
-                        `;
-                    }
                 }
 
-                showStatus('🎉 预览库更新成功！请在下方核对多图，核对无误后点击“一键部署”。', 'success');
+                showStatus('🎉 首页5张大图轮播图部署下发成功！', 'success');
                 selectedFilesCache = [];
                 fileInput.value = '';
-                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册文件或拍照';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
                 
-                // 5. 最终全量重新查表校验渲染，确保看板万无一失地刷新
                 await refreshLiveDashboard(supabaseUrl);
 
             } catch (err) {
@@ -427,149 +369,22 @@
         });
     }
 
-    // ==========================================
-    // 🎯 加固版：提交成功后全量刷新预览
-    // ==========================================
-    async function handleImageUploadSuccess(sectionId, index, storageUrl, supabaseUrl) {
-        console.log(`图片上传成功，正在同步路由表... 位置: ${sectionId}_${index}`);
-
-        try {
-            // 1. 同步更新路由表
-            await window.supabaseClient
-                .from('deployed_images')
-                .upsert({
-                    section_id: sectionId,
-                    image_index: index,
-                    storage_url: storageUrl,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'section_id,image_index' });
-
-            console.log("路由表同步成功，正在击穿缓存强刷预览区...");
-
-            // 2. 🎯 精准修改：尝试击穿缓存修改单张 DOM
-            const targetImg = document.getElementById(`img-${sectionId}-${index}`);
-            const targetCard = document.getElementById(`card-${sectionId}-${index}`);
-
-            if (targetImg && targetCard) {
-                targetImg.src = `${storageUrl}?t=${new Date().getTime()}`;
-                targetCard.style.display = 'block';
-                const badge = targetCard.querySelector('.badge');
-                if (badge) {
-                    badge.className = 'badge active';
-                    badge.style.backgroundColor = '#2ecc71';
-                    badge.textContent = `● 已上线 [索引 ${index}]`;
-                }
-            }
-            
-            // 3. 🎯 终极保底：无论上面 DOM 有没有抓到，直接调用查表函数，让看板重新渲染
-            if (typeof refreshLiveDashboard === 'function') {
-                await refreshLiveDashboard(supabaseUrl);
-            }
-
-            alert('照片提交成功，预览图已同步刷新！');
-
-        } catch (err) {
-            console.error("提交后处理预览失败:", err);
-            alert('图片已上传，但动态预览刷新失败，请手动刷新页面。');
-        }
-    }
-    /*========================================================== */
-    /**********增加删除键************/
-    /* ==========================================================*/
-    /*async function refreshLiveDashboard(supabaseUrl) {
-        const wrapper = document.getElementById('sections-wrapper');
-        if (!wrapper) return;
-
-        const sections = [
-            { id: 'section_banner', name: '首页 Banner 大图轮播区', maxCount: 5 },
-            { id: 'section_anime', name: '动漫版面轮播区', maxCount: 4 },
-            { id: 'section_community', name: '社区交流轮播区', maxCount: 4 },
-            { id: 'section_recommend', name: '热门强推卡牌轮播区', maxCount: 4 }
-        ];
-
-        wrapper.innerHTML = '';
-
-        // 一次性拉取最新的线上路由表
-        let deployedList = [];
-        try {
-            const { data, error } = await window.supabaseClient
-                .from('deployed_images')
-                .select('section_id, image_index, storage_url');
-            if (data && !error) {
-                deployedList = data;
-            }
-        } catch (err) {
-            console.error("读取线上图片路由表失败, 降级为默认渲染:", err);
-        }
-
-        for (const item of sections) {
-            const block = document.createElement('div');
-            block.className = 'dashboard-section';
-
-            const header = document.createElement('div');
-            header.className = 'section-header';
-            header.innerHTML = `
-                <div class="section-title">📺 ${item.name}</div>
-                <button class="deploy-btn" onclick="deploySection('${item.id}', ${item.maxCount}, '${supabaseUrl}')">🚀 一键部署到主页</button>
-            `;
-
-            const grid = document.createElement('div');
-            grid.className = 'image-flow-grid';
-
-            for (let i = 0; i < item.maxCount; i++) {
-                const card = document.createElement('div');
-                card.className = 'img-preview-card';
-                card.id = `card-${item.id}-${i}`; 
-                card.style.display = 'block'; // 强行让卡片容器亮起
-
-                // 检查当前位置在数据库里有没有成功记录
-                const match = deployedList.find(d => d.section_id === item.id && d.image_index === i);
-                const cacheBuster = `?t=${new Date().getTime()}_${Math.random().toString(36).substr(2, 5)}`;
-
-                if (match) {
-                    // 🌟 核心优化 1：若有图，渲染出图片，并附带一个高级感十足的独立红底删除按钮
-                    card.innerHTML = `
-                        <div class="img-container">
-                            <img id="img-${item.id}-${i}" src="${match.storage_url}${cacheBuster}" />
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding: 0 4px;">
-                            <span class="badge" style="background:#2ecc71; color:#fff; margin:0;">● 已上线 [${i}]</span>
-                            <button onclick="deleteImage('${item.id}', ${i}, '${supabaseUrl}')" style="background:#ff4757; color:#fff; border:none; padding:2px 8px; font-size:0.7rem; border-radius:4px; cursor:pointer; font-weight:600;">❌ 删除</button>
-                        </div>
-                    `;
-                } else {
-                    // 📷 若没传过，显示一个像素风占位席位
-                    card.innerHTML = `
-                        <div class="img-container" style="background:#090616; height:90px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:0.8rem;">
-                            <span>📷 席位空缺</span>
-                        </div>
-                        <span class="badge">未部署 [索引 ${i}]</span>
-                    `;
-                }
-                grid.appendChild(card);
-            }
-
-            block.appendChild(header);
-            block.appendChild(grid);
-            wrapper.appendChild(block);
-        }
-    }*/
     // ========================================================
-    // 🎯 黄金加固版看板：提供明晰的独立输入框与独立图片发布槽
+    // 🎯 动态渲染：热门动漫、漫画连载输入框与双轨上传大卡片
     // ========================================================
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
         wrapper.innerHTML = '';
 
-        // 1. 同步拉取新建立的内容配置表数据
+        // 1. 同步拉取精细化内容配置表
         let managementData = [];
         try {
             const { data, error } = await window.supabaseClient.from('content_management').select('*');
             if (data && !error) managementData = data;
         } catch (err) { console.error(err); }
 
-        // 2. 拉取大图轮播路由数据
+        // 2. 拉取大图轮播表数据
         let bannerList = [];
         try {
             const { data } = await window.supabaseClient.from('deployed_images').select('*').eq('section_id', 'section_banner');
@@ -577,9 +392,9 @@
         } catch(e){}
 
         const modules = [
-            { id: 'section_banner', name: '🎪 首页 5 张大图轮播区', type: 'banner', maxCount: 5 },
-            { id: 'anime', name: '📺 热门动漫推荐专区 (支持精细化详情)', type: 'content', maxCount: 4 },
-            { id: 'manga', name: '📖 漫画连载专区 (支持多主题配置)', type: 'content', maxCount: 4 }
+            { id: 'section_banner', name: '🎪 首页 5 张大图轮播位监控', type: 'banner', maxCount: 5 },
+            { id: 'anime', name: '📺 热门动漫推荐专区 (支持精细化详情图上传)', type: 'content', maxCount: 4 },
+            { id: 'manga', name: '📖 漫画连载专区 (支持连载主题添加)', type: 'content', maxCount: 4 }
         ];
 
         for (const mod of modules) {
@@ -587,11 +402,11 @@
             block.className = 'dashboard-section';
             block.style = "background:var(--panel-bg); border:1px solid var(--border-glow); border-radius:16px; padding:20px; margin-bottom:24px; box-sizing:border-box;";
 
-            block.innerHTML = `<div class="section-title" style="font-size:1.2rem; font-weight:bold; color:var(--accent-neon); margin-bottom:16px;">${mod.name}</div>`;
+            block.innerHTML = `<div class="section-title" style="font-size:1.1rem; font-weight:bold; color:var(--accent-neon); margin-bottom:16px;">${mod.name}</div>`;
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
-            // 🔹 模块 A：保持原汁原味的首页 5 张大图轮播
+            // 情况 A：首页大图轮播位
             if (mod.type === 'banner') {
                 for (let i = 0; i < mod.maxCount; i++) {
                     const card = document.createElement('div');
@@ -602,32 +417,31 @@
                     if (match) {
                         card.innerHTML = `
                             <div class="img-container"><img src="${match.storage_url}${cacheBuster}" /></div>
-                            <div style="display:flex; justify-content:space-between; margin-top:8px; align-items:center;">
-                                <span class="badge" style="background:#2ecc71; color:#fff; margin:0;">● 轮播图 [${i+1}]</span>
-                                <button onclick="deleteImage('section_banner', ${i}, '${supabaseUrl}')" style="background:#ff4757; color:#fff; border:none; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.75rem;">❌ 删除</button>
+                            <div style="display:flex; justify-content:space-between; margin-top:4px; align-items:center;">
+                                <span class="badge" style="background:#2ecc71; color:#fff;">● 已上线 [大图 ${i+1}]</span>
                             </div>
                         `;
                     } else {
                         card.innerHTML = `
                             <div class="img-container" style="color:var(--text-muted); font-size:0.8rem;">📷 轮播位空缺 [${i+1}]</div>
-                            <span class="badge" style="margin-top:8px;">未部署</span>
+                            <span class="badge">未上架</span>
                         `;
                     }
                     grid.appendChild(card);
                 }
                 block.appendChild(grid);
+                
                 const btnWrap = document.createElement('div');
                 btnWrap.style = "margin-top:16px; text-align:right;";
-                btnWrap.innerHTML = `<button class="deploy-btn" onclick="deploySection('section_banner', 5, '${supabaseUrl}')">🚀 一键同步大图轮播</button>`;
+                btnWrap.innerHTML = `<button class="deploy-btn" onclick="deploySection('section_banner', 5, '${supabaseUrl}')">🚀 激活激活同步发布</button>`;
                 block.appendChild(btnWrap);
             } 
             
-            // 🔹 模块 B：热门动漫推荐 / 漫画连载（全量输入与图片独立上传区域）
+            // 情况 B：热门动漫推荐 / 漫画连载（修复无遮挡、带输入框、独立文件选择器版本）
             else {
                 for (let i = 0; i < mod.maxCount; i++) {
                     const card = document.createElement('div');
                     card.className = 'img-preview-card';
-                    card.style = "background:rgba(0,0,0,0.25); padding:16px; border-radius:12px; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;";
 
                     const record = managementData.find(d => d.category === mod.id && d.slot_index === i) || {
                         title: '', subtitle: '', theme_tags: [], cover_url: '', detail_urls: []
@@ -637,37 +451,38 @@
                     const cacheBuster = `?t=${new Date().getTime()}`;
 
                     card.innerHTML = `
-                        <div style="font-size:0.85rem; font-weight:600; color:var(--text-main);">🖼️ 首页展示封面 (位置 ${i+1})</div>
-                        <div class="img-container" style="height:140px;">
-                            ${hasCover ? `<img src="${record.cover_url}${cacheBuster}" />` : `<span style="font-size:0.8rem; color:var(--text-muted);">📷 暂无封面，请选择文件上传</span>`}
+                        <div style="font-size:0.85rem; font-weight:bold; color:#fff;">🖼️ 首页封面展示 (格子 ${i+1})</div>
+                        <div class="img-container">
+                            ${hasCover ? `<img src="${record.cover_url}${cacheBuster}" />` : `<span style="font-size:0.8rem; color:var(--text-muted);">📷 暂无封面，请上传</span>`}
                         </div>
                         
-                        <div style="background:rgba(255,255,255,0.02); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.1);">
-                            <input type="file" id="cover-file-${mod.id}-${i}" accept="image/*" style="font-size:0.75rem; width:100%; color:var(--text-muted);" />
+                        <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.12);">
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">📁 选择主封面图</div>
+                            <input type="file" id="cover-file-${mod.id}-${i}" accept="image/*" style="font-size:0.75rem; color:#fff; width:100%;" />
                         </div>
 
-                        <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+                        <div style="display:flex; flex-direction:column; gap:6px;">
                             <div>
-                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
-                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：死神 千年血战篇" />
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
+                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="如：名侦探柯南" />
                             </div>
                             <div>
-                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题/最新章节</label>
-                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 26 话" />
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题/更新集数</label>
+                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="如：更新至 1120 话" />
                             </div>
                             <div>
-                                <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 连载主题标签 (用逗号隔开)</label>
-                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,冒险,奇幻" />
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 添加连载主题主题 (逗号隔开)</label>
+                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="如：悬疑,推理,热血" />
                             </div>
                         </div>
 
-                        <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
-                            <div style="font-size:0.75rem; color:var(--accent-neon); font-weight:600;">📂 详情页内容图集 (已部署: ${(record.detail_urls || []).length} 张)</div>
-                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="image/*" style="font-size:0.75rem; width:100%; color:var(--text-muted);" />
+                        <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; margin-top:4px;">
+                            <div style="font-size:0.75rem; color:var(--accent-neon); margin-bottom:4px; font-weight:bold;">📂 详情页正文图集 (已传: ${(record.detail_urls || []).length} 张)</div>
+                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="image/*" style="font-size:0.75rem; color:var(--text-muted); width:100%;" />
                         </div>
 
-                        <button onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem; transition:opacity 0.2s; margin-top:auto;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
-                            💾 保存该格配置并发布
+                        <button onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; margin-top:auto; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:8px; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+                            💾 保存配置并同步发布
                         </button>
                     `;
                     grid.appendChild(card);
@@ -678,71 +493,8 @@
         }
     }
 
-    window.deploySection = async function(section, maxCount, supabaseUrl) {
-        let deployedUrls = [];
-        for (let i = 0; i < maxCount; i++) {
-            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
-            deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
-        }
-
-        try {
-            showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
-            
-            const { error } = await window.supabaseClient
-                .from('site_config')
-                .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
-
-            if (error) throw error;
-            
-            alert('✨ 部署指令已安全同步！主页相应版面多图轮播已实时覆盖。');
-            showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
-
-        } catch (err) {
-            alert('部署同步失败: ' + err.message);
-            showStatus('部署失败: ' + err.message, 'error');
-        }
-    };
-
-    function showStatus(msg, type) {
-        const el = document.getElementById('upload-status');
-        if (!el) return;
-        el.style.display = 'block'; 
-        el.innerText = msg;
-        el.className = ''; 
-        if (type === 'info') el.className = 'status-info';
-        if (type === 'success') el.className = 'status-success';
-        if (type === 'error') el.className = 'status-error';
-    }
-    // 🎯 核心优化：单张图片路由安全退线与清除机制
-    window.deleteImage = async function(sectionId, index, supabaseUrl) {
-        if (!confirm(`确定要将当前版面 [${sectionId}] 的第 ${index + 1} 张图片退线并清除预览吗？`)) {
-            return;
-        }
-
-        try {
-            showStatus(`正在注销路由记录... [位置: ${sectionId}_${index}]`, 'info');
-
-            // 1. 从 deployed_images 路由表中彻底抹去这一行记录
-            const { error: dbError } = await window.supabaseClient
-                .from('deployed_images')
-                .delete()
-                .eq('section_id', sectionId)
-                .eq('image_index', index);
-
-            if (dbError) throw dbError;
-
-            // 2. 刷新画布看板，使其立刻无缝变为 “📷 席位空缺”
-            await refreshLiveDashboard(supabaseUrl);
-            showStatus('🎉 单图注销成功！请在核对无误后重新点击“一键部署”刷新前台。', 'success');
-            alert('图片已成功在预览库下线！温馨提示：请记得点击对应区域的“一键部署”按钮，将删除后的最新空缺状态同步发布到前台。');
-
-        } catch (err) {
-            console.error("图片注销失败:", err);
-            alert('删除路由失败: ' + err.message);
-        }
-    };
     // ========================================================
-    // 🎯 核心上传与同步引擎：分别捕获独立封面和不限张数详情图
+    // 🎯 核心上传存储引擎：双轨同步分流
     // ========================================================
     window.saveContentModule = async function(category, slotIndex, supabaseUrl) {
         const titleVal = document.getElementById(`title-${category}-${slotIndex}`).value.trim();
@@ -750,30 +502,28 @@
         const tagsRaw = document.getElementById(`tags-${category}-${slotIndex}`).value.trim();
         const themeTags = tagsRaw ? tagsRaw.split(/[，,]/).map(t => t.trim()).filter(Boolean) : [];
 
-        // 获取该单元格专属的封面文件与详情图文件
         const coverInput = document.getElementById(`cover-file-${category}-${slotIndex}`);
         const detailInput = document.getElementById(`files-detail-${category}-${slotIndex}`);
         
         try {
-            showStatus(`正在处理发布 [${category === 'anime'?'热门动漫':'漫画连载'}] 第 ${slotIndex + 1} 格...`, 'info');
+            showStatus(`正在部署下发格 [${slotIndex + 1}] ...`, 'info');
 
-            // 1. 处理独立封面的上传
+            // 1. 上传独立主封面
             let coverUrl = "";
             if (coverInput && coverInput.files.length > 0) {
                 const cFile = coverInput.files[0];
                 const cName = `${category}_slot_${slotIndex}_cover_${Date.now()}.png`;
                 
                 const { error: errC } = await window.supabaseClient.storage.from('images').upload(`images/${cName}`, cFile, { upsert: true });
-                if (errC) throw new Error("封面上传存储桶失败: " + errC.message);
+                if (errC) throw new Error("主封面同步失败: " + errC.message);
                 
                 coverUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${cName}`;
             } else {
-                // 如果用户没有选择新封面，保留上一次的数据
                 const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).single();
                 if (data) coverUrl = data.cover_url;
             }
 
-            // 2. 处理不限制张数的详情图集批量上传
+            // 2. 上传详情页内容图集（不限制张数批量并发）
             let detailUrls = [];
             if (detailInput && detailInput.files.length > 0) {
                 const files = detailInput.files;
@@ -782,18 +532,17 @@
                     const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.png`;
                     
                     const { error: errD } = await window.supabaseClient.storage.from('images').upload(`images/${dName}`, dFile, { upsert: true });
-                    if (errD) console.warn(`详情图 [${k}] 上传失败`, errD);
-                    
-                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
-                    detailUrls.push(dUrl);
+                    if (!errD) {
+                        const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
+                        detailUrls.push(dUrl);
+                    }
                 }
             } else {
-                // 未重传详情图，则拉取老记录保留
                 const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).single();
                 if (data && data.detail_urls) detailUrls = data.detail_urls;
             }
 
-            // 3. 全量打包写入到 content_management 精细化大表
+            // 3. 压入精细化配置大表
             const { error } = await window.supabaseClient
                 .from('content_management')
                 .upsert({
@@ -809,19 +558,48 @@
 
             if (error) throw error;
 
-            alert('✨ 配置发布成功！前台主页和详情页已实时对齐上线！');
+            alert('✨ 该卡片配置及图集已全部同步部署上架！');
             showStatus('🎉 同步下发成功！', 'success');
-            await refreshLiveDashboard(supabaseUrl); // 强刷看板看效果
+            await refreshLiveDashboard(supabaseUrl);
 
         } catch (err) {
             console.error(err);
-            alert('发布故障: ' + err.message);
-            showStatus('发布阻断: ' + err.message, 'error');
+            alert('发布失败: ' + err.message);
         }
     };
+
+    window.deploySection = async function(section, maxCount, supabaseUrl) {
+        let deployedUrls = [];
+        for (let i = 0; i < maxCount; i++) {
+            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
+            deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
+        }
+
+        try {
+            showStatus(`正在下发 [${section}] 部署指令...`, 'info');
+            const { error } = await window.supabaseClient
+                .from('site_config')
+                .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
+
+            if (error) throw error;
+            alert('✨ 首页大图轮播已经安全激活上线！');
+            showStatus('🎉 部署成功！', 'success');
+        } catch (err) {
+            alert('部署失败: ' + err.message);
+        }
+    };
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('upload-status');
+        if (!el) return;
+        el.innerText = msg;
+        el.className = ''; 
+        if (type === 'info') el.className = 'status-info';
+        if (type === 'success') el.className = 'status-success';
+        if (type === 'error') el.className = 'status-error';
+    }
+
     document.addEventListener('DOMContentLoaded', initWorkflow);
-
-
 </script>
 </body>
 </html>
