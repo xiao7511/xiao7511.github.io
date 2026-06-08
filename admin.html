@@ -186,7 +186,7 @@
             box-shadow: 0 4px 8px rgba(0, 206, 201, 0.2);
         }
 
-        /*.image-flow-grid {
+        .image-flow-grid {
             display: grid; 
             grid-template-columns: repeat(2, 1fr); 
             gap: 10px;
@@ -199,7 +199,7 @@
             display: none; 
         }
 
-        .img-container { 
+       /* .img-container { 
             width: 100%; 
             min-height: 90px; 
             max-height: 180px;
@@ -216,52 +216,24 @@
             max-height: 180px;
             object-fit: contain;
         }*/
-        /* 🎯 优化：PC端满屏、大图平铺，移动端保持自适应 */
-        /* 🎯 修复 1：严格限制隐形文件输入框的捕获范围，绝对不能让它盖住下拉菜单和下方的表单 */
-        #file-input {
-            display: none !important; /* 彻底移除隐形铺满，只让它通过点击 dropzone 触发 */
-        }
 
-        /* 🎯 修复 2：加固图片流网格，确保移动端绝不发生横向溢出 */
-        .image-flow-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
-            gap: 16px;
-            margin-top: 12px;
+        /* 后台看板容器，保持原样精致即可，不用跟着撑大 */
+        .img-container {
             width: 100%;
+            height: 110px; /* 恢复成美观紧凑的110px，后台看起来更工整 */
+            background: #090616;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        /* 🎯 修复 3：强力让所有的卡片内部输入框、按钮在移动端和PC端能够缩放，不撑爆版面 */
-        .img-preview-card input[type="text"] {
+        .img-container img {
             width: 100%;
-            box-sizing: border-box; /* 锁死内边距，防止撑开宽度 */
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #fff;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            outline: none;
-            transition: border-color 0.2s;
+            height: 100%;
+            object-fit: cover;
         }
-        .img-preview-card input[type="text"]:focus {
-            border-color: var(--accent-neon);
-        }
-
-        /* 🎯 修复 4：针对移动端的自适应进行绝对保护 */
-        @media (max-width: 768px) {
-            .image-flow-grid {
-                grid-template-columns: 1fr !important; /* 移动端精细化卡片改成单列垂直排列，体验最棒 */
-                gap: 12px;
-            }
-            .img-container {
-                height: 140px; 
-            }
-            .panel {
-                padding: 16px;
-            }
-        }
-        
+                
         .badge {
             font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px;
             background: rgba(255,255,255,0.06); color: var(--text-muted);
