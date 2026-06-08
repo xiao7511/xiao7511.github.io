@@ -211,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await fetchPosts();
     // 在你的前台主页加载完毕、且 supabaseClient 握手成功后，立刻调用它：
     await loadDeployedSections();
+    await loadHomeContent();
   }
 
   // =========================================================
@@ -939,6 +940,82 @@ document.addEventListener('DOMContentLoaded', () => {
 
       } catch (globalErr) {
           console.error("前台同步对齐发生严重阻断:", globalErr);
+      }
+  }
+
+    async function loadHomeContent() {
+      try {
+          // 1. 获取新版复合内容数据（热门动漫与漫画连载）
+          const { data: managementData, error } = await window.supabaseClient
+              .from('content_management')
+              .select('*');
+
+          if (error) throw error;
+
+          // 2. 渲染“热门动漫推荐”区域 (假设你的容器 ID 是 anime-container)
+          const animeContainer = document.getElementById('anime-container');
+          if (animeContainer) {
+              animeContainer.innerHTML = ''; // 清空原本写死的静态 HTML
+
+              // 过滤出动漫的数据，并按槽位升序排序
+              const animeSlots = managementData
+                  .filter(item => item.category === 'anime')
+                  .sort((a, b) => a.slot_index - b.slot_index);
+
+              animeSlots.forEach(slot => {
+                  const card = document.createElement('div');
+                  card.className = 'anime-card'; // 保持你原本的卡片样式类名
+                  card.style.cursor = 'pointer';
+                  
+                  // 点击后携带参数跳转到详情页
+                  card.onclick = () => {
+                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
+                  };
+
+                  // 动态装填后台配置的封面、标题、副标题和标签
+                  const tagsHtml = (slot.theme_tags || []).map(tag => `<span class="tag-badge">${tag}</span>`).join('');
+                  
+                  card.innerHTML = `
+                      <div class="card-cover-wrapper">
+                          <img src="${slot.cover_url || 'placeholder.png'}" alt="${slot.title}" />
+                      </div>
+                      <div class="card-info">
+                          <h3>${slot.title || '未命名主题'}</h3>
+                          <p>${slot.subtitle || '暂无更新进度'}</p>
+                          <div class="tags-flex">${tagsHtml}</div>
+                      </div>
+                  `;
+                  animeContainer.appendChild(card);
+              });
+          }
+
+          // 3. 同理：如果你的漫画连载区也想动态化 (假设容器 ID 是 manga-container)
+          const mangaContainer = document.getElementById('manga-container');
+          if (mangaContainer) {
+              mangaContainer.innerHTML = '';
+              const mangaSlots = managementData
+                  .filter(item => item.category === 'manga')
+                  .sort((a, b) => a.slot_index - b.slot_index);
+
+              mangaSlots.forEach(slot => {
+                  const card = document.createElement('div');
+                  card.className = 'manga-card';
+                  card.style.cursor = 'pointer';
+                  card.onclick = () => {
+                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
+                  };
+                  
+                  card.innerHTML = `
+                      <img src="${slot.cover_url || 'placeholder.png'}" />
+                      <h4>${slot.title}</h4>
+                      <span>${slot.subtitle}</span>
+                  `;
+                  mangaContainer.appendChild(card);
+              });
+          }
+
+      } catch (err) {
+          console.error("主页动态数据加载失败:", err);
       }
   }
 
