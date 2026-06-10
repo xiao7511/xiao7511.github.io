@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="动漫推荐页，浏览热门题材、精选作品与个性化推荐。">
   <meta name="robots" content="index,follow">
-  <link rel="canonical" href="https://xiao7511.github.io/recommend.html">
+  <link rel="canonical" href="https://nobistudio.com/recommend.html">
   <title>动漫推荐 - DorisY</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="assets/css/main.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="assets/js/main.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -23,46 +21,77 @@
     </nav>
   </header>
 
-  <main>
-    <section class="section">
+  <main class="main-content">
+    <section class="section" aria-labelledby="page-title">
       <div class="section__head">
-        <h1>发现精彩动漫</h1>
-        <p>按照题材快速筛选你想看的作品。</p>
+        <h1 id="page-title">发现精彩动漫</h1>
+        <p>通过边缘云盾网关实时同步后台推荐的优质作品。</p>
       </div>
 
-      <div class="cards">
-        <article class="card">
-          <img src="https://picsum.photos/800/1067?random=1" alt="咒术回战" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h2 class="card__title">咒术回战</h2>
-            <p class="card__tag">热血 / 战斗</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="https://picsum.photos/800/1067?random=2" alt="葬送的芙莉莲" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h2 class="card__title">葬送的芙莉莲</h2>
-            <p class="card__tag">治愈 / 奇幻</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="https://picsum.photos/800/1067?random=3" alt="Re:从零开始的异世界生活" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h2 class="card__title">Re:从零开始的异世界生活</h2>
-            <p class="card__tag">异世界 / 冒险</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="https://picsum.photos/800/1067?random=4" alt="间谍过家家" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h2 class="card__title">间谍过家家</h2>
-            <p class="card__tag">喜剧 / 日常</p>
-          </div>
-        </article>
+      <div class="cards" id="dynamic-recommend-container">
+        <div style="text-align: center; color: #a4b0be; padding: 40px; grid-column: 1/-1;">⚡ 正在通过加密通道加载动漫推荐...</div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">© 2026 DorisY Anime</footer>
+  <footer class="site-footer">
+    <p>&copy; 2025 DorisY动漫世界. Powered by Cloudflare Workers.</p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            // 🌟 统一使用已有的 Cloudflare Worker 加密网关
+            const workerUrl = 'https://api.nobistudio.com/';
+            const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/recommend`;
+            
+            const response = await fetch(apiTarget);
+            if (!response.ok) throw new Error("网关响应异常");
+            const data = await response.json();
+
+            const container = document.getElementById('dynamic-recommend-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#a4b0be;grid-column:1/-1;">💡 后台暂未发布任何动漫推荐内容。</div>';
+                return;
+            }
+
+            // 循环遍历生成全撑满智能裁剪卡片
+            data.forEach(item => {
+                const card = document.createElement('article');
+                card.className = 'card';
+                card.style.cssText = "cursor: pointer; display: flex !important; flex-direction: column !important; height: 100% !important; overflow: hidden !important;";
+                
+                // 点击后直接进入统一详情预览页
+                card.onclick = () => {
+                    window.location.href = `detail.html?category=${item.category}&slot=${item.slot_index}`;
+                };
+
+                const tagsText = (item.theme_tags || []).join(' / ') || item.subtitle || '精品推荐';
+
+                // 物理内联样式锁死宽高，实现智能居中裁剪填充，绝不留白边
+                card.innerHTML = `
+                  <div style="width: 100% !important; height: 280px !important; overflow: hidden !important; display: block !important;">
+                      <img src="${item.cover_url || 'images/IMG_4893.png'}" 
+                           alt="${item.title}" 
+                           style="width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: center !important; display: block !important;"
+                           loading="lazy" decoding="async">
+                  </div>
+                  <div class="card__body" style="padding: 16px !important; flex-grow: 1 !important;">
+                    <h2 class="card__title" style="margin: 0 0 6px 0 !important; font-size: 1.2rem !important; color: #fff !important; font-weight: bold;">${item.title || '未命名作品'}</h2>
+                    <p class="card__tag" style="margin: 0 !important; font-size: 0.85rem !important; color: #FF6EC7 !important;">${tagsText}</p>
+                  </div>
+                `;
+                container.appendChild(card);
+            });
+
+        } catch (err) {
+            console.error("加载动漫推荐失败:", err);
+            document.getElementById('dynamic-recommend-container').innerHTML = `<div style="text-align:center;color:#ff4757;grid-column:1/-1;">❌ 安全隔离通道数据请求失败，请检查 Worker 配置。</div>`;
+        }
+    });
+  </script>
 </body>
 </html>
