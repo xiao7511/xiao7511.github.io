@@ -21,6 +21,61 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="assets/js/main.js" defer></script>
 </head>
+<style>
+    /* 1. 确保热门动漫容器布局稳固，卡片高度对齐 */
+    #anime-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      align-items: stretch; /* 确保一行的卡片高度完全一致 */
+    }
+
+    /* 2. 重写或增强动态生成的 .card 或 .anime-card 布局 */
+    #anime-container .card, 
+    #anime-container .anime-card {
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* 撑满纵向高度 */
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    /* 🎯 3. 核心：锁定大图容器比例，图片强制撑满并智能裁剪 */
+    #anime-container .card img,
+    #anime-container .anime-card img,
+    #anime-container .card-cover-wrapper img {
+      width: 100% !important;
+      height: 240px !important;    /* 🌟 固定图片高度，你可以根据喜好微调为 220px 或 260px */
+      object-fit: cover !important; /* 🌟 关键：类似背景图，强制充满并居中裁剪，绝不拉伸变形 */
+      object-position: center !important;
+      display: block;
+    }
+
+    /* 4. 调整下方的文字描述区域，使其排版紧凑 */
+    #anime-container .card__body,
+    #anime-container .card-info {
+      padding: 16px;
+      flex-grow: 1; /* 让文字区域自动填满剩余空间 */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    #anime-container h3 {
+      margin: 0 0 6px 0;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+
+    #anime-container p,
+    #anime-container .card__tag {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #FF6EC7; /* 契合你网站的萌系粉色主题 */
+    }
+  </style>
 <body>
   <header class="site-header">
     <a class="logo" href="index.html" aria-label="返回首页">DorisY动漫世界</a>
