@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
             <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
-              ${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
+              ${(isLiked || likeCount > 0) ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
             </button>
             <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
               💬 回复
