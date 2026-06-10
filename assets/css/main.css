@@ -171,7 +171,7 @@ main {
 /* 🎯 终极突破：强力干掉 contain，切换至 100% 铺满平铺不留白 */
 .hero__slide img {
   width: 100% !important;
-  height: 100% !important;
+  /*height: 100% !important;*/
   object-fit: cover !important; 
   object-position: center center !important; 
   image-rendering: -webkit-optimize-contrast;
@@ -675,7 +675,7 @@ main {
   /* 2. 核心魔法：原图无拉伸、无裁切、百分之百完整展现 */
   .hero__slide img {
     width: 100% !important;
-    height: 100% !important;
+    /*height: 100% !important;*/
     object-fit: contain !important; /* 🎯 改为 contain：原图比例不走样，完整画面全显 */
     position: relative;
     z-index: 2; /* 让原图浮在虚化背景上方 */
