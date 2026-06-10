@@ -42,7 +42,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         try {
             // 🌟 统一使用已有的 Cloudflare Worker 加密网关
-            const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+            const workerUrl = 'https://api.nobistudio.com/';
             const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/recommend`;
             
             const response = await fetch(apiTarget);

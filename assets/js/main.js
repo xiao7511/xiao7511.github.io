@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+    const workerUrl = 'https://api.nobistudio.com/';
     let config = null;
 
     try {
