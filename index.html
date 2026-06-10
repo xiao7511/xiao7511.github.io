@@ -21,65 +21,30 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="assets/js/main.js" defer></script>
 </head>
-<style>
-    /* 1. 确保热门动漫网格容器稳固，自动平分 4 列 */
-    #anime-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      align-items: stretch;
-      width: 100% !important;
+ <style>
+    /* 让网格内的卡片高度整齐对齐 */
+    #anime-container.cards {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+      gap: 24px !important;
+      align-items: stretch !important;
     }
 
-    /* 2. 同时加固 .card 和 .anime-card 的外壳，使其在 Grid 盒子里横向和纵向全面撑满 */
-    #anime-container .card, 
-    #anime-container .anime-card {
+    /* 强行定位到动态生成的卡片图片 */
+    #anime-container .card img {
+      width: 100% !important;
+      height: 280px !important;     /* 🌟 固定大图展示区的高度，你可以自由调节（如240px、300px） */
+      object-fit: cover !important; /* 🌟 浏览器级智能裁剪：100% 撑满格子且绝不拉伸变形！ */
+      object-position: center !important; /* 保持图片中心点可见 */
+      display: block !important;
+    }
+
+    /* 确保文字区域有足够的对比度和弹性空间 */
+    #anime-container .card__body {
       display: flex !important;
       flex-direction: column !important;
-      width: 100% !important; /* 🌟 核心：强制外壳填满网格宽度 */
-      height: 100% !important; 
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    /* 3. 强行把图片外层包裹的 div 容器拉宽到 100% */
-    #anime-container .card-cover-wrapper {
-      width: 100% !important;
-      display: block !important;
-    }
-
-    /* 🎯 4. 终极核心：让图片绝对横向 100% 撑满，锁定 240px 高度并智能裁剪 */
-    #anime-container img {
-      width: 100% !important;      /* 🌟 纵向与横向全铺满 */
-      height: 240px !important;     /* 🌟 高度对齐，你可以自由调整为 220px ~ 260px */
-      object-fit: cover !important; /* 🌟 核心：防止图片拉伸变形，多余部分自动裁剪 */
-      object-position: center !important;
-      display: block !important;
-    }
-
-    /* 5. 文字区域紧凑饱满 */
-    #anime-container .card__body,
-    #anime-container .card-info {
-      padding: 16px;
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    #anime-container h3 {
-      margin: 0 0 6px 0;
-      font-size: 1.1rem;
-      color: #fff;
-    }
-
-    #anime-container p,
-    #anime-container .card__tag {
-      margin: 0;
-      font-size: 0.85rem;
-      color: #FF6EC7;
+      justify-content: space-between !important;
+      flex-grow: 1 !important;
     }
   </style>
 <body>
