@@ -943,7 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-    async function loadHomeContent() {
+    /*async function loadHomeContent() {
       try {
           if (!window.supabaseClient) {
               console.warn("SupabaseClient 尚未就绪，跳过内容渲染。");
@@ -1021,6 +1021,57 @@ document.addEventListener('DOMContentLoaded', () => {
               });
           }
 
+      } catch (err) {
+          console.error("主页动态数据加载失败:", err);
+      }
+  }*/
+
+      async function loadHomeContent() {
+      try {
+          if (!window.supabaseClient) return;
+
+          // 1. 获取新版复合内容数据
+          const { data: managementData, error } = await window.supabaseClient
+              .from('content_management')
+              .select('*');
+
+          if (error) throw error;
+          if (!managementData) return;
+
+          // 2. 渲染“热门动漫推荐”区域
+          const animeContainer = document.getElementById('anime-container');
+          if (animeContainer) {
+              animeContainer.innerHTML = ''; // 清空静态占位
+
+              // 过滤出动漫的数据，并按槽位升序排序
+              const animeSlots = managementData
+                  .filter(item => item.category === 'anime')
+                  .sort((a, b) => a.slot_index - b.slot_index);
+
+              animeSlots.forEach(slot => {
+                  // 🎯 核心修正：创建和你原本 HTML 一模一样的 article 标签，类名叫 card
+                  const card = document.createElement('article');
+                  card.className = 'card'; 
+                  card.style.cursor = 'pointer';
+                  
+                  // 点击跳转
+                  card.onclick = () => {
+                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
+                  };
+
+                  const tagsText = (slot.theme_tags || []).join(' / ');
+                  
+                  // 🎯 核心修正：完美复刻你原始 index.html 的 DOM 骨架，去掉多余的包裹层
+                  card.innerHTML = `
+                      <img src="${slot.cover_url || 'images/IMG_4893.png'}" alt="${slot.title || '动漫'}" loading="lazy" decoding="async">
+                      <div class="card__body">
+                        <h3 class="card__title">${slot.title || '未命名主题'}</h3>
+                        <p class="card__tag">${tagsText || slot.subtitle || '暂无分类'}</p>
+                      </div>
+                  `;
+                  animeContainer.appendChild(card);
+              });
+          }
       } catch (err) {
           console.error("主页动态数据加载失败:", err);
       }
