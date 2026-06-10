@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>主题详情 —— 极简画廊</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>主题详情 - DorisY画廊</title>
     <style>
         :root {
             --bg-color: #0f0c20;
@@ -13,169 +12,77 @@
             --text-main: #f1f2f6;
             --text-muted: #a4b0be;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #0f0c20 0%, #15102a 100%);
-            color: var(--text-main);
-            margin: 0;
-            padding: 16px;
-            min-height: 100vh;
-            box-sizing: border-box;
+            color: var(--text-main); margin: 0; padding: 16px; min-height: 100vh; box-sizing: border-box;
         }
-
-        .detail-container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        /* 顶部导航与返回 */
-        .top-nav {
-            display: flex;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-top: 8px;
-        }
+        .detail-container { width: 100%; max-width: 800px; margin: 0 auto; }
+        .top-nav { display: flex; align-items: center; margin-bottom: 24px; padding-top: 8px; }
         .back-btn {
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.08); color: #fff; text-decoration: none; padding: 8px 16px;
+            border-radius: 50px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s;
         }
-        .back-btn:hover {
-            background: var(--accent-neon);
-            color: #000;
-        }
-
-        /* 主题头部元信息 */
+        .back-btn:hover { background: var(--accent-neon); color: #000; }
         .meta-panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(138, 43, 226, 0.2);
-            margin-bottom: 24px;
+            background: var(--panel-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px; padding: 20px; border: 1px solid rgba(138, 43, 226, 0.2); margin-bottom: 24px;
         }
-        h1 {
-            font-size: 1.5rem;
-            margin: 0 0 8px 0;
-            font-weight: 800;
-            color: #fff;
-        }
-        .subtitle {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            margin: 0 0 12px 0;
-        }
-        .tags-wrapper {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
+        h1 { font-size: 1.5rem; margin: 0 0 8px 0; font-weight: 800; color: #fff; }
+        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px 0; }
+        .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; }
         .tag-item {
-            font-size: 0.75rem;
-            background: rgba(0, 245, 255, 0.12);
-            color: var(--accent-neon);
-            padding: 4px 10px;
-            border-radius: 4px;
-            border: 1px solid rgba(0, 245, 255, 0.2);
+            font-size: 0.75rem; background: rgba(0, 245, 255, 0.12); color: var(--accent-neon);
+            padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(0, 245, 255, 0.2);
         }
-
-        /* 🖼️ 正文图集流：完美自适应无损铺开 */
-        .gallery-stream {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            width: 100%;
-        }
-        .gallery-item {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-        }
-        .gallery-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-            object-fit: contain; /* 保证漫画长图或动漫原图不被裁切 */
-        }
-
-        /* 状态提示 */
-        .loading-status {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-        }
+        .gallery-stream { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+        .gallery-item { width: 100%; background: rgba(0, 0, 0, 0.3); border-radius: 12px; overflow: hidden; display: flex; justify-content: center; }
+        .gallery-item img { width: 100%; height: auto; display: block; object-fit: contain; }
+        .loading-status { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.95rem; }
     </style>
 </head>
 <body>
-
     <div class="detail-container">
-        <div class="top-nav">
-            <a href="index.html" class="back-btn">← 返回首页</a>
-        </div>
-
+        <div class="top-nav"><a href="javascript:history.back();" class="back-btn">← 返回前页</a></div>
+        
         <div class="meta-panel" id="meta-panel" style="display: none;">
             <h1 id="detail-title">加载中...</h1>
             <div class="subtitle" id="detail-sub"></div>
             <div class="tags-wrapper" id="detail-tags"></div>
         </div>
 
-        <div id="status-tips" class="loading-status">⚡ 正在调取云仓详情多图...</div>
+        <div id="status-tips" class="loading-status">⚡ 正在调取边缘云仓详情多图...</div>
         <div class="gallery-stream" id="gallery-stream"></div>
     </div>
 
 <script>
     async function loadDetailWorkflow() {
-        // 1. 解析 URL 携带的参数 (?category=anime&slot=0)
         const urlParams = new URLSearchParams(window.location.search);
         const category = urlParams.get('category');
         const slot = urlParams.get('slot');
 
         if (!category || slot === null) {
-            document.getElementById('status-tips').innerText = "❌ 传参有误，无法定位内容主题。";
+            document.getElementById('status-tips').innerText = "❌ 参数路由解析失败。";
             return;
         }
 
         try {
-            // 2. 初始化 Supabase 
-            const SUPABASE_URL = "https://kogjjfccyncdszuuwlun.supabase.co";
-            const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtvZ2pqZmNjeW5jZHN6dXV3bHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODEwMDksImV4cCI6MjA5MDQ1NzAwOX0.JIjUQdbZYUM6Cu57pFVwVzrlTrvyYmFyE9eBRlR9Sec";
+            // 🌟 统一使用你已有的 Worker 地址进行带参抓取
+            const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+            const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/detail?category=${category}&slot=${slot}`;
             
-            const supabaseClient = supabase.createClient(SUPABASE_URL, ANON_KEY);
-
-            // 3. 精准单条拉取该格子在后台保存的数据
-            const { data, error } = await supabaseClient
-                .from('content_management')
-                .select('*')
-                .eq('category', category)
-                .eq('slot_index', parseInt(slot))
-                .maybeSingle();
-
-            if (error) throw error;
+            const response = await fetch(apiTarget);
+            if (!response.ok) throw new Error("网关传输失败");
+            const data = await response.json();
 
             if (!data) {
-                document.getElementById('status-tips').innerText = "📷 该槽位暂未发布任何详情正文。";
+                document.getElementById('status-tips').innerText = "📷 该槽位暂未发布任何详情画集/正文。";
                 return;
             }
 
-            // 4. 回填头部文字与标签
             document.getElementById('status-tips').style.display = 'none';
             document.getElementById('meta-panel').style.display = 'block';
-            document.getElementById('detail-title').innerText = data.title || "未命名";
+            document.getElementById('detail-title').innerText = data.title || "未命名主题";
             document.getElementById('detail-sub').innerText = data.subtitle || "";
             
             const tagsWrapper = document.getElementById('detail-tags');
@@ -189,36 +96,29 @@
                 });
             }
 
-            // 5. 瀑布流渲染详情内容图集 (detail_urls)
             const stream = document.getElementById('gallery-stream');
             stream.innerHTML = '';
 
+            // 瀑布流渲染高清图集
             if (data.detail_urls && data.detail_urls.length > 0) {
                 data.detail_urls.forEach(url => {
                     const box = document.createElement('div');
                     box.className = 'gallery-item';
-                    
                     const img = document.createElement('img');
-                    // 加上防缓存时间戳，确保换图后实时刷新
                     img.src = `${url}?t=${new Date().getTime()}`;
-                    img.loading = 'lazy'; // 开启原生懒加载，对移动端极其友好
-                    
+                    img.loading = 'lazy';
                     box.appendChild(img);
                     stream.appendChild(box);
                 });
             } else {
-                const noImgTip = document.createElement('div');
-                noImgTip.style = "text-align:center; color:var(--text-muted); padding:20px; font-size:0.85rem;";
-                noImgTip.innerText = "💡 后台仅上传了封面，尚未上传详情页内容图集。";
-                stream.appendChild(noImgTip);
+                stream.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px; font-size:0.85rem;">💡 后台仅上传了封面，尚未上传详情页多图内容。</div>`;
             }
 
         } catch (err) {
             console.error(err);
-            document.getElementById('status-tips').innerText = "❌ 调取云仓数据流失败: " + err.message;
+            document.getElementById('status-tips').innerText = "❌ 调取加密云仓数据流失败: " + err.message;
         }
     }
-
     document.addEventListener('DOMContentLoaded', loadDetailWorkflow);
 </script>
 </body>

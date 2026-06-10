@@ -5,63 +5,117 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>漫画连载 - DorisY</title>
     <style>
-        /* 复用全局样式... */
         * {margin:0; padding:0; box-sizing:border-box;}
-        body { font-family: sans-serif; background: #1a1a1a; color: #fff; padding-top: 90px;}
-        .header { position: fixed; top:0; width:100%; height:70px; background: #000; display: flex; align-items:center; justify-content:space-between; padding: 0 5%; z-index:1000;}
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #121024; color: #fff; padding-top: 90px; padding-bottom: 40px;}
+        
+        /* 导航栏 */
+        .header { position: fixed; top:0; width:100%; height:70px; background: #0b091a; display: flex; align-items:center; justify-content:space-between; padding: 0 5%; z-index:1000; border-bottom: 1px solid rgba(255,110,199,0.15);}
+        .logo-link { color: #FF6EC7; text-decoration: none; font-weight: bold; font-size: 18px; }
         .nav {display:flex; gap:20px;}
-        .nav-item {color: #fff; text-decoration: none; font-size: 14px;}
+        .nav-item {color: #a4b0be; text-decoration: none; font-size: 14px; font-weight: 500;}
+        .nav-item:hover { color: #FF6EC7; }
 
-        /* 漫画列表样式 */
-        .manga-section { padding: 0 5%; }
-        .manga-list { display: flex; flex-direction: column; gap: 20px; }
+        /* 漫画列表布局 */
+        .manga-section { padding: 0 5%; max-width: 900px; margin: 0 auto; }
+        .manga-list { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+        
         .manga-item { 
-            display: flex; background: #2a2a2a; border-radius: 12px; 
+            display: flex; background: rgba(255,255,255,0.04); border-radius: 12px; 
             overflow: hidden; height: 180px; transition: 0.3s;
-            border: 1px solid #333;
+            border: 1px solid rgba(255,255,255,0.06);
         }
-        .manga-item:hover { border-color: #FF6EC7; background: #333; }
-        .manga-cover { width: 130px; height: 100%; object-fit: cover; }
-        .manga-detail { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        .manga-title { font-size: 20px; font-weight: bold; color: #FFE066; }
-        .manga-meta { font-size: 13px; color: #bbb; }
-        .update-badge { background: #FF6EC7; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-        .read-btn { 
-            align-self: flex-start; padding: 8px 20px; 
-            background: transparent; border: 1px solid #FF6EC7; 
-            color: #FF6EC7; border-radius: 5px; cursor: pointer;
+        .manga-item:hover { transform: translateY(-2px); border-color: #FF6EC7; box-shadow: 0 4px 15px rgba(255,110,199,0.2); }
+        
+        /* 封面锁定，物理智能裁剪撑满 */
+        .manga-cover-box { width: 130px; height: 100%; flex-shrink: 0; overflow: hidden; }
+        .manga-cover { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
+        
+        .manga-detail { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .manga-title { font-size: 1.2rem; color: #fff; margin-bottom: 4px; font-weight: bold;}
+        .manga-update { font-size: 0.85rem; color: #a4b0be; }
+        
+        .read-btn {
+            align-self: flex-start; padding: 8px 24px; 
+            background: linear-gradient(135deg, #FF6EC7 0%, #ff4757 100%); 
+            border: none; color: #fff; font-weight: bold; font-size: 0.85rem;
+            border-radius: 50px; cursor: pointer; box-shadow: 0 3px 8px rgba(255,110,199,0.3);
+            transition: opacity 0.2s;
         }
-        @media(max-width: 600px) { .manga-item { height: 140px; } .manga-cover { width: 100px; } }
+        .read-btn:hover { opacity: 0.9; }
+
+        @media(max-width: 600px) { 
+            .manga-item { height: 140px; } 
+            .manga-cover-box { width: 100px; } 
+            .manga-detail { padding: 12px; }
+            .manga-title { font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight:bold;">DorisY动漫</div>
+        <a class="logo-link" href="index.html">DorisY动漫</a>
         <div class="nav">
             <a href="index.html" class="nav-item">首页</a>
             <a href="recommend.html" class="nav-item">动漫推荐</a>
-            <a href="manga.html" class="nav-item" style="color:#FFE066">漫画连载</a>
+            <a href="manga.html" class="nav-item" style="color:#FF6EC7">漫画连载</a>
             <a href="community.html" class="nav-item">社区</a>
         </div>
     </div>
 
     <div class="manga-section">
-        <h2 style="margin-bottom: 20px;">最新连载更新</h2>
-        <div class="manga-list">
-            <!-- 漫画项目 -->
-            <div class="manga-item">
-                <img src="https://picsum.photos/200/300?random=10" class="manga-cover">
-                <div class="manga-detail">
-                    <div>
-                        <div class="manga-title">辉夜大小姐想让我告白</div>
-                        <div class="manga-meta">作者：赤坂明 | 状态：<span class="update-badge">更新中</span></div>
-                    </div>
-                    <div class="manga-meta">最新章节：第281话 “终焉”</div>
-                    <button class="read-btn">开始阅读</button>
-                </div>
-            </div>
-            <!-- 更多漫画... -->
+        <h2>📖 最新连载更新</h2>
+        
+        <div class="manga-list" id="dynamic-manga-container">
+            <div style="text-align: center; color: #a4b0be; padding: 40px;">⚡ 正在建立安全连接，同步连载数据...</div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 🌟 使用你已有的 Worker 加密网关
+                const workerUrl = 'https://supabase-config-api.xiao-ye751111.workers.dev/';
+                const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/manga`;
+                
+                const response = await fetch(apiTarget);
+                if (!response.ok) throw new Error("网关无响应");
+                const data = await response.json();
+
+                const container = document.getElementById('dynamic-manga-container');
+                if (!container) return;
+                container.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center;color:#a4b0be;padding:20px;">💡 后台暂未上架任何漫画连载内容。</div>';
+                    return;
+                }
+
+                // 动态装载结构
+                data.forEach(item => {
+                    const itemBox = document.createElement('div');
+                    itemBox.className = 'manga-item';
+                    const jumpTarget = `detail.html?category=${item.category}&slot=${item.slot_index}`;
+
+                    itemBox.innerHTML = `
+                        <div class="manga-cover-box" onclick="window.location.href='${jumpTarget}'" style="cursor:pointer;">
+                            <img src="${item.cover_url || 'placeholder.png'}" class="manga-cover" loading="lazy" decoding="async">
+                        </div>
+                        <div class="manga-detail">
+                            <div>
+                                <div class="manga-title" onclick="window.location.href='${jumpTarget}'" style="cursor:pointer;">${item.title || '未命名连载'}</div>
+                                <div class="manga-update">${item.subtitle || '连载中'}</div>
+                            </div>
+                            <button class="read-btn" onclick="window.location.href='${jumpTarget}'">开始阅读</button>
+                        </div>
+                    `;
+                    container.appendChild(itemBox);
+                });
+
+            } catch (err) {
+                console.error("加载漫画连载失败:", err);
+                document.getElementById('dynamic-manga-container').innerHTML = `<div style="text-align:center;color:#ff4757;padding:20px;">❌ 数据流同步失败，请检查边缘网关状态。</div>`;
+            }
+        });
+    </script>
 </body>
 </html>
