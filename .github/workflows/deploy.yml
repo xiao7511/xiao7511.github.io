@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write      # 必须：用于允许部署到 GitHub Pages
-  id-token: write   # 必须：用于身份验证
 
 jobs:
   deploy:
