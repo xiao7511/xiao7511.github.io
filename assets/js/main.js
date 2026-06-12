@@ -1021,7 +1021,35 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("主页动态数据加载失败:", err);
       }
   }
-
+  // =========================================================
+    // 🎯 物理拦截：解决从管理后台 history.back() 返回主页时数据不刷新的问题
+    // =========================================================
+    window.addEventListener('pageshow', async (event) => {
+      // event.persisted 为 true 代表页面是从浏览器历史缓存（BFCache）中后退恢复出来的
+      // window.performance.navigation.type === 2 代表通过浏览器后退按钮返回
+      if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+        console.log("🔄 检测到通过 history.back() 返回行为，正在强制重载云端数据流...");
+        
+        try {
+          if (window.supabaseClient) {
+            // 1. 重新拉取轮播图（内部要带上时间戳防止图片强缓存）
+            await syncLiveImagesFromDB();
+            // 2. 重新加载四大板块
+            if (typeof loadDeployedSections === 'function') await loadDeployedSections();
+            // 3. 重新加载动漫/漫画推荐内容
+            if (typeof loadHomeContent === 'function') await loadHomeContent();
+            
+            console.log("✨ 站点主页动态图片与配置已成功对齐刷新！");
+          } else {
+            // 如果 SupabaseClient 实例在非活动状态下被浏览器回收了，直接强刷页面
+            window.location.reload();
+          }
+        } catch (e) {
+          console.error("后退刷新流阻断，执行降级安全重载：", e);
+          window.location.reload();
+        }
+      }
+    });
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
 });
