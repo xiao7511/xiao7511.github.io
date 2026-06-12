@@ -1029,7 +1029,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // window.performance.navigation.type === 2 代表通过浏览器后退按钮返回
       if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
         console.log("🔄 检测到通过 history.back() 返回行为，正在强制重载云端数据流...");
-        
         try {
           if (window.supabaseClient) {
             // 1. 重新拉取轮播图（内部要带上时间戳防止图片强缓存）
