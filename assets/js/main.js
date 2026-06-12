@@ -833,33 +833,51 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
 });
-    // =========================================================
-    // 🎯 物理拦截：解决从管理后台 history.back() 返回主页时数据不刷新的问题
-    // =========================================================
+// =========================================================
+// 🎯 具备自愈能力的最高优先级 pageshow 监听器（放在 main.js 最外层）
+// =========================================================
 window.addEventListener('pageshow', async (event) => {
-      // event.persisted 为 true 代表页面是从浏览器历史缓存（BFCache）中后退恢复出来的
-      // window.performance.navigation.type === 2 代表通过浏览器后退按钮返回
-  if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
-        console.log("🔄 检测到通过 history.back() 返回行为，正在强制重载云端数据流...");
-     try {
-          if (window.supabaseClient) {
-            // 1. 重新拉取轮播图（内部要带上时间戳防止图片强缓存）
-            await syncLiveImagesFromDB();
-            // 2. 重新加载四大板块
-            if (typeof loadDeployedSections === 'function') await loadDeployedSections();
-            // 3. 重新加载动漫/漫画推荐内容
-            if (typeof loadHomeContent === 'function') await loadHomeContent();
+    // 判断是否来自后退/返回
+    const isBack = event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
+    
+    if (isBack) {
+        console.log("🔄 捕获到后退行为。开始检查 Supabase 客户端状态...");
+        
+        // 🎯 核心加固：如果发现 window.supabaseClient 为空，绝不坐以待毙！
+        if (!window.supabaseClient) {
+            console.warn("🚨 警告：window.supabaseClient 为空！正在尝试唤醒并重新执行全局初始化...");
             
-            console.log("✨ 站点主页动态图片与配置已成功对齐刷新！");
-          } else {
-            // 如果 SupabaseClient 实例在非活动状态下被浏览器回收了，直接强刷页面
-            window.location.reload();
-          }
-        } catch (e) {
-          console.error("后退刷新流阻断，执行降级安全重载：", e);
-          window.location.reload();
+            try {
+                // 1. 如果你主页有现成的全局初始化函数（例如 initApp 或 loadConfig），直接调用它去拉取密钥并创建 client
+                if (typeof initApp === 'function') {
+                    await initApp(); 
+                } else if (typeof loadConfig === 'function') {
+                    await loadConfig();
+                }
+                
+                // 2. 给异步网络请求一点微小的串行等待时间（100ms），等待客户端彻底创建完毕
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (e) {
+                console.error("异步唤醒失败，准备执行强刷重载兜底:", e);
+            }
         }
-      }
+
+        // 🎯 再次判定状态
+        if (window.supabaseClient) {
+            console.log("⚡ Supabase 客户端已就绪（或唤醒成功），开始洗牌缓存并拉取最新图片...");
+            try {
+                if (typeof syncLiveImagesFromDB === 'function') await syncLiveImagesFromDB();
+                if (typeof loadDeployedSections === 'function') await loadDeployedSections();
+                if (typeof loadHomeContent === 'function') await loadHomeContent();
+            } catch (err) {
+                console.error("局部动态刷新失败:", err);
+            }
+        } else {
+            // 🎯 最终杀招：如果各种唤醒手段都失效了，说明内存彻底错乱，直接物理强刷整页！
+            console.error("🚨 无法无感唤醒数据库实例，执行全页硬重载（穿透缓存）...");
+            window.location.reload(true);
+        }
+    }
 });
 async function syncLiveImagesFromDB() {
     const fallbackImages = {
