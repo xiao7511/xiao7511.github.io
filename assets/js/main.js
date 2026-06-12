@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
+  /*
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
@@ -121,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.warn('正在平滑切换回本地备份图层呈现。');
     }
-  }
+  }*/
 
   // ==========================================
   // 1. 增强型应用程序初始化函数
@@ -860,7 +861,48 @@ window.addEventListener('pageshow', async (event) => {
         }
       }
 });
+async function syncLiveImagesFromDB() {
+    const fallbackImages = {
+      section_banner: [
+        'images/IMG_4822.jpeg',
+        'images/IMG_4823.jpeg',
+        'images/IMG_4824.jpeg',
+        'images/IMG_4825.jpeg',
+        'images/IMG_4826.jpeg'
+      ]
+    };
 
+    try {
+      let liveUrls = [];
+      if (window.supabaseClient) {
+        const { data, error } = await window.supabaseClient
+          .from('site_config')
+          .select('section, url')
+          .eq('section', 'section_banner')
+          .maybeSingle();
+
+        if (!error && data && data.url) {
+          liveUrls = JSON.parse(data.url);
+          if (typeof window.renderAdminBannerList === 'function') {
+            window.renderAdminBannerList(liveUrls);
+          }
+        }
+      }
+
+      carouselSlides.forEach((slide, index) => {
+        const imgElement = slide.querySelector('img');
+        if (imgElement) {
+          if (liveUrls && liveUrls[index]) {
+            imgElement.src = liveUrls[index];
+          } else {
+            imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('正在平滑切换回本地备份图层呈现。');
+    }
+  }
   // ==========================================
   // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
   // ==========================================
