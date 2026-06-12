@@ -232,7 +232,8 @@
     <div class="container">
         <div class="header-box">
             <h1>内容管理后台 —— 终极自适应控制台</h1>
-            <a href="javascript:history.back();" class="back-home-btn">← 返回站点主页</a>
+            <!--<a href="javascript:history.back();" class="back-home-btn">← 返回站点主页</a>-->
+            <a href="index.html" onclick="return safeBack();" class="back-home-btn">← 返回站点主页</a>
         </div>
 
         <div class="upload-card">
@@ -261,6 +262,19 @@
     </div>
 
 <script>
+    function safeBack() {
+        // document.referrer 可以获取用户是从哪个页面跳过来的
+        const hasReferrer = document.referrer && document.referrer.trim() !== "";
+        
+        // 如果有历史来源，且来源包含你自己的域名或 index.html，就执行后退
+        if (hasReferrer && history.length > 1) {
+            history.back();
+            return false; // 阻止 <a> 标签默认的 href 跳转，交给 history.back() 处理
+        }
+        
+        // 如果没有历史记录（比如直接打开的后台），则放行默认的 href="index.html" 正常跳转
+        return true; 
+    }
     // 🔒 始发状态完全留空，没有任何明文凭证
     window.supabaseClient = null;
     let selectedFilesCache = []; 
