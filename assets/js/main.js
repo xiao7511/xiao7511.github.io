@@ -1021,15 +1021,18 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("主页动态数据加载失败:", err);
       }
   }
+  document.addEventListener('touchend', globalTriggerModal, { passive: false });
+  document.addEventListener('click', globalTriggerModal);
+});
     // =========================================================
     // 🎯 物理拦截：解决从管理后台 history.back() 返回主页时数据不刷新的问题
     // =========================================================
-    window.addEventListener('pageshow', async (event) => {
+window.addEventListener('pageshow', async (event) => {
       // event.persisted 为 true 代表页面是从浏览器历史缓存（BFCache）中后退恢复出来的
       // window.performance.navigation.type === 2 代表通过浏览器后退按钮返回
-      if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+  if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
         console.log("🔄 检测到通过 history.back() 返回行为，正在强制重载云端数据流...");
-        try {
+     try {
           if (window.supabaseClient) {
             // 1. 重新拉取轮播图（内部要带上时间戳防止图片强缓存）
             await syncLiveImagesFromDB();
@@ -1048,7 +1051,4 @@ document.addEventListener('DOMContentLoaded', () => {
           window.location.reload();
         }
       }
-    });
-  document.addEventListener('touchend', globalTriggerModal, { passive: false });
-  document.addEventListener('click', globalTriggerModal);
 });
