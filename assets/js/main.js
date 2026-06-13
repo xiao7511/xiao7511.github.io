@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 💡 黑科技：往全局 url 配置里塞一个时间戳参数，强制后续所有 Supabase 图片查询都带上最新时间戳破除缓存
       window.forceCacheBuster = `?t=${new Date().getTime()}`;
   }
-  
+
   // 获取所有基础 DOM 元素
   const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
   const userButton = document.getElementById('user-btn');
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  
+  /*
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
@@ -123,6 +123,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (imgElement) {
           if (liveUrls && liveUrls[index]) {
             imgElement.src = liveUrls[index];
+          } else {
+            imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('正在平滑切换回本地备份图层呈现。');
+    }
+  }*/
+ async function syncLiveImagesFromDB() {
+    const fallbackImages = {
+      section_banner: [
+        'images/IMG_4822.jpeg',
+        'images/IMG_4823.jpeg',
+        'images/IMG_4824.jpeg',
+        'images/IMG_4825.jpeg',
+        'images/IMG_4826.jpeg'
+      ]
+    };
+
+    try {
+      let liveUrls = [];
+      if (window.supabaseClient) {
+        const { data, error } = await window.supabaseClient
+          .from('site_config')
+          .select('section, url')
+          .eq('section', 'section_banner')
+          .maybeSingle();
+
+        if (!error && data && data.url) {
+          liveUrls = JSON.parse(data.url);
+          if (typeof window.renderAdminBannerList === 'function') {
+            window.renderAdminBannerList(liveUrls);
+          }
+        }
+      }
+
+      // 🎯 核心修复：提取全局的时间戳参数，如果没有，默认生成一个普通的，确保每次返回都是最新的
+      const buster = window.forceCacheBuster || `?t=${new Date().getTime()}`;
+
+      carouselSlides.forEach((slide, index) => {
+        const imgElement = slide.querySelector('img');
+        if (imgElement) {
+          if (liveUrls && liveUrls[index]) {
+            // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
+            const rawUrl = liveUrls[index];
+            imgElement.src = rawUrl.includes('?') ? `${rawUrl}&_cb=${new Date().getTime()}` : rawUrl + buster;
           } else {
             imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
           }
@@ -876,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("前台同步对齐发生严重阻断:", globalErr);
       }
   }
-
+  /*
     async function loadHomeContent() {
       try {
           if (!window.supabaseClient) {
@@ -946,6 +993,84 @@ document.addEventListener('DOMContentLoaded', () => {
                   
                   card.innerHTML = `
                       <img src="${slot.cover_url || 'placeholder.png'}" loading="lazy" decoding="async"/>
+                      <div class="card__body">
+                        <h3 class="card__title">${slot.title}</h3>
+                        <p class="card__tag">${slot.subtitle}</p>
+                      </div>
+                  `;
+                  mangaContainer.appendChild(card);
+              });
+          }
+
+      } catch (err) {
+          console.error("主页动态数据加载失败:", err);
+      }
+  }*/
+ async function loadHomeContent() {
+      try {
+          if (!window.supabaseClient) return;
+          const { data: managementData, error } = await window.supabaseClient
+              .from('content_management')
+              .select('*');
+
+          if (error || !managementData) return;
+
+          // 🎯 核心修复：定义用于板块内容图片击穿缓存的时间戳
+          const buster = window.forceCacheBuster || `?t=${new Date().getTime()}`;
+
+          const animeContainer = document.getElementById('anime-container');
+          if (animeContainer) {
+              animeContainer.innerHTML = '';
+              const animeSlots = managementData
+                  .filter(item => item.category === 'anime')
+                  .sort((a, b) => a.slot_index - b.slot_index);
+
+              animeSlots.forEach(slot => {
+                  const card = document.createElement('article');
+                  card.className = 'card';
+                  card.style.cursor = 'pointer';
+                  card.onclick = () => {
+                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
+                  };
+                  
+                  // ⚡ 核心加固：为封面图 url 强制缀上缓存击穿标记
+                  const finalCover = slot.cover_url 
+                      ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
+                      : 'placeholder.png';
+                  
+                  card.innerHTML = `
+                      <img src="${finalCover}" loading="lazy" decoding="async"/>
+                      <div class="card__body">
+                        <h3 class="card__title">${slot.title}</h3>
+                        <p class="card__tag">${slot.subtitle}</p>
+                      </div>
+                  `;
+                  animeContainer.appendChild(card);
+              });
+          }
+
+          const mangaContainer = document.getElementById('manga-container');
+          if (mangaContainer) {
+              mangaContainer.innerHTML = '';
+              const mangaSlots = managementData
+                  .filter(item => item.category === 'manga')
+                  .sort((a, b) => a.slot_index - b.slot_index);
+
+              mangaSlots.forEach(slot => {
+                  const card = document.createElement('article');
+                  card.className = 'card';
+                  card.style.cursor = 'pointer';
+                  card.onclick = () => {
+                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
+                  };
+                  
+                  // ⚡ 核心加固：同样为漫画封面处理多媒体硬缓存
+                  const finalCover = slot.cover_url 
+                      ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
+                      : 'placeholder.png';
+                  
+                  card.innerHTML = `
+                      <img src="${finalCover}" loading="lazy" decoding="async"/>
                       <div class="card__body">
                         <h3 class="card__title">${slot.title}</h3>
                         <p class="card__tag">${slot.subtitle}</p>
