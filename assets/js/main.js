@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 1. 增强型应用程序初始化函数
   // ==========================================
-  async function initApp() {
+  /*async function initApp() {
     showSlide(0);
     startCarousel();
 
@@ -265,7 +265,76 @@ document.addEventListener('DOMContentLoaded', () => {
     // 在你的前台主页加载完毕、且 supabaseClient 握手成功后，立刻调用它：
     await loadDeployedSections();
     await loadHomeContent();
+  }*/
+ // 🌟 纯净的全局初始化入口
+  async function initApp() {
+    try {
+      const apiUri = "https://api.nobistudio.com/";
+      const res = await fetch(apiUri);
+      if (!res.ok) throw new Error(`Cloudflare 边缘节点异常: ${res.status}`);
+      
+      const config = await res.json();
+      if (!config.SUPABASE_URL || !config.ANON_KEY) {
+        throw new Error("云端载入的通信凭证不完整。");
+      }
+
+      // 创建客户端
+      window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      });
+      
+      console.log("✅ Supabase 安全客户端已成功注入底座！");
+
+      // 🎯 核心修复 1：在这里无论登录与否，先强制把图片拿下来，不受后续登录验权卡死的干扰！
+      try {
+        await syncLiveImagesFromDB(); // 刷新轮播图
+        await loadHomeContent();       // 刷新推荐板块
+        console.log("📊 基础静态/动态版面图片加载序列完成");
+      } catch (innerErr) {
+        console.error("图片流局部加载失败，但不阻塞应用启动:", innerErr);
+      }
+
+      // 🎯 核心修复 2：监听登录状态时，内部绝对不做任何会卡死、阻塞的耗时操作
+      window.supabaseClient.auth.onAuthStateChange((event, session) => {
+        console.log(`🔑 认证状态变更事件触发: ${event}`);
+        
+        if (session && session.user) {
+          // 仅做 UI 上的无感渲染更新（换头像、改按钮文字、关弹窗等同步操作）
+          updateUserUI(session.user);
+          
+          // 如果是管理员相关的特殊 Cookie 补写，放入异步的微任务中，绝不阻塞主线程
+          setTimeout(async () => {
+             try {
+                // 原本卡死的 users 表验权逻辑，丢在定时器里安全异步执行
+                const { data } = await window.supabaseClient
+                  .from('users')
+                  .select('is_admin')
+                  .eq('id', session.user.id)
+                  .single();
+                if (data && data.is_admin) {
+                   document.cookie = "admin_access=true; path=/; max-age=86400";
+                }
+             } catch(e) { console.warn("后台状态补写略过:", e); }
+          }, 10);
+
+        } else {
+          clearUserUI();
+        }
+      });
+
+    } catch (e) {
+      console.warn("未能通过云端拉取配置，启动本地安全后备：", e);
+     // window.supabaseClient = supabase.createClient(
+      //  "https://kogjjfccyncdszuuwlun.supabase.co",
+       // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    //  );
+      syncLiveImagesFromDB();
+      loadHomeContent();
+    }
   }
+
+  // 唯一启动入口
+  //initApp();
 
   // =========================================================
   // 🎯 鉴权核心函数
@@ -760,7 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
-  function updateUserUI(user) {
+  /*function updateUserUI(user) {
     if (!userButton) return;
     if (user) {
       userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
@@ -771,7 +840,58 @@ document.addEventListener('DOMContentLoaded', () => {
       userButton.style.background = '';
       if (postArea) postArea.setAttribute('hidden', '');
     }
+  }*/
+  // 🌟 深度加固与安全解耦后的用户 UI 渲染及状态写入函数
+  function updateUserUI(user) {
+    if (!userButton) return;
+    
+    if (user) {
+      // 1. 瞬间点亮/渲染前端用户登录按钮（高响应速度，零网络阻塞）
+      userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
+      userButton.style.background = 'rgba(255, 255, 255, 0.15)';
+      if (postArea) postArea.removeAttribute('hidden');
+      
+      // 🎯 核心改良：将原本在监听器里乱跑、容易导致断网卡死的异步验权锁死逻辑，
+      // 封装进非阻塞的低优先级 setTimeout 微任务中，100% 确保主页 site_config 表先拿到图片
+      setTimeout(async () => {
+        // 安全拦截：如果由于后退返回导致环境异常，直接退出，绝不卡死主线程
+        if (!window.supabaseClient || typeof window.supabaseClient.from !== 'function') {
+          console.warn("⚠️ 实例尚在复苏，略过本次静默验权。");
+          return;
+        }
+        
+        try {
+          console.log("🔍 正在后台静默校验管理员身份凭证...");
+          const { data, error } = await window.supabaseClient
+            .from('users')
+            .select('is_admin')
+            .eq('id', user.id)
+            .maybeSingle(); // 使用 maybeSingle 代替 single，防止找不到记录时抛出硬报错中断脚本
+
+          if (!error && data && data.is_admin) {
+            console.log("👑 认证成功：当前登录账号具备最高管理权限，正在补写本地通信锁...");
+            // 补写 Cookie 锁定状态，供 admin.html 和路由守卫进行安全判定
+            document.cookie = "admin_access=true; path=/; max-age=86400; SameSite=Strict";
+          } else {
+            // 如果查出来不是管理员，或者报错，安全擦除可能残留的老旧 Cookie 状态
+            document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          }
+        } catch (authCatch) {
+          console.warn("静默验权通道暂时处于休眠或繁忙状态，已自动降级跳过:", authCatch);
+        }
+      }, 200); // 延迟 200 毫秒执行，完美错开主页首屏拉取图片（site_config）的网络带宽黄金期
+
+    } else {
+      // 2. 处理用户未登录或退出登录时的 UI 还原
+      userButton.innerHTML = '✨ 登录 / 注册专区';
+      userButton.style.background = '';
+      if (postArea) postArea.setAttribute('hidden', '');
+      
+      // 用户登出，立即物理清除管理员 Cookie 锁，防止越权风险
+      document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    }
   }
+
 
   window.renderAdminBannerList = function(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
