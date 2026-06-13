@@ -180,7 +180,7 @@
             align-items: center;
             justify-content: center;
         }
-        .img-container img { 
+        .img-container img, .img-container video { 
             width: 100%; 
             height: 100%; 
             object-fit: cover;
@@ -233,7 +233,6 @@
         <div class="header-box">
             <h1>内容管理后台 —— 终极自适应控制台</h1>
             <a href="javascript:history.back();" class="back-home-btn">← 返回站点主页</a>
-            <!--<a href="index.html" onclick="return safeBack();" class="back-home-btn">← 返回站点主页</a>-->
         </div>
 
         <div class="upload-card">
@@ -263,23 +262,16 @@
 
 <script>
     function safeBack() {
-        // document.referrer 可以获取用户是从哪个页面跳过来的
         const hasReferrer = document.referrer && document.referrer.trim() !== "";
-        
-        // 如果有历史来源，且来源包含你自己的域名或 index.html，就执行后退
         if (hasReferrer && history.length > 1) {
             history.back();
-            return false; // 阻止 <a> 标签默认的 href 跳转，交给 history.back() 处理
+            return false; 
         }
-        
-        // 如果没有历史记录（比如直接打开的后台），则放行默认的 href="index.html" 正常跳转
         return true; 
     }
-    // 🔒 始发状态完全留空，没有任何明文凭证
     window.supabaseClient = null;
     let selectedFilesCache = []; 
 
-    // 🎯 核心安全引擎：仅从云端管道动态加载凭证
     async function loadCloudflareConfig() {
         const apiUri = "https://api.nobistudio.com/";
         try {
@@ -288,12 +280,10 @@
             
             const config = await res.json();
             
-            // 严格校验接口返回的数据结构
             if (!config.SUPABASE_URL || !config.ANON_KEY) {
                 throw new Error("云端载入的通信凭证不完整，拒绝初始化。");
             }
 
-            // 动态注入并创建 Supabase 客户端
             window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
                 auth: { persistSession: true, autoRefreshToken: true }
             });
@@ -310,10 +300,8 @@
         try {
             showStatus('⚡ 正在安全检索云端控制中心凭证...', 'info');
 
-            // 1. 动态获取配置，前端不留任何线索
             const supabaseUrl = await loadCloudflareConfig();
             
-            // 2. 凭证就绪后再做安全鉴权
             const session = await verifyAdminAuth();
             if (!session) return; 
 
@@ -356,6 +344,33 @@
         return session;
     }
 
+    // 🎯 核心重构封装：通用的高级带百分比进度的单文件上传引擎（修复视频头部丢失缺陷）
+    async function executeSingleUpload(file, pathName, onPercentProgress) {
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        let calculatedMimeType = file.type || 'application/octet-stream';
+        
+        // 🚀 核心优化：专门针对动漫/漫画详情专区的媒体文件检测及MimeType强行修正
+        if (fileExt === 'mp4') calculatedMimeType = 'video/mp4';
+        if (fileExt === 'webm') calculatedMimeType = 'video/webm';
+        if (fileExt === 'mov') calculatedMimeType = 'video/quicktime';
+
+        const { data, error } = await window.supabaseClient.storage
+            .from('images')
+            .upload(pathName, file, { 
+                upsert: true,
+                contentType: calculatedMimeType, // 注入精准的多媒体读取标头
+                onUploadProgress: (progress) => {
+                    if (progress.total) {
+                        const currentPercentage = Math.round((progress.loaded / progress.total) * 100);
+                        if (typeof onPercentProgress === 'function') onPercentProgress(currentPercentage);
+                    }
+                }
+            });
+            
+        if (error) throw error;
+        return data;
+    }
+
     function activateUploadListener(supabaseUrl) {
         const uploadBtn = document.getElementById('upload-btn');
         const fileInput = document.getElementById('file-input');
@@ -365,6 +380,17 @@
 
         fileInput.addEventListener('change', () => {
             selectedFilesCache = Array.from(fileInput.files);
+            
+            // 🎯 关闭首页文件接收视频的安全过滤策略：若混入视频，直接拒绝上传
+            const hasVideo = selectedFilesCache.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
+            if (hasVideo) {
+                alert('安全性限制：首页 Banner 轮播大图区域不支持上传视频流媒体资源，请重新选取图片！');
+                selectedFilesCache = [];
+                fileInput.value = '';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
+                return;
+            }
+
             if (selectedFilesCache.length > 0) {
                 dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张轮播图，准备就绪。`;
             }
@@ -376,7 +402,7 @@
                 return;
             }
 
-            showStatus(`⚡ 正在为首页轮播大图进行并发覆盖同步...`, 'info');
+            showStatus(`⚡ 正在准备为首页轮播大图进行并发覆盖同步...`, 'info');
 
             try {
                 const maxCount = Math.min(selectedFilesCache.length, 5);
@@ -384,9 +410,10 @@
                     const file = selectedFilesCache[i];
                     const fileName = `section_banner_${i}.png`; 
                     
-                    await window.supabaseClient.storage
-                        .from('images')
-                        .upload(`images/${fileName}`, file, { upsert: true });
+                    // 🎯 优化：增加首页大图上传的每张细化百分比进度跟踪提示
+                    await executeSingleUpload(file, `images/${fileName}`, (percent) => {
+                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前进度: ${percent}%`, 'info');
+                    });
 
                     const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${fileName}`;
 
@@ -447,6 +474,7 @@
 
         const modules = [
             { id: 'section_banner', name: '🎪 首页 5 张大图轮播位状态', type: 'banner', maxCount: 5 },
+            // 🎯 【同步优化】解除热门动漫推荐专区和漫画专区的文件属性封锁，支持多媒体混合连载
             { id: 'anime', name: '📺 热门动漫推荐专区 (支持精细化详情及大标题录入)', type: 'content', maxCount: 4 },
             { id: 'manga', name: '📖 漫画连载专区 (已升级支持：图片/视频多媒体混合连载及图集)', type: 'content', maxCount: 4 }
         ];
@@ -494,9 +522,10 @@
                     const cacheBuster = `?t=${new Date().getTime()}`;
                     const mediaTagHtml = record.cover_url ? generateMediaTag(record.cover_url + cacheBuster) : generateMediaTag(null);
 
-                    const acceptType = mod.id === 'manga' ? 'image/*,video/*' : 'image/*';
-                    const uploadLabel = mod.id === 'manga' ? '📁 选取主封面(图片/视频)' : '📁 选取主封面图片';
-                    const detailLabel = mod.id === 'manga' ? '📂 详情内容图集/视频流' : '📂 详情页内容图集';
+                    // 🎯 优化：让“动漫推荐专区”和“漫画连载专区”保持对齐，全部开放支持图片与视频的高清流混合选取
+                    const acceptType = 'image/*,video/*';
+                    const uploadLabel = '📁 选取主封面(图片/视频)';
+                    const detailLabel = '📂 详情内容图集/视频流';
 
                     card.innerHTML = `
                         <div style="font-size:0.85rem; font-weight:bold; color:#fff;">🖼️ 首页展示封面 (格子 ${i+1})</div>
@@ -551,16 +580,19 @@
         const detailInput = document.getElementById(`files-detail-${category}-${slotIndex}`);
         
         try {
-            showStatus(`正在处理发布 [${category === 'anime' ? '热门动漫' : '漫画连载'}] 第 ${slotIndex + 1} 个槽位...`, 'info');
+            const currentBlockName = category === 'anime' ? '热门动漫专区' : '漫画连载专区';
+            showStatus(`正在处理发布 [${currentBlockName}] 第 ${slotIndex + 1} 个槽位核心资源...`, 'info');
 
             let coverUrl = "";
             if (coverInput && coverInput.files.length > 0) {
                 const cFile = coverInput.files[0];
-                const fileExt = cFile.name.split('.').pop();
+                const fileExt = cFile.name.split('.').pop().toLowerCase();
                 const cName = `${category}_slot_${slotIndex}_cover_${Date.now()}.${fileExt}`;
                 
-                const { error: errC } = await window.supabaseClient.storage.from('images').upload(`images/${cName}`, cFile, { upsert: true });
-                if (errC) throw new Error("主封面媒体同步失败: " + errC.message);
+                // 🎯 优化：增加封面卡片文件上传进度跟踪提示
+                await executeSingleUpload(cFile, `images/${cName}`, (percent) => {
+                    showStatus(`⏱️ 正在上传 [${currentBlockName}] 展示封面... 进度: ${percent}%`, 'info');
+                });
                 
                 coverUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${cName}`;
             } else {
@@ -573,14 +605,16 @@
                 const files = detailInput.files;
                 for (let k = 0; k < files.length; k++) {
                     const dFile = files[k];
-                    const dFileExt = dFile.name.split('.').pop();
+                    const dFileExt = dFile.name.split('.').pop().toLowerCase();
                     const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.${dFileExt}`;
                     
-                    const { error: errD } = await window.supabaseClient.storage.from('images').upload(`images/${dName}`, dFile, { upsert: true });
-                    if (!errD) {
-                        const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
-                        detailUrls.push(dUrl);
-                    }
+                    // 🎯 优化：增加详情页多图集/流媒体视频文件批量分步百分比进度跟踪提示
+                    await executeSingleUpload(dFile, `images/${dName}`, (percent) => {
+                        showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
+                    });
+                    
+                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
+                    detailUrls.push(dUrl);
                 }
             } else {
                 const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).single();
@@ -602,13 +636,14 @@
 
             if (error) throw error;
 
-            alert('✨ 配置、标题及全部多媒体图集已发布上线！前台数据已完成对齐同步。');
+            alert(`✨ ${currentBlockName}配置、标题及全部多媒体图集/视频流已发布上线！前台数据已完成对齐同步。`);
             showStatus('🎉 同步下发成功！', 'success');
             await refreshLiveDashboard(supabaseUrl);
 
         } catch (err) {
             console.error(err);
             alert('同步中断: ' + err.message);
+            showStatus('同步中断: ' + err.message, 'error');
         }
     };
 
