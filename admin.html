@@ -373,7 +373,7 @@
         fileInput.addEventListener('change', () => {
             selectedFilesCache = Array.from(fileInput.files);
             
-            // 🎯 关闭首页 Banner 上传视频限制
+            // 🎯 拦截首页 Banner 区域选取视频的行为
             const hasVideo = selectedFilesCache.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
             if (hasVideo) {
                 alert('🚨 权限拦截：首页 Banner 大图轮播区域不允许上传任何视频文件，请重新选择图片格式素材！');
@@ -511,7 +511,7 @@
                     const cacheBuster = `?t=${new Date().getTime()}`;
                     const mediaTagHtml = record.cover_url ? generateMediaTag(record.cover_url + cacheBuster) : generateMediaTag(null);
 
-                    // 🎯 优化：主封面限制为只能选图片(accept="image/*")，详情区混合解封保持原状
+                    // 🎯 严格限定：主封面只能传图片，禁止视频文件
                     const acceptCoverType = 'image/*';
                     const acceptDetailType = 'image/*,video/*';
                     const uploadLabel = '📁 选取主封面(仅限图片，禁止视频)';
@@ -560,7 +560,7 @@
         }
     }
 
-    // 🎯 拦截非图片输入，并计算主封面的选择数量
+    // 🎯 精准拦截非图片输入，并计算联动主封面的选择数量
     window.handleCoverFileSelect = function(category, slotIndex) {
         const input = document.getElementById(`cover-file-${category}-${slotIndex}`);
         const lbl = document.getElementById(`cover-count-lbl-${category}-${slotIndex}`);
@@ -572,7 +572,7 @@
             return;
         }
 
-        // 🎯 严格禁止所有主封面上传视频文件
+        // 🎯 严格防线二：除 Banner 外，所有主封面选择视频时立即重置拦截
         const hasVideo = files.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
         if(hasVideo) {
             alert('🚨 权限拦截：主封面区域不允许使用视频作为展示封面，请选择纯图片格式素材！');
@@ -581,6 +581,7 @@
             return;
         }
 
+        // 🎯 主封面上传后，精确回显文件状态与选中的数量
         lbl.innerHTML = `📁 主封面已就绪 —— <em style="color:#00f5ff; font-weight:bold;">已选择文件数量: ${files.length} 个</em>`;
     };
 
@@ -626,7 +627,7 @@
                     const dFileExt = dFile.name.split('.').pop().toLowerCase();
                     const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.${dFileExt}`;
                     
-                    // 📡 高清视频/图集混合批量上传高频百分比追踪，解决大文件保存无反应的通病
+                    // 📡 详情内容区多媒体/大视频文件批量上传高频百分比追踪，解决大文件保存无反应
                     await executeSingleUpload(dFile, `images/${dName}`, (percent) => {
                         saveButton.innerText = `⏳ 正在传输文件 ${k+1}/${files.length} (${percent}%)`;
                         showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
