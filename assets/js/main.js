@@ -89,50 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  /*
   async function syncLiveImagesFromDB() {
-    const fallbackImages = {
-      section_banner: [
-        'images/IMG_4822.jpeg',
-        'images/IMG_4823.jpeg',
-        'images/IMG_4824.jpeg',
-        'images/IMG_4825.jpeg',
-        'images/IMG_4826.jpeg'
-      ]
-    };
-
-    try {
-      let liveUrls = [];
-      if (window.supabaseClient) {
-        const { data, error } = await window.supabaseClient
-          .from('site_config')
-          .select('section, url')
-          .eq('section', 'section_banner')
-          .maybeSingle();
-
-        if (!error && data && data.url) {
-          liveUrls = JSON.parse(data.url);
-          if (typeof window.renderAdminBannerList === 'function') {
-            window.renderAdminBannerList(liveUrls);
-          }
-        }
-      }
-
-      carouselSlides.forEach((slide, index) => {
-        const imgElement = slide.querySelector('img');
-        if (imgElement) {
-          if (liveUrls && liveUrls[index]) {
-            imgElement.src = liveUrls[index];
-          } else {
-            imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
-          }
-        }
-      });
-    } catch (err) {
-      console.warn('正在平滑切换回本地备份图层呈现。');
-    }
-  }*/
- async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
         'images/IMG_4822.jpeg',
@@ -181,93 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 1. 增强型应用程序初始化函数
+  // 1. 增强型应用程序初始化函数（修复并行时序版）
   // ==========================================
-  /*async function initApp() {
+  async function initApp() {
     showSlide(0);
     startCarousel();
 
-    if (typeof supabase === 'undefined') {
-      console.error("Supabase SDK 尚未加载，中断初始化。");
-      return;
-    }
-
-    // 从 Cookie 中同步秒读管理员状态（0毫秒延迟，彻底防止按钮闪现或消失）
-    const isAdminCookie = document.cookie.split('; ').find(row => row.startsWith('is_admin='));
-    const isAdmin = isAdminCookie ? isAdminCookie.split('=')[1] === 'true' : false;
-    
-    const adminBtn = document.getElementById('admin-entrance-wrapper');
-    if (adminBtn) {
-      if (isAdmin) {
-        adminBtn.style.setProperty('display', 'block', 'important');
-      } else {
-        adminBtn.style.setProperty('display', 'none', 'important');
-      }
-    }
-
-    const workerUrl = 'https://api.nobistudio.com/';
-    let config = null;
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      const response = await fetch(workerUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        config = await response.json();
-        window.sysConfig = config;
-      } else {
-        throw new Error();
-      }
-    } catch (e) {
-    }
-
-    window.supabaseClient = supabase.createClient(config.SUPABASE_URL.trim(), config.ANON_KEY.trim(), {
-      auth: { persistSession: true, autoRefreshToken: true }
-    });
-
-    // 🎯 使用标准状态广播流：同步状态到 Cookie 并处理权限
-    window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth 状态变更流:", event);
-      
-      if (session && session.user) {
-        updateUserUI(session.user);
-        
-        // 异步去验权，一旦确认为管理员，立即补写 Cookie 锁死状态
-        try {
-          const { data, error } = await window.supabaseClient
-            .from('users')
-            .select('is_admin')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (data && data.is_admin) {
-            document.cookie = "is_admin=true; path=/; max-age=86400; SameSite=Lax";
-            if (adminBtn) adminBtn.style.setProperty('display', 'block', 'important');
-          } else {
-            document.cookie = "is_admin=false; path=/; max-age=0; SameSite=Lax";
-            if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
-          }
-        } catch (err) {
-          console.error("级联验权失败:", err);
-        }
-      } else {
-        // 清退逻辑
-        updateUserUI(null);
-        document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
-        if (adminBtn) adminBtn.style.setProperty('display', 'none', 'important');
-      }
-    });
-
-    await syncLiveImagesFromDB();
-    await fetchPosts();
-    // 在你的前台主页加载完毕、且 supabaseClient 握手成功后，立刻调用它：
-    await loadDeployedSections();
-    await loadHomeContent();
-  }*/
- // 🌟 纯净的全局初始化入口
-  async function initApp() {
     try {
       const apiUri = "https://api.nobistudio.com/";
       const res = await fetch(apiUri);
@@ -285,56 +161,38 @@ document.addEventListener('DOMContentLoaded', () => {
       
       console.log("✅ Supabase 安全客户端已成功注入底座！");
 
-      // 🎯 核心修复 1：在这里无论登录与否，先强制把图片拿下来，不受后续登录验权卡死的干扰！
+      // 🎯 核心修复 1：无论登录与否，立即采用 Promise.all 并发拉取全部图片、四大区域以及论坛列表！
+      // 彻底避开身份恢复（onAuthStateChange）时产生的底层网络死锁，让页面从后退中瞬间复活
       try {
-        await syncLiveImagesFromDB(); // 刷新轮播图
-        await loadHomeContent();       // 刷新推荐板块
-        console.log("📊 基础静态/动态版面图片加载序列完成");
+        await Promise.all([
+          syncLiveImagesFromDB(),   // 刷新轮播图
+          loadHomeContent(),         // 刷新动态推荐板块
+          loadDeployedSections(),   // 📺 读取部署数据并无缝对齐四大区域逻辑功能（确保不损坏原有功能）
+          fetchPosts()              // 🚀 唤醒并并行加载论坛帖子列表
+        ]);
+        console.log("📊 站点基础版面、多媒体图层与论坛数据流并行同步完成！");
       } catch (innerErr) {
-        console.error("图片流局部加载失败，但不阻塞应用启动:", innerErr);
+        console.error("数据流局部渲染受阻，正在继续保障认证链路:", innerErr);
       }
 
-      // 🎯 核心修复 2：监听登录状态时，内部绝对不做任何会卡死、阻塞的耗时操作
+      // 🎯 核心修复 2：解耦身份监听状态。内部严禁做任何阻塞式高频操作，保证论坛状态与控制台不掉线
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         console.log(`🔑 认证状态变更事件触发: ${event}`);
-        
         if (session && session.user) {
-          // 仅做 UI 上的无感渲染更新（换头像、改按钮文字、关弹窗等同步操作）
           updateUserUI(session.user);
-          
-          // 如果是管理员相关的特殊 Cookie 补写，放入异步的微任务中，绝不阻塞主线程
-          setTimeout(async () => {
-             try {
-                // 原本卡死的 users 表验权逻辑，丢在定时器里安全异步执行
-                const { data } = await window.supabaseClient
-                  .from('users')
-                  .select('is_admin')
-                  .eq('id', session.user.id)
-                  .single();
-                if (data && data.is_admin) {
-                   document.cookie = "admin_access=true; path=/; max-age=86400";
-                }
-             } catch(e) { console.warn("后台状态补写略过:", e); }
-          }, 10);
-
         } else {
-          clearUserUI();
+          updateUserUI(null);
         }
       });
 
     } catch (e) {
       console.warn("未能通过云端拉取配置，启动本地安全后备：", e);
-     // window.supabaseClient = supabase.createClient(
-      //  "https://kogjjfccyncdszuuwlun.supabase.co",
-       // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    //  );
       syncLiveImagesFromDB();
       loadHomeContent();
+      loadDeployedSections();
+      fetchPosts();
     }
   }
-
-  // 唯一启动入口
-  //initApp();
 
   // =========================================================
   // 🎯 鉴权核心函数
@@ -342,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function checkAdminPermission(session) {
     updateUserUI(session?.user || null);
 
-    const adminBtn = document.getElementById('admin-entrance-wrapper');
+    const adminBtn = document.getElementById('admin-entrance-wrapper') || document.getElementById('admin-btn');
     if (!adminBtn) return;
 
     if (!session || !session.user) {
@@ -385,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
         console.log(`🔄 捕获到 Auth 状态变更事件: ${event}`);
-        // 无论是初始化会话、登录、还是凭证刷新，统一交由核心函数审查
         await checkAdminPermission(session);
     });
   }
@@ -425,23 +282,19 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
+  
   if (userButton) {
       userButton.addEventListener('click', async (e) => {
-        // 1. 彻底掐断事件冒泡，防止任何全局拦截器的干扰
         e.preventDefault();
         e.stopPropagation();
 
-        // 2. 精准包含判定
         const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
 
         if (isLogged) {
           if (confirm('确定要退出登录吗？')) {
             console.log("启动终极物理熔断退出流...");
             
-            // 🎯【核心改良】：在页面强刷前，物理抹除 Supabase 官方的一切本地 Token 残留
-            // 这样可以彻底打断重新载入时的自动无感登录链条
             try {
-              // 扫描并定点清除所有以 sb- 开头的 Supabase 官方凭证
               for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith('sb-')) {
@@ -452,8 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
               console.warn("清洗官方缓存略有异常:", clearErr);
             }
 
-            // 清除咱们自己的自定义管理和用户缓存
             document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
+            document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
             localStorage.removeItem('is_admin');
             localStorage.removeItem('user_nickname');
             localStorage.removeItem('user_avatar');
@@ -461,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
               if (window.supabaseClient && window.supabaseClient.auth) {
-                // 异步通知云端注销（限时 1 秒，超时不候）
                 await Promise.race([
                   window.supabaseClient.auth.signOut(),
                   new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
@@ -472,11 +324,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             alert('已安全退出登录！');
-            // 🎯 强行跳转回纯净的主页根路径，彻底洗净一切后台路由和时序残留
             window.location.href = window.location.origin + window.location.pathname;
           }
         } else {
-          // 未登录状态，正常唤起登录弹窗
           if (typeof openModal === 'function') openModal('login');
         }
       });
@@ -607,13 +457,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==========================================
-  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染（点赞防拦截加固版）
+  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
   // ==========================================
   async function fetchPosts() {
     if (!postsList) return;
     
     try {
-      // 一次性查出所有主贴和回复，并按时间正序排列
       const { data: allPosts, error } = await window.supabaseClient
         .from('posts')
         .select('*')
@@ -623,23 +472,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
       postsList.innerHTML = '';
       
-      // 1. 分离主贴和回复
       const mainPosts = allPosts.filter(p => !p.parent_id);
       const replies = allPosts.filter(p => p.parent_id);
 
-      // 2. 依次渲染主贴和它附属的二级回复
       mainPosts.forEach(post => {
         const postCard = document.createElement('div');
         postCard.className = 'post-card';
         postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
 
-        // 检查当前登录用户是否点过赞
         const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
         const likesArray = post.likes_users || [];
         const isLiked = likesArray.includes(currentEmail);
         const likeCount = likesArray.length;
 
-        // 拼接主贴 DOM 骨架 (注意：把 button 上的 onclick 移除了，改用 class 进行精准绑定)
         let htmlContent = `
           <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%;" />
@@ -662,7 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
         `;
 
-        // 找出属于这条主贴的所有二级回复并渲染
         const currentReplies = replies.filter(r => r.parent_id === post.id);
         currentReplies.forEach(reply => {
           htmlContent += `
@@ -677,7 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
           `;
         });
 
-        // 闭合容器并拼接动态回复输入框
         htmlContent += `
           </div>
           <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
@@ -689,14 +532,11 @@ document.addEventListener('DOMContentLoaded', () => {
         postCard.innerHTML = htmlContent;
         postsList.appendChild(postCard);
 
-        // 🎯 【核心加固点】：动态绑定点赞点击，死死拦截冒泡，避开一切外部全局拦截器！
         const likeBtn = postCard.querySelector('.like-action-btn');
         if (likeBtn) {
           likeBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            e.stopPropagation(); // 💥 切断冒泡，让全局智能拦截器变成瞎子
-            
-            // 安全触发更新，直接传入 post 对象，完美避开 JSON.stringify 引号截断 Bug
+            e.stopPropagation(); 
             await window.toggleLike(post.id, likesArray);
           });
         }
@@ -706,9 +546,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ==========================================
-  // 🎯 论坛加固：点赞安全判别（带报错监控版）
-  // ==========================================
   window.toggleLike = async function(postId, currentLikes) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
@@ -732,20 +569,17 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('id', postId);
 
       if (error) {
-        // 🎯 核心监控：如果数据库报错（比如因 RLS 策略拒绝），这里会直接弹窗告诉你原因！
         console.error("数据库拒绝了点赞更新:", error);
         alert(`点赞失败，数据库返回: ${error.message} (代码: ${error.code})`);
         return;
       }
       
-      // 成功后重新拉取
       await fetchPosts(); 
     } catch(err) {
       console.error("网络或流阻断:", err);
     }
   };
 
-  // 唤起特定帖子的回复输入框
   window.showReplyBox = function(postId) {
     const box = document.getElementById(`reply-box-${postId}`);
     if (box) {
@@ -756,9 +590,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // ==========================================
-  // 🎯 论坛加固：提交二级评论回复
-  // ==========================================
   window.submitReply = async function(postId) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
@@ -775,7 +606,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      // 勾兑昵称与头像
       const nickname = localStorage.getItem('user_nickname') || user.email.split('@')[0];
       const avatarUrl = localStorage.getItem('user_avatar') || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko';
 
@@ -785,12 +615,12 @@ document.addEventListener('DOMContentLoaded', () => {
           content: input.value.trim(),
           nickname: nickname,
           avatar_url: avatarUrl,
-          parent_id: postId // 牢牢绑定父级 ID
+          parent_id: postId 
         }]);
 
       if (error) throw error;
       input.value = '';
-      await fetchPosts(); // 重新加载盖楼树状图
+      await fetchPosts(); 
     } catch (err) {
       alert("回复失败: " + err.message);
     }
@@ -829,32 +659,27 @@ document.addEventListener('DOMContentLoaded', () => {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   }
 
-  /*function updateUserUI(user) {
-    if (!userButton) return;
-    if (user) {
-      userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
-      userButton.style.background = 'rgba(255, 255, 255, 0.15)';
-      if (postArea) postArea.removeAttribute('hidden');
-    } else {
-      userButton.innerHTML = '✨ 登录 / 注册专区';
-      userButton.style.background = '';
-      if (postArea) postArea.setAttribute('hidden', '');
-    }
-  }*/
-  // 🌟 深度加固与安全解耦后的用户 UI 渲染及状态写入函数
+  // 🌟 3. 增强型用户 UI 状态更新与完全非阻塞异步鉴权函数
   function updateUserUI(user) {
     if (!userButton) return;
     
+    // 获取后台控制入口按钮元素（兼容代码中出现的两种 ID 命名）
+    let adminButton = document.getElementById('admin-entrance-wrapper') || document.getElementById('admin-btn');
+    
     if (user) {
-      // 1. 瞬间点亮/渲染前端用户登录按钮（高响应速度，零网络阻塞）
+      // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
       userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
       userButton.style.background = 'rgba(255, 255, 255, 0.15)';
-      if (postArea) postArea.removeAttribute('hidden');
       
-      // 🎯 核心改良：将原本在监听器里乱跑、容易导致断网卡死的异步验权锁死逻辑，
-      // 封装进非阻塞的低优先级 setTimeout 微任务中，100% 确保主页 site_config 表先拿到图片
+      // (2) 🚀 瞬间无缝唤醒论坛：全物理接触隐藏，彻底防止论坛处于断开或僵尸挂起状态
+      if (postArea) {
+        postArea.removeAttribute('hidden');
+        postArea.style.display = 'block'; 
+      }
+      if (publishBtn) publishBtn.removeAttribute('disabled');
+
+      // (3) 🎯 异步低优先级隔离：将可能引起死锁挂起的 `users` 表鉴权延迟 200ms 执行
       setTimeout(async () => {
-        // 安全拦截：如果由于后退返回导致环境异常，直接退出，绝不卡死主线程
         if (!window.supabaseClient || typeof window.supabaseClient.from !== 'function') {
           console.warn("⚠️ 实例尚在复苏，略过本次静默验权。");
           return;
@@ -866,35 +691,66 @@ document.addEventListener('DOMContentLoaded', () => {
             .from('users')
             .select('is_admin')
             .eq('id', user.id)
-            .maybeSingle(); // 使用 maybeSingle 代替 single，防止找不到记录时抛出硬报错中断脚本
+            .maybeSingle(); // 健壮处理，防止无记录时产生致命脚本异常
 
           if (!error && data && data.is_admin) {
-            console.log("👑 认证成功：当前登录账号具备最高管理权限，正在补写本地通信锁...");
-            // 补写 Cookie 锁定状态，供 admin.html 和路由守卫进行安全判定
+            console.log("👑 认证成功：当前账号具备最高管理权限，正在呈现控制台入口...");
+            
+            // 补写安全通信锁双向 Cookie
+            document.cookie = "is_admin=true; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "admin_access=true; path=/; max-age=86400; SameSite=Strict";
+            
+            // 展现控制台按钮入口
+            if (adminButton) {
+              adminButton.removeAttribute('hidden');
+              adminButton.style.setProperty('display', 'block', 'important');
+            } else {
+              // 如果 DOM 中没有预设，则动态自动在用户区右侧补上
+              if (!document.getElementById('admin-btn-dynamic')) {
+                const adminBtnHtml = `<a href="admin.html" id="admin-btn-dynamic" class="nav-btn admin-special-btn" style="margin-left: 10px; background: #ff4757; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;">⚙️ 管理后台</a>`;
+                userButton.insertAdjacentHTML('afterend', adminBtnHtml);
+              }
+            }
           } else {
-            // 如果查出来不是管理员，或者报错，安全擦除可能残留的老旧 Cookie 状态
+            // 如果查出来不是管理员，安全清理所有的残留锁
+            document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
             document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            removeAdminButton();
           }
         } catch (authCatch) {
-          console.warn("静默验权通道暂时处于休眠或繁忙状态，已自动降级跳过:", authCatch);
+          console.warn("静默验权通道暂时繁忙，已安全降级跳过:", authCatch);
         }
-      }, 200); // 延迟 200 毫秒执行，完美错开主页首屏拉取图片（site_config）的网络带宽黄金期
+      }, 200); 
 
     } else {
-      // 2. 处理用户未登录或退出登录时的 UI 还原
-      userButton.innerHTML = '✨ 登录 / 注册专区';
-      userButton.style.background = '';
-      if (postArea) postArea.setAttribute('hidden', '');
-      
-      // 用户登出，立即物理清除管理员 Cookie 锁，防止越权风险
+      // (4) 用户未登录或退出登录时，全面物理还原界面并封锁论坛发布功能
+      clearUserUI();
+      document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      removeAdminButton();
+    }
+
+    // 辅助工具：安全解除管理按钮
+    function removeAdminButton() {
+      if (adminButton) {
+        adminButton.setAttribute('hidden', 'true');
+        adminButton.style.setProperty('display', 'none', 'important');
+      }
+      const dynamicBtn = document.getElementById('admin-btn-dynamic');
+      if (dynamicBtn) dynamicBtn.remove();
     }
   }
 
   // 负责退出登录或未登录时的界面复原
   function clearUserUI() {
-     if (userButton) userButton.textContent = '登录/注册';
+     if (userButton) {
+        userButton.innerHTML = '✨ 登录 / 注册专区';
+        userButton.style.background = '';
+     }
+     if (postArea) {
+        postArea.setAttribute('hidden', '');
+        postArea.style.display = 'none';
+     }
      if (publishBtn) publishBtn.setAttribute('disabled', 'true');
   }
 
@@ -935,9 +791,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  // 启动应用
-  initApp();
-
   // ==========================================
   // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
   // ==========================================
@@ -949,7 +802,6 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
           }
 
-          // 1. 一次性从 site_config 表中捞取所有区域的部署配置
           const { data: configs, error } = await window.supabaseClient
               .from('site_config')
               .select('section, url');
@@ -964,7 +816,6 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
           }
 
-          // 2. 依次遍历并动态对齐四大区域
           configs.forEach(cfg => {
               const sectionId = cfg.section;
               let imageUrls = [];
@@ -978,15 +829,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
               if (!Array.isArray(imageUrls) || imageUrls.length === 0) return;
 
-              // 🎯 针对四大不同的板块进行精准的前台 DOM 元素打通与无损拼接
               switch (sectionId) {
-                  
-                  // 🔹 板块 1：首页 Banner 大图轮播区
                   case 'section_banner':
-                      // 假设你的首页轮播容器 ID 是 banner-slider 或类似的名字
                       const bannerContainer = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper'); 
                       if (bannerContainer) {
-                          // 动态拼装轮播图的 HTML 结构（保留你原有的样式类名，这里以标准的 Swiper/Slider 为例）
                           bannerContainer.innerHTML = imageUrls.map(url => `
                               <div class="swiper-slide">
                                   <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
@@ -995,7 +841,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                       break;
 
-                  // 🔹 板块 2：动漫版面轮播区
                   case 'section_anime':
                       const animeContainer = document.getElementById('anime-section-grid') || document.querySelector('.anime-grid');
                       if (animeContainer) {
@@ -1008,7 +853,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                       break;
 
-                  // 🔹 板块 3：社区交流轮播区
                   case 'section_community':
                       const commContainer = document.getElementById('community-section-images') || document.querySelector('.community-banners');
                       if (commContainer) {
@@ -1020,7 +864,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       }
                       break;
 
-                  // 🔹 板块 4：热门强推卡牌轮播区
                   case 'section_recommend':
                       const recommendContainer = document.getElementById('recommend-section-cards') || document.querySelector('.recommend-grid');
                       if (recommendContainer) {
@@ -1039,7 +882,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           console.log("🎉 前台四大板块已全部无缝查表对齐并动态刷新完成！");
 
-          // 💡 温馨提示：如果你的首页使用了 Swiper 等轮播图组件，渲染完后需要手动重新初始化一下
           if (window.mySwiperInstance && typeof window.mySwiperInstance.update === 'function') {
               window.mySwiperInstance.update();
           }
@@ -1048,90 +890,8 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("前台同步对齐发生严重阻断:", globalErr);
       }
   }
-  /*
-    async function loadHomeContent() {
-      try {
-          if (!window.supabaseClient) {
-              console.warn("SupabaseClient 尚未就绪，跳过内容渲染。");
-              return;
-          }
 
-          // 1. 获取新版复合内容数据（热门动漫与漫画连载）
-          const { data: managementData, error } = await window.supabaseClient
-              .from('content_management')
-              .select('*');
-
-          if (error) throw error;
-          if (!managementData) return;
-
-          // 2. 渲染“热门动漫推荐”区域
-          const animeContainer = document.getElementById('anime-container');
-          if (animeContainer) {
-              animeContainer.innerHTML = ''; // 清空原本写死的 4 个占位 HTML
-
-              // 过滤出动漫的数据(anime)，并按槽位 0,1,2,3 升序排序
-              const animeSlots = managementData
-                  .filter(item => item.category === 'anime')
-                  .sort((a, b) => a.slot_index - b.slot_index);
-
-              animeSlots.forEach(slot => {
-                  // 创建最外层卡片 article
-                  const card = document.createElement('article');
-                  card.className = 'card'; // 🌟 沿用你主页原本的卡片样式类名
-                  card.style.cursor = 'pointer';
-                  
-                  // 点击后携带参数安全跳转到详情页
-                  card.onclick = () => {
-                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
-                  };
-
-                  // 拼接标签：如果是多标签数组，用 / 隔开
-                  const tagsText = (slot.theme_tags || []).join(' / ');
-                  
-                  // 🌟 精准无损地复刻你 HTML 原始的 DOM 结构
-                  card.innerHTML = `
-                      <img src="${slot.cover_url || 'images/IMG_4893.png'}" alt="${slot.title || '动漫主题'}" loading="lazy" decoding="async">
-                      <div class="card__body">
-                        <h3 class="card__title">${slot.title || '未命名主题'}</h3>
-                        <p class="card__tag">${tagsText || slot.subtitle || '暂无分类'}</p>
-                      </div>
-                  `;
-                  animeContainer.appendChild(card);
-              });
-          }
-
-          // 3. 【同理修复】如果你以后要开放底部的漫画连载区动态化，确保 HTML 里有 id="manga-container"
-          const mangaContainer = document.getElementById('manga-container');
-          if (mangaContainer) {
-              mangaContainer.innerHTML = '';
-              const mangaSlots = managementData
-                  .filter(item => item.category === 'manga')
-                  .sort((a, b) => a.slot_index - b.slot_index);
-
-              mangaSlots.forEach(slot => {
-                  const card = document.createElement('article');
-                  card.className = 'card';
-                  card.style.cursor = 'pointer';
-                  card.onclick = () => {
-                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
-                  };
-                  
-                  card.innerHTML = `
-                      <img src="${slot.cover_url || 'placeholder.png'}" loading="lazy" decoding="async"/>
-                      <div class="card__body">
-                        <h3 class="card__title">${slot.title}</h3>
-                        <p class="card__tag">${slot.subtitle}</p>
-                      </div>
-                  `;
-                  mangaContainer.appendChild(card);
-              });
-          }
-
-      } catch (err) {
-          console.error("主页动态数据加载失败:", err);
-      }
-  }*/
- async function loadHomeContent() {
+  async function loadHomeContent() {
       try {
           if (!window.supabaseClient) return;
           const { data: managementData, error } = await window.supabaseClient
@@ -1140,7 +900,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (error || !managementData) return;
 
-          // 🎯 核心修复：定义用于板块内容图片击穿缓存的时间戳
           const buster = window.forceCacheBuster || `?t=${new Date().getTime()}`;
 
           const animeContainer = document.getElementById('anime-container');
@@ -1158,7 +917,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
                   
-                  // ⚡ 核心加固：为封面图 url 强制缀上缓存击穿标记
                   const finalCover = slot.cover_url 
                       ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
                       : 'placeholder.png';
@@ -1189,7 +947,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
                   
-                  // ⚡ 核心加固：同样为漫画封面处理多媒体硬缓存
                   const finalCover = slot.cover_url 
                       ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
                       : 'placeholder.png';
@@ -1210,13 +967,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
   }
 
-  // ✨ 拦截器加固：只有处于登出状态、且点击了包含特定文案的按钮时才拦截弹窗
-  // 全局智能拦截器 (修改后的防死锁版)
+  // ✨ 拦截器加固
   const globalTriggerModal = (e) => {
     const targetBtn = e.target.closest('#user-btn');
     if (!targetBtn) return;
 
-    // 🎯 核心加固：如果按钮文本里已经包含了“欢迎回来”，说明是登录态，全局拦截器直接放行，绝不强弹窗或干扰
     if (targetBtn.textContent.includes('欢迎回来')) {
       return;
     }
@@ -1243,25 +998,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
+
+  let currentSlideIndexOld = 0;
+  let carouselSlidesOld = Array.from(document.querySelectorAll('.hero__slide'));
+  function showSlideOld(idx) {
+    if (!carouselSlidesOld.length) return;
+    carouselSlidesOld.forEach(s => s.classList.remove('is-active'));
+    let target = idx;
+    if (idx >= carouselSlidesOld.length) target = 0;
+    if (idx < 0) target = carouselSlidesOld.length - 1;
+    currentSlideIndexOld = target;
+    carouselSlidesOld[currentSlideIndexOld].classList.add('is-active');
+  }
+
+  const prevBtn = document.querySelector('.hero__btn--prev');
+  const nextBtn = document.querySelector('.hero__btn--next');
+  if (prevBtn) prevBtn.onclick = () => showSlideOld(currentSlideIndexOld - 1);
+  if (nextBtn) nextBtn.onclick = () => showSlideOld(currentSlideIndexOld + 1);
+
+  if (carouselSlidesOld.length > 0) {
+    setInterval(() => showSlideOld(currentSlideIndexOld + 1), 6000);
+  }
+
+  // 💥 唤起总初始化启动入口 💥
+  initApp();
 });
+
 // =================================================================
 // 🎯 终极物理破局：解决返回主页时 Supabase 挂起卡死没反应的问题
 // =================================================================
 window.addEventListener('pageshow', (event) => {
-    // 1. 严格判断是否是通过 history.back()、浏览器后退或往返缓存（BFCache）恢复回到主页的
     const isBackAction = event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
     
     if (isBackAction) {
         console.log("🔄 捕获到从后台返回的行为。为了防止旧网络套接字被浏览器冻结死锁，准备强刷整页...");
-        
-        // 2. 埋下一颗信号弹，告诉刷新后的主页：“你是从管理后台刚刚退回来的”
         sessionStorage.setItem('just_backed_from_admin', 'true');
-        
-        // 3. 核心杀招：强制重载当前页面，绕过一切僵尸内存和卡死链接
         window.location.reload();
     }
 });
-  
