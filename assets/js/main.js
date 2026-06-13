@@ -3,6 +3,15 @@ window.sysConfig = null;
 window.supabaseClient = null; 
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 🎯 【必须加在最顶端第一行】检查是否是刚才后退回来触发的全新刷新
+  if (sessionStorage.getItem('just_backed_from_admin') === 'true') {
+      console.log("✨ 成功通过物理重载复苏主页！正在擦除信号并强制清除缓存...");
+      sessionStorage.removeItem('just_backed_from_admin'); // 立即销毁标记，防止以后F5刷新被误伤
+      
+      // 💡 黑科技：往全局 url 配置里塞一个时间戳参数，强制后续所有 Supabase 图片查询都带上最新时间戳破除缓存
+      window.forceCacheBuster = `?t=${new Date().getTime()}`;
+  }
+  
   // 获取所有基础 DOM 元素
   const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
   const userButton = document.getElementById('user-btn');
@@ -80,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
   }
 
-  /*
+  
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
@@ -122,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.warn('正在平滑切换回本地备份图层呈现。');
     }
-  }*/
+  }
 
   // ==========================================
   // 1. 增强型应用程序初始化函数
@@ -300,45 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
       resetForm.removeAttribute('hidden');
     }
   }
-  /*======================================================
-  if (userButton) {
-    userButton.addEventListener('click', async (e) => {
-      // 🎯 核心加固：100% 掐断冒泡和捕获，不给最底部的全局拦截器任何卡死它的机会
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 改为更安全的精准包含判断，防止二次渲染的 innerHTML 小图标破坏文本
-      const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
-
-      if (isLogged) {
-        if (confirm('确定要退出登录吗？')) {
-          console.log("正在执行退出流...");
-          
-          // 先同步强制清除本地的一切缓存与状态，防止网络挂起
-          localStorage.clear();
-          sessionStorage.clear();
-          document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
-          
-          try {
-            if (window.supabaseClient && window.supabaseClient.auth) {
-              // 加上 1 秒限时，防止 signOut() 的云端网络请求无声卡死
-              await Promise.race([
-                window.supabaseClient.auth.signOut(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1000))
-              ]);
-            }
-          } catch (signOutErr) {
-            console.warn("云端注销略有延迟，已平滑跳过:", signOutErr);
-          }
-
-          alert('已安全退出登录！');
-          window.location.reload(); // 强刷整洁页面
-        }
-      } else {
-        openModal('login');
-      }
-    });
-  }*/
   if (userButton) {
       userButton.addEventListener('click', async (e) => {
         // 1. 彻底掐断事件冒泡，防止任何全局拦截器的干扰
@@ -796,131 +766,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 启动应用
   initApp();
 
-  // ✨ 拦截器加固：只有处于登出状态、且点击了包含特定文案的按钮时才拦截弹窗
-  // 全局智能拦截器 (修改后的防死锁版)
-  const globalTriggerModal = (e) => {
-    const targetBtn = e.target.closest('#user-btn');
-    if (!targetBtn) return;
-
-    // 🎯 核心加固：如果按钮文本里已经包含了“欢迎回来”，说明是登录态，全局拦截器直接放行，绝不强弹窗或干扰
-    if (targetBtn.textContent.includes('欢迎回来')) {
-      return;
-    }
-
-    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const authModal = document.getElementById('auth-modal');
-      const loginForm = document.getElementById('login-form');
-      const regForm = document.getElementById('reg-form');
-
-      if (authModal) {
-        authModal.removeAttribute('hidden');
-        authModal.style.setProperty('display', 'grid', 'important');
-        if (loginForm) loginForm.removeAttribute('hidden');
-        if (regForm) regForm.setAttribute('hidden', '');
-        
-        const tabLogin = document.getElementById('tab-login');
-        const tabReg = document.getElementById('tab-reg');
-        if (tabLogin) tabLogin.classList.add('is-active');
-        if (tabReg) tabReg.classList.remove('is-active');
-      }
-    }
-  };
-
-  
-  document.addEventListener('touchend', globalTriggerModal, { passive: false });
-  document.addEventListener('click', globalTriggerModal);
-});
-// =========================================================
-// 🎯 具备自愈能力的最高优先级 pageshow 监听器（放在 main.js 最外层）
-// =========================================================
-window.addEventListener('pageshow', async (event) => {
-    // 判断是否来自后退/返回
-    const isBack = event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
-    
-    if (isBack) {
-        console.log("🔄 捕获到后退行为。开始检查 Supabase 客户端状态...");
-        
-        // 🎯 核心加固：如果发现 window.supabaseClient 为空，绝不坐以待毙！
-        if (!window.supabaseClient) {
-            console.warn("🚨 警告：window.supabaseClient 为空！正在尝试唤醒并重新执行全局初始化...");
-            
-            try {
-                // 1. 如果你主页有现成的全局初始化函数（例如 initApp 或 loadConfig），直接调用它去拉取密钥并创建 client
-                if (typeof initApp === 'function') {
-                    await initApp(); 
-                } else if (typeof loadConfig === 'function') {
-                    await loadConfig();
-                }
-                
-                // 2. 给异步网络请求一点微小的串行等待时间（100ms），等待客户端彻底创建完毕
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (e) {
-                console.error("异步唤醒失败，准备执行强刷重载兜底:", e);
-            }
-        }
-
-        // 🎯 再次判定状态
-        if (window.supabaseClient) {
-            console.log("⚡ Supabase 客户端已就绪（或唤醒成功），开始洗牌缓存并拉取最新图片...");
-            try {
-                if (typeof syncLiveImagesFromDB === 'function') await syncLiveImagesFromDB();
-                if (typeof loadDeployedSections === 'function') await loadDeployedSections();
-                if (typeof loadHomeContent === 'function') await loadHomeContent();
-            } catch (err) {
-                console.error("局部动态刷新失败:", err);
-            }
-        } else {
-            // 🎯 最终杀招：如果各种唤醒手段都失效了，说明内存彻底错乱，直接物理强刷整页！
-            console.error("🚨 无法无感唤醒数据库实例，执行全页硬重载（穿透缓存）...");
-            window.location.reload(true);
-        }
-    }
-});
-async function syncLiveImagesFromDB() {
-    const fallbackImages = {
-      section_banner: [
-        'images/IMG_4822.jpeg',
-        'images/IMG_4823.jpeg',
-        'images/IMG_4824.jpeg',
-        'images/IMG_4825.jpeg',
-        'images/IMG_4826.jpeg'
-      ]
-    };
-
-    try {
-      let liveUrls = [];
-      if (window.supabaseClient) {
-        const { data, error } = await window.supabaseClient
-          .from('site_config')
-          .select('section, url')
-          .eq('section', 'section_banner')
-          .maybeSingle();
-
-        if (!error && data && data.url) {
-          liveUrls = JSON.parse(data.url);
-          if (typeof window.renderAdminBannerList === 'function') {
-            window.renderAdminBannerList(liveUrls);
-          }
-        }
-      }
-
-      carouselSlides.forEach((slide, index) => {
-        const imgElement = slide.querySelector('img');
-        if (imgElement) {
-          if (liveUrls && liveUrls[index]) {
-            imgElement.src = liveUrls[index];
-          } else {
-            imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
-          }
-        }
-      });
-    } catch (err) {
-      console.warn('正在平滑切换回本地备份图层呈现。');
-    }
-  }
   // ==========================================
   // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
   // ==========================================
@@ -1114,3 +959,59 @@ async function syncLiveImagesFromDB() {
           console.error("主页动态数据加载失败:", err);
       }
   }
+
+  // ✨ 拦截器加固：只有处于登出状态、且点击了包含特定文案的按钮时才拦截弹窗
+  // 全局智能拦截器 (修改后的防死锁版)
+  const globalTriggerModal = (e) => {
+    const targetBtn = e.target.closest('#user-btn');
+    if (!targetBtn) return;
+
+    // 🎯 核心加固：如果按钮文本里已经包含了“欢迎回来”，说明是登录态，全局拦截器直接放行，绝不强弹窗或干扰
+    if (targetBtn.textContent.includes('欢迎回来')) {
+      return;
+    }
+
+    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const authModal = document.getElementById('auth-modal');
+      const loginForm = document.getElementById('login-form');
+      const regForm = document.getElementById('reg-form');
+
+      if (authModal) {
+        authModal.removeAttribute('hidden');
+        authModal.style.setProperty('display', 'grid', 'important');
+        if (loginForm) loginForm.removeAttribute('hidden');
+        if (regForm) regForm.setAttribute('hidden', '');
+        
+        const tabLogin = document.getElementById('tab-login');
+        const tabReg = document.getElementById('tab-reg');
+        if (tabLogin) tabLogin.classList.add('is-active');
+        if (tabReg) tabReg.classList.remove('is-active');
+      }
+    }
+  };
+
+  
+  document.addEventListener('touchend', globalTriggerModal, { passive: false });
+  document.addEventListener('click', globalTriggerModal);
+});
+// =================================================================
+// 🎯 终极物理破局：解决返回主页时 Supabase 挂起卡死没反应的问题
+// =================================================================
+window.addEventListener('pageshow', (event) => {
+    // 1. 严格判断是否是通过 history.back()、浏览器后退或往返缓存（BFCache）恢复回到主页的
+    const isBackAction = event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
+    
+    if (isBackAction) {
+        console.log("🔄 捕获到从后台返回的行为。为了防止旧网络套接字被浏览器冻结死锁，准备强刷整页...");
+        
+        // 2. 埋下一颗信号弹，告诉刷新后的主页：“你是从管理后台刚刚退回来的”
+        sessionStorage.setItem('just_backed_from_admin', 'true');
+        
+        // 3. 核心杀招：强制重载当前页面，绕过一切僵尸内存和卡死链接
+        window.location.reload();
+    }
+});
+  
