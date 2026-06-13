@@ -892,6 +892,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 负责退出登录或未登录时的界面复原
+  function clearUserUI() {
+     if (userButton) userButton.textContent = '登录/注册';
+     if (publishBtn) publishBtn.setAttribute('disabled', 'true');
+  }
 
   window.renderAdminBannerList = function(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
