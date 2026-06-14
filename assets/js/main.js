@@ -664,14 +664,28 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       if (!window.supabaseClient) return;
 
-      const password = document.getElementById('new-password').value;
-      const hasFile = editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files[0];
+      //const password = document.getElementById('new-password').value;
+      //const hasFile = editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files[0];
 
       // 1. 安全边界拦截：如果用户什么都没填/没选，不浪费网络请求
+      //if (!password && !hasFile) {
+        //alert('你还没有输入新密码，也没有选择新头像喵！');
+       // return;
+      //}
+      // 1. 先获取元素本身，不直接加 .value
+      const passwordInput = document.getElementById('new-password');
+      const editAvatarFileInput = document.getElementById('edit-avatar-input'); // 确保这个ID也正确
+
+      // 2. 安全地获取值：如果元素存在就取值，不存在则设为 null 或空字符串
+      const password = passwordInput ? passwordInput.value : '';
+      const hasFile = editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files[0];
+
+      // 3. 这里的安全边界检查逻辑就能正常工作了
       if (!password && !hasFile) {
-        alert('你还没有输入新密码，也没有选择新头像喵！');
-        return;
+          alert('您没有输入新密码，也没有选择新头像！');
+          return;
       }
+
 
       // 获取当前在线用户态
       const { data: { session } } = await window.supabaseClient.auth.getSession();
