@@ -32,6 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 寻找 const avatarOptions = Array.from(document.querySelectorAll('.avatar-option')); 在下方添加： 20260614
   const avatarFileInput = document.getElementById('reg-avatar-file');
   const avatarFileHint = document.getElementById('avatar-file-hint');
+  // ✨ 新增：修改头像相关的 DOM 节点获取
+  const updateAvatarForm = document.getElementById('update-avatar-form');
+  const editAvatarFileInput = document.getElementById('edit-avatar-file');
+  const editAvatarHint = document.getElementById('edit-avatar-hint');
 
   //const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
   const REDIRECT_URL = 'https://www.nobistudio.com/index.html';
@@ -448,7 +452,8 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal();
     });
   }*/
- // 寻找 if (regForm) { regForm.addEventListener('submit', ... ) } 块，替换为以下优化版：
+  // 寻找 if (regForm) { regForm.addEventListener('submit', ... ) } 块，替换为以下优化版：
+  // 🔍 寻找 main.js 中约第 314 行的 if (regForm) 逻辑，用以下代码进行完整替换：
   if (regForm) {
     regForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -463,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.textContent = '⏱️ 正在创建角色...';
 
       try {
-        // 1. 先调用 Supabase Auth 注册用户
+        // 1. 先调用 Supabase Auth 注册新账号
         const { data, error } = await window.supabaseClient.auth.signUp({
           email, password, options: { redirectTo: REDIRECT_URL }
         });
@@ -471,43 +476,60 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) throw error;
 
         if (data.user) {
+          // 预设一个基础头像地址（如果用户没选本地文件，则沿用 DiceBear 默认值）
           let finalAvatarUrl = selectedAvatar;
 
-          // 2. ✨ 新增：检测是否有自定义头像文件需要上传
+          // 2. ✨ 核心修改：在这里检测是否有自定义头像文件需要上传
           if (avatarFileInput && avatarFileInput.files && avatarFileInput.files[0]) {
             const file = avatarFileInput.files[0];
-            const fileExt = file.name.split('.').pop();
-            // 用用户 ID 命名，确保唯一性且避免产生冗余废文件
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            // 用用户真实的唯一 ID 命名，确保一个用户永远只有一张最新的头像，避免污染存储空间
             const filePath = `${data.user.id}.${fileExt}`; 
 
             submitBtn.textContent = '⏱️ 正在上传自定义头像...';
             
-            // 上传至名为 'avatars' 的 storage bucket
+            // 上传至 Supabase 存储空间里的 'avatars' 存储桶
             const { error: uploadError } = await window.supabaseClient.storage
               .from('avatars')
               .upload(filePath, file, { upsert: true });
 
             if (uploadError) {
-              console.error('头像上传失败，自动降级为默认预设:', uploadError.message);
-            } else {
-              // 获取公开访问 URL
-              const { data: publicUrlData } = window.supabaseClient.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-                
-              // 加上时间戳，防止浏览器缓存导致用户更新头像时前台不刷新
-              finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+              // 🎯 拒绝静默失败，抛出异常让开发者和用户能直接看到原因
+              throw new Error(`头像物理上传失败: ${uploadError.message} (请检查存储桶 avatars 是否已创建)`);
             }
+
+            // 上传无误后，实时捕获该图片的外部公开访问 URL
+            const { data: publicUrlData } = window.supabaseClient.storage
+              .from('avatars')
+              .getPublicUrl(filePath);
+              
+            // 拼接最新的公共 URL 路径，并加上防缓存时间戳
+            finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
           }
 
-          // 3. 写入用户 profiles 资料表
-          await window.supabaseClient.from('profiles').insert([
-            { id: data.user.id, nickname, avatar_url: finalAvatarUrl }
-          ]);
+          submitBtn.textContent = '⏱️ 正在写入账户资料卡...';
+
+          // 3. ✨ 核心修改：时序调整到最后！将最终获取到的自定义 finalAvatarUrl 地址持久化写入 profiles 表
+          const { error: profileError } = await window.supabaseClient
+            .from('profiles')
+            .insert([
+              { id: data.user.id, nickname, avatar_url: finalAvatarUrl }
+            ]);
+
+          if (profileError) {
+            throw new Error(`资料卡绑定失败: ${profileError.message} (请检查 profiles 表的 RLS 策略)`);
+          }
         }
         
-        alert('注册成功！请检查邮箱激活邮件。');
+        alert('注册成功！请检查邮箱激活邮件喵~');
         closeModal();
+        
+        // 注册完毕后刷新或重载，让新用户的状态对齐
+        if (typeof initApp === 'function') {
+          initApp();
+        } else {
+          window.location.reload();
+        }
       } catch (err) {
         alert(`注册或绑定失败: ${err.message}`);
       } finally {
@@ -517,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (resetForm) {
+  /*if (resetForm) {
     resetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!window.supabaseClient) return;
@@ -527,6 +549,111 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('密码修改成功，请重新登录。');
       closeModal();
       window.location.reload();
+    });
+  }*/
+ // =========================================================
+  // 🎯 核心重构：将“修改密码”与“修改头像”融为一体的混编表单
+  // =========================================================
+  if (resetForm) {
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!window.supabaseClient) return;
+
+      const password = document.getElementById('new-password').value;
+      const hasFile = editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files[0];
+
+      // 1. 安全边界拦截：如果用户什么都没填/没选，不浪费网络请求
+      if (!password && !hasFile) {
+        alert('你还没有输入新密码，也没有选择新头像喵！');
+        return;
+      }
+
+      // 获取当前在线用户态
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = session?.user;
+      if (!user) {
+        alert('登录态已失效，请重新登录哦！');
+        return;
+      }
+
+      const submitBtn = resetForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏱️ 正在同步资料...';
+
+      try {
+        let isAvatarUpdated = false;
+        let isPasswordUpdated = false;
+
+        // 2. ✨ 第一阶段：处理自定义头像上传与更新
+        if (hasFile) {
+          submitBtn.textContent = '⏱️ 正在上传新头像...';
+          const file = editAvatarFileInput.files[0];
+          const fileExt = file.name.split('.').pop().toLowerCase();
+          const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖旧图
+
+          // 推送到存储桶
+          const { error: uploadError } = await window.supabaseClient.storage
+            .from('avatars')
+            .upload(filePath, file, { upsert: true });
+
+          if (uploadError) throw new Error(`头像存储失败: ${uploadError.message}`);
+
+          // 捕获公开 URL
+          const { data: publicUrlData } = window.supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+          // 注入时间戳，强制前端刷新 5G 或浏览器缓存的同名头像文件
+          const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+
+          // 更新用户资料表
+          const { error: profileError } = await window.supabaseClient
+            .from('profiles')
+            .update({ avatar_url: finalAvatarUrl })
+            .eq('id', user.id);
+
+          if (profileError) throw new Error(`同步资料表失败: ${profileError.message}`);
+          
+          isAvatarUpdated = true;
+        }
+
+        // 3. ✨ 第二阶段：处理密码安全修改
+        if (password) {
+          submitBtn.textContent = '⏱️ 正在加密新密码...';
+          if (password.length < 6) {
+            throw new Error('密码长度不能少于 6 位数哦！');
+          }
+          const { error: pwdError } = await window.supabaseClient.auth.updateUser({ password });
+          if (pwdError) throw pwdError;
+          isPasswordUpdated = true;
+        }
+
+        // 4. ✨ 第三阶段：根据执行结果判定后续的用户引导反馈
+        if (isPasswordUpdated) {
+          alert('密码修改成功，安全凭证已失效，请重新登录。');
+          // 密码修改在 Supabase 中通常会清除敏感 session，必须重新登录
+          closeModal();
+          window.location.reload();
+        } else if (isAvatarUpdated) {
+          alert('🎉 恭喜你，头像修改成功！论坛各模块已实时对齐。');
+          
+          // 重置上传控件显示状态
+          editAvatarFileInput.value = '';
+          editAvatarHint.textContent = '';
+          
+          closeModal();
+          // 触发论坛发帖刷新或页面重载，让新头像生效
+          if (typeof fetchPosts === 'function') await fetchPosts();
+          window.location.reload();
+        }
+
+      } catch (err) {
+        alert(`修改失败: ${err.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   }
 
@@ -774,7 +901,10 @@ document.addEventListener('DOMContentLoaded', () => {
       // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
       userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
       userButton.style.background = 'rgba(255, 255, 255, 0.15)';
-      
+      // ✨ 新增：登录成功后，让“修改头像表单”在主页的用户面板或弹窗里可以被看到
+      if (updateAvatarForm) {
+        updateAvatarForm.style.display = 'block';
+      }
       // (2) 🚀 瞬间无缝唤醒论坛：全物理接触隐藏，彻底防止论坛处于断开或僵尸挂起状态
       if (postArea) {
         postArea.removeAttribute('hidden');
@@ -829,6 +959,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // (4) 用户未登录或退出登录时，全面物理还原界面并封锁论坛发布功能
       clearUserUI();
+      // ✨ 新增：退出登录或未登录时，必须物理隐藏修改头像功能
+      if (updateAvatarForm) {
+        updateAvatarForm.style.display = 'none';
+      }
       document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       removeAdminButton();
