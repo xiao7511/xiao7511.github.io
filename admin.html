@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>内容管理后台 —— 终极自适应控制台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f0c20 0%, #15102a 100%);
+            --panel-bg: rgba(25, 20, 45, 0.75);
+            --border-glow: rgba(138, 43, 226, 0.25);
+            --primary-glow: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            --accent-neon: #00f5ff;
+            --text-main: #f1f2f6;
+            --text-muted: #a4b0be;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 950px;
+            margin: auto;
+            background: var(--panel-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+        }
+
+        .header-box {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            margin: 0;
+            font-weight: 800;
+            background: linear-gradient(120deg, #ffffff, var(--accent-neon));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .back-home-btn {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main) !important;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-decoration: none !important;
+            transition: all 0.2s;
+        }
+        .back-home-btn:hover { background: var(--primary-glow); border-color: transparent; }
+
+        .upload-card {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-sizing: border-box;
+            margin-bottom: 32px;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        select {
+            width: 100%;
+            background: #1c1836;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px; 
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .dropzone-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 16px 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .dropzone-area input[type='file'] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+            z-index: 2;
+        }
+
+        .action-btn {
+            width: 100%;
+            background: var(--primary-glow);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 700;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(106, 17, 203, 0.3);
+        }
+        .action-btn:disabled { background: #2e2a44; color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+
+        #upload-status {
+            margin-top: 14px; padding: 12px; border-radius: 8px;
+            font-size: 0.85rem; text-align: center;
+        }
+        .status-info { background: rgba(37, 117, 252, 0.15); color: #3a86ff; }
+        .status-success { background: rgba(46, 213, 115, 0.15); color: #2ed573; }
+        .status-error { background: rgba(255, 71, 87, 0.15); color: #ff4757; }
+
+        .image-flow-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .img-preview-card {
+            background: #110d24; 
+            border-radius: 12px; 
+            padding: 16px; 
+            border: 1px solid rgba(255,255,255,0.05);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .img-container { 
+            width: 100%; 
+            height: 120px; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            background: #090616;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .img-container img, .img-container video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover;
+        }
+
+        .img-preview-card input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .img-preview-card input[type="text"]:focus {
+            border-color: var(--accent-neon);
+        }
+        
+        .badge {
+            font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-block;
+            background: rgba(255,255,255,0.06); color: var(--text-muted);
+        }
+
+        @media (max-width: 768px) {
+            .image-flow-grid {
+                grid-template-columns: 1fr !important; 
+                gap: 16px;
+            }
+            .img-container {
+                height: 140px;
+            }
+        }
+
+        @media (min-width: 600px) {
+            body { padding: 40px 20px; }
+            .container { padding: 35px; border-radius: 24px; }
+            .header-box { flex-direction: row; justify-content: space-between; align-items: center; }
+            h1 { font-size: 1.6rem; }
+            .upload-card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-box">
+            <h1>内容管理后台 —— 终极自适应控制台</h1>
+            <a href="javascript:history.back();" class="back-home-btn">← 返回站点主页</a>
+        </div>
+
+        <div class="upload-card">
+            <h2><span>🔮</span> 首页 Banner 轮播大图批量部署通道</h2>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-size:0.85rem; color:var(--text-muted);">目标更新版面</label>
+                <select id="page-section" disabled>
+                    <option value="section_banner">首页Banner大图轮播 (5张总控联动区)</option>
+                </select>
+            </div>
+
+            <div class="dropzone-area" id="drop-zone">
+                <span style="font-size:2.2rem; display:block; margin-bottom:8px;">📥</span>
+                <span class="dropzone-text">点击批量选择相册大图文件进行缓冲覆盖</span>
+                <input type="file" id="file-input" accept="image/*" multiple />
+            </div>
+
+            <button id="upload-btn" class="action-btn" disabled>确认上传并部署大图轮播</button>
+            <div id="upload-status" class="status-info">正在安全连接控制中心...</div>
+        </div>
+
+        <div class="preview-dashboard">
+            <h2><span>🖼️</span> 热门动漫推荐 / 漫画连载内容配置面板</h2>
+            <div id="sections-wrapper"></div>
+        </div>
+    </div>
+
+<script>
+    function safeBack() {
+        const hasReferrer = document.referrer && document.referrer.trim() !== "";
+        if (hasReferrer && history.length > 1) {
+            history.back();
+            return false; 
+        }
+        return true; 
+    }
+    window.supabaseClient = null;
+    let selectedFilesCache = []; 
+
+    async function loadCloudflareConfig() {
+        const apiUri = "https://api.nobistudio.com/";
+        try {
+            const res = await fetch(apiUri);
+            if (!res.ok) throw new Error(`Cloudflare 节点鉴权响应异常: ${res.status}`);
+            const config = await res.json();
+            
+            if (!config.SUPABASE_URL || !config.ANON_KEY) {
+                throw new Error("云端载入的通信凭证不完整，拒绝初始化。");
+            }
+
+            window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
+                auth: { persistSession: true, autoRefreshToken: true }
+            });
+
+            return config.SUPABASE_URL;
+        } catch (err) {
+            console.error(err);
+            showStatus('🚀 安全通信链路建立失败。请检查跨域响应头(CORS)。', 'error');
+            throw err;
+        }
+    }
+
+    async function initWorkflow() {
+        try {
+            showStatus('⚡ 正在安全检索云端控制中心凭证...', 'info');
+            const supabaseUrl = await loadCloudflareConfig();
+            
+            const session = await verifyAdminAuth();
+            if (!session) return; 
+
+            showStatus('✨ 通信链路已就绪。欢迎回来，管理员！', 'info');
+            activateUploadListener(supabaseUrl);
+            await refreshLiveDashboard(supabaseUrl);
+
+        } catch (error) {
+            console.error(error);
+            if(!window.supabaseClient) {
+                showStatus('核心安全引擎初始化中断，拒绝访问。', 'error');
+            } else {
+                showStatus('数据引擎对接断开，请刷新重试。', 'error');
+            }
+        }
+    }
+
+    async function verifyAdminAuth() {
+        if (!window.supabaseClient) return null;
+        const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+
+        if (error || !session) {
+            alert('错误：未检测到合法的登录状态！请在主页登录。');
+            navigateBackHome();
+            return null;
+        }
+
+        const { data: userPermission, error: dbError } = await window.supabaseClient
+            .from('users')
+            .select('is_admin')
+            .eq('email', session.user.email)
+            .maybeSingle();
+
+        if (dbError || !userPermission || userPermission.is_admin !== true) {
+            alert(`鉴权失败：账号 ${session.user.email} 无控制台访问特权。`);
+            navigateBackHome();
+            return null;
+        }
+        return session;
+    }
+
+    // 🎯 通用高级百分比进度跟踪文件上传引擎（自动处理大视频架构标头）
+    async function executeSingleUpload(file, pathName, onPercentProgress) {
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        let calculatedMimeType = file.type || 'application/octet-stream';
+        
+        if (fileExt === 'mp4') calculatedMimeType = 'video/mp4';
+        if (fileExt === 'webm') calculatedMimeType = 'video/webm';
+        if (fileExt === 'mov') calculatedMimeType = 'video/quicktime';
+
+        const { data, error } = await window.supabaseClient.storage
+            .from('images')
+            .upload(pathName, file, { 
+                upsert: true,
+                contentType: calculatedMimeType, 
+                onUploadProgress: (progress) => {
+                    if (progress.total) {
+                        const currentPercentage = Math.round((progress.loaded / progress.total) * 100);
+                        if (typeof onPercentProgress === 'function') onPercentProgress(currentPercentage);
+                    }
+                }
+            });
+            
+        if (error) throw error;
+        return data;
+    }
+
+    function activateUploadListener(supabaseUrl) {
+        const uploadBtn = document.getElementById('upload-btn');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+
+        uploadBtn.disabled = false;
+
+        fileInput.addEventListener('change', () => {
+            selectedFilesCache = Array.from(fileInput.files);
+            
+            // 🎯 拦截首页 Banner 区域选取视频的行为
+            const hasVideo = selectedFilesCache.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
+            if (hasVideo) {
+                alert('🚨 权限拦截：首页 Banner 大图轮播区域不允许上传任何视频文件，请重新选择图片格式素材！');
+                selectedFilesCache = [];
+                fileInput.value = '';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
+                return;
+            }
+
+            if (selectedFilesCache.length > 0) {
+                dropZone.querySelector('.dropzone-text').innerHTML = `已选中 <em style="color:#2ed573; font-weight:bold;">${selectedFilesCache.length}</em> 张轮播图，准备就绪。`;
+            }
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            if (selectedFilesCache.length === 0) {
+                alert('请先选择相册图片！');
+                return;
+            }
+
+            showStatus(`⚡ 正在准备为首页轮播大图进行并发覆盖同步...`, 'info');
+
+            try {
+                const maxCount = Math.min(selectedFilesCache.length, 5);
+                for (let i = 0; i < maxCount; i++) {
+                    const file = selectedFilesCache[i];
+                    const fileName = `section_banner_${i}.png`; 
+                    
+                    await executeSingleUpload(file, `images/${fileName}`, (percent) => {
+                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前上传进度: ${percent}%`, 'info');
+                    });
+
+                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/${fileName}`;
+
+                    await window.supabaseClient
+                        .from('deployed_images')
+                        .upsert({
+                            section_id: 'section_banner',
+                            image_index: i,
+                            storage_url: storageUrl,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'section_id,image_index' });
+                }
+
+                await deploySection('section_banner', 5, supabaseUrl);
+                showStatus('🎉 首页5张轮播大图已成功激活部署！', 'success');
+                selectedFilesCache = [];
+                fileInput.value = '';
+                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
+                
+                await refreshLiveDashboard(supabaseUrl);
+
+            } catch (err) {
+                showStatus('上传流发生阻断: ' + err.message, 'error');
+            }
+        });
+    }
+
+    function generateMediaTag(url) {
+        if (!url) return `<span style="font-size:0.8rem; color:var(--text-muted);">📷 暂无内容，请选取上传</span>`;
+        const pureUrl = url.split('?')[0].toLowerCase();
+        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', 'video_slot', 'detail_video'];
+        const isVideo = videoExtensions.some(ext => pureUrl.endsWith(ext) || url.toLowerCase().includes(ext));
+        
+        if (isVideo) {
+            return `<video src="${url}" controls preload="metadata" muted playsinline></video>`;
+        } else {
+            return `<img src="${url}" />`;
+        }
+    }
+
+    async function refreshLiveDashboard(supabaseUrl) {
+        const wrapper = document.getElementById('sections-wrapper');
+        if (!wrapper) return;
+        wrapper.innerHTML = '';
+
+        let managementData = [];
+        try {
+            const { data, error } = await window.supabaseClient.from('content_management').select('*');
+            if (data && !error) managementData = data;
+        } catch (err) { console.error(err); }
+
+        let bannerList = [];
+        try {
+            const { data } = await window.supabaseClient.from('deployed_images').select('*').eq('section_id', 'section_banner');
+            if (data) bannerList = data;
+        } catch(e){}
+
+        const modules = [
+            { id: 'section_banner', name: '🎪 首页 5 张大图轮播位状态', type: 'banner', maxCount: 5 },
+            { id: 'anime', name: '📺 动漫连载专区 (已深度优化大文件详情视频高速流秒开上传)', type: 'content', maxCount: 4 },
+            { id: 'manga', name: '📖 漫画连载专区 (详情页支持图片/视频多媒体混合发布)', type: 'content', maxCount: 4 }
+        ];
+
+        for (const mod of modules) {
+            const block = document.createElement('div');
+            block.className = 'dashboard-section';
+            block.style = "background:var(--panel-bg); border:1px solid var(--border-glow); border-radius:16px; padding:20px; margin-bottom:24px; box-sizing:border-box;";
+
+            block.innerHTML = `<div class="section-title" style="font-size:1.1rem; font-weight:bold; color:var(--accent-neon); margin-bottom:16px;">${mod.name}</div>`;
+            const grid = document.createElement('div');
+            grid.className = 'image-flow-grid';
+
+            if (mod.type === 'banner') {
+                for (let i = 0; i < mod.maxCount; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'img-preview-card';
+                    const match = bannerList.find(b => b.image_index === i);
+                    const cacheBuster = `?t=${new Date().getTime()}`;
+
+                    if (match) {
+                        card.innerHTML = `
+                            <div class="img-container">${generateMediaTag(match.storage_url + cacheBuster)}</div>
+                            <span class="badge" style="background:#2ecc71; color:#fff; text-align:center; margin-top:4px;">● 已上线 轮播位 [${i+1}]</span>
+                        `;
+                    } else {
+                        card.innerHTML = `
+                            <div class="img-container" style="color:var(--text-muted); font-size:0.8rem;">📷 席位空缺 [${i+1}]</div>
+                            <span class="badge" style="text-align:center; margin-top:4px;">未部署</span>
+                        `;
+                    }
+                    grid.appendChild(card);
+                }
+                block.appendChild(grid);
+            } 
+            else {
+                for (let i = 0; i < mod.maxCount; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'img-preview-card';
+
+                    const record = managementData.find(d => d.category === mod.id && d.slot_index === i) || {
+                        title: '', subtitle: '', theme_tags: [], cover_url: '', detail_urls: []
+                    };
+
+                    const cacheBuster = `?t=${new Date().getTime()}`;
+                    const mediaTagHtml = record.cover_url ? generateMediaTag(record.cover_url + cacheBuster) : generateMediaTag(null);
+
+                    // 🎯 严格限定：主封面只能传图片，禁止视频文件
+                    const acceptCoverType = 'image/*';
+                    const acceptDetailType = 'image/*,video/*';
+                    const uploadLabel = '📁 选取主封面(仅限图片，禁止视频)';
+                    const detailLabel = '📂 详情内容图集/视频流';
+
+                    card.innerHTML = `
+                        <div style="font-size:0.85rem; font-weight:bold; color:#fff;">🖼️ 首页展示封面 (格子 ${i+1})</div>
+                        <div class="img-container">
+                            ${mediaTagHtml}
+                        </div>
+                        
+                        <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.12);">
+                            <div id="cover-count-lbl-${mod.id}-${i}" style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">${uploadLabel} (未选新文件)</div>
+                            <input type="file" id="cover-file-${mod.id}-${i}" accept="${acceptCoverType}" onchange="handleCoverFileSelect('${mod.id}', ${i})" style="font-size:0.75rem; color:#fff; width:100%;" />
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <div>
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
+                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：火影忍者剧场版" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题 / 最新集数</label>
+                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 720 话" />
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 连载主题标签 (多个用英文逗号隔开)</label>
+                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,羁绊,冒险" />
+                            </div>
+                        </div>
+
+                        <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; margin-top:4px;">
+                            <div style="font-size:0.75rem; color:var(--accent-neon); margin-bottom:4px; font-weight:bold;">${detailLabel} (已存: ${(record.detail_urls || []).length})</div>
+                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="${acceptDetailType}" style="font-size:0.75rem; color:var(--text-muted); width:100%;" />
+                        </div>
+
+                        <button id="save-btn-${mod.id}-${i}" onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; margin-top:auto; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:10px; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+                            💾 保存该格配置并同步发布
+                        </button>
+                    `;
+                    grid.appendChild(card);
+                }
+                block.appendChild(grid);
+            }
+            wrapper.appendChild(block);
+        }
+    }
+
+    // 🎯 精准拦截非图片输入，并计算联动主封面的选择数量
+    window.handleCoverFileSelect = function(category, slotIndex) {
+        const input = document.getElementById(`cover-file-${category}-${slotIndex}`);
+        const lbl = document.getElementById(`cover-count-lbl-${category}-${slotIndex}`);
+        if(!input || !lbl) return;
+
+        const files = Array.from(input.files);
+        if(files.length === 0) {
+            lbl.innerHTML = `📁 选取主封面(仅限图片，禁止视频) (未选新文件)`;
+            return;
+        }
+
+        // 🎯 严格防线二：除 Banner 外，所有主封面选择视频时立即重置拦截
+        const hasVideo = files.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
+        if(hasVideo) {
+            alert('🚨 权限拦截：主封面区域不允许使用视频作为展示封面，请选择纯图片格式素材！');
+            input.value = '';
+            lbl.innerHTML = `📁 选取主封面(仅限图片，禁止视频) (未选新文件)`;
+            return;
+        }
+
+        // 🎯 主封面上传后，精确回显文件状态与选中的数量
+        lbl.innerHTML = `📁 主封面已就绪 —— <em style="color:#00f5ff; font-weight:bold;">已选择文件数量: ${files.length} 个</em>`;
+    };
+
+    window.saveContentModule = async function(category, slotIndex, supabaseUrl) {
+        const titleVal = document.getElementById(`title-${category}-${slotIndex}`).value.trim();
+        const subtitleVal = document.getElementById(`sub-${category}-${slotIndex}`).value.trim();
+        const tagsRaw = document.getElementById(`tags-${category}-${slotIndex}`).value.trim();
+        const themeTags = tagsRaw ? tagsRaw.split(/[，,]/).map(t => t.trim()).filter(Boolean) : [];
+
+        const coverInput = document.getElementById(`cover-file-${category}-${slotIndex}`);
+        const detailInput = document.getElementById(`files-detail-${category}-${slotIndex}`);
+        const saveButton = document.getElementById(`save-btn-${category}-${slotIndex}`);
+        
+        try {
+            const currentBlockName = category === 'anime' ? '动漫推荐专区' : '漫画连载专区';
+            
+            saveButton.disabled = true;
+            saveButton.innerText = "⏳ 正在分析媒体架构...";
+            showStatus(`正在处理发布 [${currentBlockName}] 第 ${slotIndex + 1} 个槽位资源...`, 'info');
+
+            let coverUrl = "";
+            if (coverInput && coverInput.files.length > 0) {
+                const cFile = coverInput.files[0];
+                const fileExt = cFile.name.split('.').pop().toLowerCase();
+                const cName = `${category}_slot_${slotIndex}_cover_${Date.now()}.${fileExt}`;
+                
+                await executeSingleUpload(cFile, `images/${cName}`, (percent) => {
+                    saveButton.innerText = `⏳ 正在上传封面 (${percent}%)`;
+                    showStatus(`⏱️ 正在上传 [${currentBlockName}] 展示封面... 进度: ${percent}%`, 'info');
+                });
+                
+                coverUrl = `${supabaseUrl}/storage/v1/object/public/images/${cName}`;
+            } else {
+                const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).single();
+                if (data) coverUrl = data.cover_url;
+            }
+
+            let detailUrls = [];
+            if (detailInput && detailInput.files.length > 0) {
+                const files = detailInput.files;
+                for (let k = 0; k < files.length; k++) {
+                    const dFile = files[k];
+                    const dFileExt = dFile.name.split('.').pop().toLowerCase();
+                    const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.${dFileExt}`;
+                    
+                    // 📡 详情内容区多媒体/大视频文件批量上传高频百分比追踪，解决大文件保存无反应
+                    await executeSingleUpload(dFile, `images/${dName}`, (percent) => {
+                        saveButton.innerText = `⏳ 正在传输文件 ${k+1}/${files.length} (${percent}%)`;
+                        showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
+                    });
+                    
+                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/${dName}`;
+                    detailUrls.push(dUrl);
+                }
+            } else {
+                const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).single();
+                if (data && data.detail_urls) detailUrls = data.detail_urls;
+            }
+
+            saveButton.innerText = "💾 正在写入云端集群数据...";
+            const { error } = await window.supabaseClient
+                .from('content_management')
+                .upsert({
+                    category: category,
+                    slot_index: slotIndex,
+                    title: titleVal,
+                    subtitle: subtitleVal,
+                    theme_tags: themeTags,
+                    cover_url: coverUrl,
+                    detail_urls: detailUrls,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'category,slot_index' });
+
+            if (error) throw error;
+
+            showStatus('🎉 连载专区配置与多媒体内容已发布成功！', 'success');
+            await refreshLiveDashboard(supabaseUrl);
+
+        } catch (err) {
+            console.error(err);
+            alert('同步中断: ' + err.message);
+            showStatus('同步中断: ' + err.message, 'error');
+        } finally {
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.innerText = "💾 保存该格配置并同步发布";
+            }
+        }
+    };
+
+    window.deploySection = async function(section, maxCount, supabaseUrl) {
+        let deployedUrls = [];
+        for (let i = 0; i < maxCount; i++) {
+            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/${section}_${i}.png`;
+            deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
+        }
+
+        try {
+            showStatus(`正在下发 [${section}] 的部署指令...`, 'info');
+            const { error } = await window.supabaseClient
+                .from('site_config')
+                .upsert([{ section: section, url: JSON.stringify(deployedUrls) }]);
+
+            if (error) throw error;
+            showStatus('🎉 部署成功！前台数据流已刷新。', 'success');
+        } catch (err) {
+            alert('部署同步失败: ' + err.message);
+            showStatus('部署失败: ' + err.message, 'error');
+        }
+    };
+
+    function navigateBackHome() {
+        window.location.href = 'index.html?fresh_token=' + new Date().getTime();
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('upload-status');
+        if (!el) return;
+        el.style.display = 'block'; 
+        el.innerText = msg;
+        el.className = ''; 
+        if (type === 'info') el.className = 'status-info';
+        if (type === 'success') el.className = 'status-success';
+        if (type === 'error') el.className = 'status-error';
+    }
+
+    document.addEventListener('DOMContentLoaded', initWorkflow);
+</script>
+</body>
+</html>

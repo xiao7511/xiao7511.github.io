@@ -1,0 +1,697 @@
+:root {
+  --bg-start: #ff6ec7;
+  --bg-end: #6ec1ff;
+  --panel-bg: rgba(0, 0, 0, 0.32);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --text-main: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.75);
+  --accent: #ffe066;
+  --accent-2: #ff6ec7;
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  line-height: 1.6;
+  color: var(--text-main);
+  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* 📱 默认留出顶部固定栏的高占位 */
+main {
+  padding-top: 84px;
+}
+
+/* ==========================================================
+   🧱 1. 顶部导航核心区
+   ========================================================== */
+.site-header {
+  position: fixed !important;
+  inset: 0 0 auto !important;
+  z-index: 999999 !important; 
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px;
+  padding: 14px 5% !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* PC 端默认横向紧凑布局 */
+.nav {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
+}
+
+.nav__link {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: var(--text-main);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav__link:hover,
+.nav__link.is-active {
+  color: #111;
+  background: var(--accent);
+}
+
+/* 独立按钮胶囊 */
+.nav__button, #user-btn, .admin-entrance-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 999px !important;
+  padding: 6px 14px !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  touch-action: manipulation !important;
+  transition: all 0.2s ease !important;
+}
+
+.nav__button:hover, #user-btn:hover, .admin-entrance-btn:hover {
+  color: #111 !important;
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* ==========================================================
+   🔒 后台管理快捷键（特定修改：默认绝对隐藏，严防闪烁）
+   ========================================================== */
+#admin-entrance-wrapper {
+  display: none !important; /* 🎯 核心修改：默认强制隐身，只有通过 JS 验证后才会放行 */
+  margin-left: 6px;
+}
+
+
+/* ==========================================================
+   📺 2. 轮播图区域自适应（全面覆盖、满屏无黑边）
+   ========================================================== */
+.hero {
+  position: relative !important;
+  z-index: 10 !important;
+  overflow: hidden !important;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #111;
+  touch-action: pan-y;
+  margin: 16px 5% 0;
+  height: 460px; /* PC 端大气大图视界高度 */
+}
+
+.hero__slides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.hero__slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+}
+
+.hero__slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 🎯 终极突破：强力干掉 contain，切换至 100% 铺满平铺不留白 */
+.hero__slide img {
+  width: 100% !important;
+  /*height: 100% !important;*/
+  object-fit: cover !important; 
+  object-position: center center !important; 
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.hero__content {
+  position: absolute !important;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 3;
+  padding: 30px 24px !important;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin: 0 0 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(1.3rem, 4vw, 2.5rem);
+  line-height: 1.2;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.hero__text {
+  max-width: 60ch;
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================================
+   🖼 3. 推荐卡牌流 & 社区版面
+   ========================================================== */
+.section {
+  padding: 30px 5%;
+}
+
+.section__head {
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.section__head h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+}
+
+.section__head p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: var(--shadow);
+}
+
+.card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.card__body {
+  padding: 10px;
+}
+
+.card__title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.card__tag {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+}
+
+.section--community {
+  padding-top: 10px;
+}
+
+.post-box, .posts {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.post-box {
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+}
+
+.post-box textarea, .form input, .form textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: var(--text-main);
+  background: rgba(0, 0, 0, 0.28);
+  outline: none;
+}
+
+.post-box textarea {
+  min-height: 70px;
+  padding: 10px;
+  font-size: 0.88rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.primary-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  color: #222;
+  background: linear-gradient(135deg, #ffe066, #fff2a5);
+  font-size: 0.85rem;
+}
+
+.posts {
+  display: grid;
+  gap: 10px;
+}
+
+.post {
+  display: flex;
+  gap: 12px;
+  padding: 12px !important;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  align-items: flex-start;
+}
+
+.post__avatar, .post img, #posts-list img {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  display: block !important;
+}
+
+.post__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.post__name {
+  margin: 0 0 2px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.post__content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.post__meta {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+}
+
+/* ==========================================================
+   🔒 4. 模态框与基础组件
+   ========================================================== */
+.site-footer {
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000000 !important; 
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.76);
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal__panel {
+  position: relative;
+  width: min(92vw, 420px);
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  background: #1b1b1b;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  color: #ddd;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+}
+
+.tab.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form[hidden] {
+  display: none;
+}
+
+.form input {
+  padding: 12px 14px;
+}
+
+#login-form button[type="submit"] {
+  padding: 12px 20px !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  touch-action: manipulation !important;
+}
+
+.avatar-selector p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: var(--accent);
+  text-align: center;
+}
+
+.avatar-options {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.avatar-option {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  width: 58px;
+  height: 58px;
+}
+
+.avatar-option img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.avatar-option.is-selected {
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+/* 后台管理快捷键 */
+.admin-entrance-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+.admin-icon {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+
+#user-btn, .nav__button {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    touch-action: manipulation !important; 
+    position: relative !important;
+    z-index: 9999999 !important; 
+}
+
+#auth-modal:not([hidden]) {
+    display: grid !important;
+    z-index: 10000000 !important;
+}
+
+/* ==========================================================
+   📱 5. 后台管理：预览图删除功能专属高级样式
+   ========================================================== */
+.admin-image-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.admin-preview-wrapper {
+  position: relative;
+  width: 80px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.admin-preview-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-image-delete-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: #ff4757 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 50% !important;
+  font-size: 11px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(255, 71, 87, 0.4);
+  z-index: 10;
+  padding: 0 !important;
+}
+
+/* ==========================================================
+   📱 6. 移动端专属极致响应式断点（核心升级区）
+   ========================================================== */
+@media (max-width: 768px) {
+  /* 🎯 极其精准的黄金空白占位：完美容纳高度增加的双行头部，并顶出舒适间距 */
+  main {
+    padding-top: 154px !important; 
+  }
+
+  .site-header {
+    flex-direction: column !important; /* 开启纵向列排布：标题在上，导航在下 */
+    align-items: center !important;
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+
+  .logo {
+    margin-bottom: 0 !important;
+    font-size: 1.1rem !important;
+  }
+
+  /* 🎯 导航网格重组：开启换行，丢弃横向滚动条，让其自然分行 */
+  .nav {
+    width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important; 
+    justify-content: center !important;
+    overflow-x: visible !important; 
+    gap: 10px 8px !important; 
+    padding: 0 !important;
+  }
+
+  /* 🛠️ 这一步非常重要：前4个基础链接不设满宽，而是通过 Flex 基础控制让其整齐在第一行排开 */
+  .nav__link {
+    padding: 5px 10px !important;
+    font-size: 0.85rem !important;
+    flex: 0 1 auto !important;
+  }
+
+  /* 🛠️ 终极隔离：将第2行的两个动作元素通过强制前置换行（或者独立边距提升）另起一行并居中 */
+  #user-btn, #admin-entrance-wrapper {
+    margin-top: 2px !important;
+  }
+
+  #user-btn, .admin-entrance-btn {
+    padding: 5px 12px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* 📱 手机端 Banner 高保真炫目满屏自适应（绝无留白） */
+  .hero {
+    margin: 12px 14px 0 !important; 
+    height: 240px !important; /* 调大至优雅的 240px */
+  }
+
+  .hero__content {
+    padding: 16px 16px !important;
+  }
+
+  .section {
+    padding-inline: 12px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+}
+/* ==========================================================
+   🖥️ 精准优化：PC端 Banner 高保真完整显示（带高级感幻灯片虚化底衬）
+   ========================================================== */
+@media (min-width: 769px) {
+  /* 1. 为轮播的每一个滑块容器垫上高档的毛玻璃底衬 */
+  .hero__slide {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: rgba(0, 0, 0, 0.4) !important; /* 基础深色调 */
+  }
+
+  /* 2. 核心魔法：原图无拉伸、无裁切、百分之百完整展现 */
+  .hero__slide img {
+    width: 100% !important;
+    /*height: 100% !important;*/
+    object-fit: contain !important; /* 🎯 改为 contain：原图比例不走样，完整画面全显 */
+    position: relative;
+    z-index: 2; /* 让原图浮在虚化背景上方 */
+  }
+
+  /* 3. 利用伪元素，在原图背后生成一个满屏铺满并被高级虚化的背景层 */
+  .hero__slide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background-image: inherit; /* 继承幻灯片图片 */
+    /* 如果你的轮播图是通过 JS 动态改写 img 的 src，这里会自动匹配底层 */
+    background: var(--bg-start); /* 兜底渐变色 */
+    filter: blur(20px); /* 强力模糊，营造画廊环境感 */
+    opacity: 0.35; /* 保持暗色调，不抢镜 */
+    transform: scale(1.1); /* 稍微放大防止边缘发白 */
+  }
+}

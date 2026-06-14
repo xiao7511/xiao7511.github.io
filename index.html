@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DorisY 动漫世界：精选动漫推荐、漫画连载与漫友社区，快速浏览优质二次元内容。">
+  <meta name="keywords" content="动漫,漫画,二次元,动漫推荐,漫友社区,DorisY">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#FF6EC7">
+  <link rel="canonical" href="https://xiao7511.github.io/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="DorisY 动漫世界">
+  <meta property="og:description" content="精选动漫推荐、漫画连载与漫友社区。">
+  <meta property="og:url" content="https://xiao7511.github.io/">
+  <meta property="og:image" content="images/IMG_4822.jpeg">
+  <meta name="twitter:card" content="summary_large_image">
+  <title>DorisY动漫世界</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://api.dicebear.com">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="assets/js/main.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="logo" href="index.html" aria-label="返回首页">DorisY动漫世界</a>
+    <nav class="nav" aria-label="主导航">
+      <a href="index.html" class="nav__link is-active">首页</a>
+      <a href="recommend.html" class="nav__link">动漫推荐</a>
+      <a href="manga.html" class="nav__link">漫画连载</a>
+      <a href="community.html" class="nav__link">社区</a>
+      <button id="user-btn" class="nav__button" type="button">登录/注册</button>
+      <div id="admin-entrance-wrapper" style="display: none;">
+          <a href="admin.html" class="admin-entrance-btn">
+              <svg class="admin-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+              控制台
+          </a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-label="首页横幅">
+     <!-- <div class="hero__slides">
+        <img src="images/IMG_4822.jpeg" alt="动漫横幅 1" class="hero__slide is-active" fetchpriority="high" decoding="async">
+        <img src="images/IMG_4873.png" alt="动漫横幅 2" class="hero__slide" loading="lazy" decoding="async">
+        <img src="images/IMG_4886.png" alt="动漫横幅 3" class="hero__slide" loading="lazy" decoding="async">
+      </div>-->
+      <div class="hero__slides">
+        <div class="hero__slide is-active">
+          <img src="images/IMG_4822.jpeg" alt="动漫幻灯片 1" loading="eager">
+        </div>
+        <div class="hero__slide">
+          <img src="images/IMG_4823.jpeg" alt="动漫幻灯片 2" loading="lazy">
+        </div>
+        <div class="hero__slide">
+          <img src="images/IMG_4824.jpeg" alt="动漫幻灯片 3" loading="lazy">
+        </div>
+        <div class="hero__slide">
+          <img src="images/IMG_4825.jpeg" alt="动漫幻灯片 4" loading="lazy">
+        </div>
+        <div class="hero__slide">
+          <img src="images/IMG_4826.jpeg" alt="动漫幻灯片 5" loading="lazy">
+        </div>
+      </div>
+      <div class="hero__content">
+        <p class="eyebrow">二次元内容聚合站</p>
+        <h1>发现你喜欢的动漫、漫画和同好</h1>
+        <p class="hero__text">精选推荐、连载更新、社区互动，一页看完。</p>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="recommend-title">
+      <div class="section__head">
+        <h2 id="recommend-title">热门动漫推荐</h2>
+        <p>精选四个热门方向，适合快速浏览。</p>
+      </div>
+
+      <div class="cards" id="anime-container">
+        <article class="card">
+          <img src="images/IMG_4893.png" alt="魔法少女" loading="lazy" decoding="async">
+          <div class="card__body">
+            <h3 class="card__title">魔法少女</h3>
+            <p class="card__tag">魔法 / 冒险</p>
+          </div>
+        </article>
+        <article class="card">
+          <img src="images/IMG_4896.png" alt="校园恋爱" loading="lazy" decoding="async">
+          <div class="card__body">
+            <h3 class="card__title">校园恋爱</h3>
+            <p class="card__tag">恋爱 / 校园</p>
+          </div>
+        </article>
+        <article class="card">
+          <img src="images/IMG_4907.png" alt="战斗冒险" loading="lazy" decoding="async">
+          <div class="card__body">
+            <h3 class="card__title">战斗冒险</h3>
+            <p class="card__tag">热血 / 冒险</p>
+          </div>
+        </article>
+        <article class="card">
+          <img src="images/IMG_5606.jpeg" alt="异世界" loading="lazy" decoding="async">
+          <div class="card__body">
+            <h3 class="card__title">异世界</h3>
+            <p class="card__tag">幻想 / 冒险</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section--community" aria-labelledby="community-title">
+      <div class="section__head">
+        <h2 id="community-title">动漫社区热帖</h2>
+        <p>登录后即可发帖，帖子列表会实时同步。</p>
+      </div>
+
+      <div id="post-area" class="post-box" hidden>
+        <label class="sr-only" for="post-content">发帖内容</label>
+        <textarea id="post-content" placeholder="分享你的二次元见闻..." maxlength="500"></textarea>
+        <div class="actions">
+          <button id="publish-btn" class="primary-btn" type="button">发布动态</button>
+        </div>
+      </div>
+
+      <div id="posts-list" class="posts" aria-live="polite">
+        <p class="loading-state">正在同步异世界信号...</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    © 2026 动漫世界 | 动漫素材来源于独立创作 | 联系方式：xiao.ye751111@outlook.com
+  </footer>
+
+  <div id="auth-modal" class="modal" hidden>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <button id="modal-close" class="modal__close" type="button" aria-label="关闭">×</button>
+      <h2 id="auth-title" class="modal__title">登录 / 注册</h2>
+
+      <div class="tabs" role="tablist" aria-label="登录注册切换">
+        <button class="tab is-active" id="tab-login" type="button" role="tab">登录</button>
+        <button class="tab" id="tab-reg" type="button" role="tab">注册</button>
+      </div>
+
+      <form id="login-form" class="form">
+        <input type="email" id="login-email" placeholder="邮箱" required autocomplete="email">
+        <input type="password" id="login-password" placeholder="密码" required autocomplete="current-password">
+        <p class="form__hint form__hint--right">
+          <button id="forgot-password-btn" class="link-btn" type="button">忘记密码？</button>
+        </p>
+        <button class="primary-btn" type="submit">进入异世界</button>
+      </form>
+
+      <form id="reset-password-form" class="form" hidden>
+        <p class="form__hint" style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 12px; font-size: 0.85rem;">
+          🌟 请输入注册邮箱，我们将向你发送密码重置链接。
+        </p>
+        <input type="email" id="forgot-email" placeholder="注册电子邮箱" required autocomplete="email" style="margin-bottom: 15px;">
+        <button class="primary-btn" type="submit" id="forgot-submit-btn">发送重置邮件</button>
+      </form>
+
+      <form id="recovery-password-form" class="form" hidden>
+        <p class="form__hint" style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 12px; font-size: 0.85rem;">
+          🔒 请设置您的新密码并再次输入确认。
+        </p>
+        <input type="password" id="recovery-password" placeholder="请输入新密码（至少6位）" required autocomplete="new-password" style="margin-bottom: 10px;">
+        <input type="password" id="recovery-confirm-password" placeholder="请再次输入新密码" required autocomplete="new-password" style="margin-bottom: 15px;">
+        
+        <button class="primary-btn" type="submit" id="recovery-submit-btn">确认修改密码</button>
+      </form>
+
+      <form id="user-profile-form" class="form" hidden>
+        <div class="avatar-selector" style="margin-bottom: 15px; text-align: center;">
+          <p style="color: #FF6EC7; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold;">🌟 更换我的个性头像</p>
+          <div class="custom-avatar-upload">
+            <label for="edit-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 14px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.8rem; background: rgba(255,110,199,0.05);">
+              📷 选择本地头像图片 (PNG/JPG)
+            </label>
+            <input type="file" id="edit-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <div id="edit-avatar-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 6px; min-height: 16px;"></div>
+          </div>
+        </div>
+        <button class="primary-btn" type="submit" id="update-avatar-submit-btn">确认更新头像</button>
+      </form>
+
+      <form id="reg-form" class="form" hidden>
+        <div class="avatar-selector">
+          <p>选择你的萌系头像</p>
+          <div class="avatar-options">
+            <button type="button" class="avatar-option is-selected" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Neko">
+              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" alt="Neko 头像" loading="lazy" decoding="async">
+            </button>
+            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Miku">
+              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" alt="Miku 头像" loading="lazy" decoding="async">
+            </button>
+            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro">
+              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="Zoro 头像" loading="lazy" decoding="async">
+            </button>
+          </div>
+          <!-- ✨ 新增：自定义头像上传区域 -->
+          <div class="custom-avatar-upload" style="margin-top: 12px; text-align: center;">
+            <label for="reg-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 12px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.85rem;">
+              📷 上传自定义头像 (PNG/JPG)
+            </label>
+            <input type="file" id="reg-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <div id="avatar-file-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px;"></div>
+          </div>
+        </div>
+        <input type="text" id="reg-nickname" placeholder="动漫昵称" required autocomplete="nickname">
+        <input type="email" id="reg-email" placeholder="邮箱" required autocomplete="email">
+        <input type="password" id="reg-password" placeholder="密码 (至少6位)" required autocomplete="new-password">
+        <button class="primary-btn" type="submit">创建角色</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
