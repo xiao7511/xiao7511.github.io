@@ -29,6 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const postsList = document.getElementById('posts-list');
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
 
+  // 寻找 const avatarOptions = Array.from(document.querySelectorAll('.avatar-option')); 在下方添加： 20260614
+  const avatarFileInput = document.getElementById('reg-avatar-file');
+  const avatarFileHint = document.getElementById('avatar-file-hint');
+
   //const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
   const REDIRECT_URL = 'https://www.nobistudio.com/index.html';
   let selectedAvatar = avatarOptions[0]?.dataset.avatar || '';
@@ -337,13 +341,45 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tabReg) tabReg.addEventListener('click', () => switchMode('reg'));
   if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', () => switchMode('reset'));
 
-  if (avatarOptions.length > 0) {
+  /*if (avatarOptions.length > 0) {
     avatarOptions.forEach(btn => {
       btn.addEventListener('click', () => {
         avatarOptions.forEach(b => b.classList.remove('is-selected'));
         btn.classList.add('is-selected');
         selectedAvatar = btn.dataset.avatar;
       });
+    });
+  }*/
+ // 寻找 if (avatarOptions.length > 0) { ... } 整个块，替换修改为：20260614
+  if (avatarOptions.length > 0) {
+    avatarOptions.forEach(btn => {
+      btn.addEventListener('click', () => {
+        avatarOptions.forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        selectedAvatar = btn.dataset.avatar;
+        
+        // ✨ 新增：如果选择了预设头像，清空已选的本地文件
+        if (avatarFileInput) avatarFileInput.value = '';
+        if (avatarFileHint) avatarFileHint.textContent = '';
+      });
+    });
+  }
+
+  // ✨ 新增：监听本地头像选择，并取消预设头像的激活状态
+  if (avatarFileInput) {
+    avatarFileInput.addEventListener('change', () => {
+      if (avatarFileInput.files && avatarFileInput.files[0]) {
+        const file = avatarFileInput.files[0];
+        // 限制文件大小在 2MB 内
+        if (file.size > 2 * 1024 * 1024) {
+          alert('头像文件不能超过 2MB 喵！');
+          avatarFileInput.value = '';
+          return;
+        }
+        // 取消所有预设的选中样式
+        avatarOptions.forEach(b => b.classList.remove('is-selected'));
+        avatarFileHint.textContent = `已选择: ${file.name}`;
+      }
     });
   }
 
@@ -387,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (regForm) {
+  /*if (regForm) {
     regForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!window.supabaseClient) return;
@@ -410,6 +446,74 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       alert('注册成功！请检查邮箱激活邮件。');
       closeModal();
+    });
+  }*/
+ // 寻找 if (regForm) { regForm.addEventListener('submit', ... ) } 块，替换为以下优化版：
+  if (regForm) {
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!window.supabaseClient) return;
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const nickname = document.getElementById('reg-nickname').value.trim() || '新漫友';
+      const submitBtn = regForm.querySelector('button[type="submit"]');
+
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏱️ 正在创建角色...';
+
+      try {
+        // 1. 先调用 Supabase Auth 注册用户
+        const { data, error } = await window.supabaseClient.auth.signUp({
+          email, password, options: { redirectTo: REDIRECT_URL }
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          let finalAvatarUrl = selectedAvatar;
+
+          // 2. ✨ 新增：检测是否有自定义头像文件需要上传
+          if (avatarFileInput && avatarFileInput.files && avatarFileInput.files[0]) {
+            const file = avatarFileInput.files[0];
+            const fileExt = file.name.split('.').pop();
+            // 用用户 ID 命名，确保唯一性且避免产生冗余废文件
+            const filePath = `${data.user.id}.${fileExt}`; 
+
+            submitBtn.textContent = '⏱️ 正在上传自定义头像...';
+            
+            // 上传至名为 'avatars' 的 storage bucket
+            const { error: uploadError } = await window.supabaseClient.storage
+              .from('avatars')
+              .upload(filePath, file, { upsert: true });
+
+            if (uploadError) {
+              console.error('头像上传失败，自动降级为默认预设:', uploadError.message);
+            } else {
+              // 获取公开访问 URL
+              const { data: publicUrlData } = window.supabaseClient.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+                
+              // 加上时间戳，防止浏览器缓存导致用户更新头像时前台不刷新
+              finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+            }
+          }
+
+          // 3. 写入用户 profiles 资料表
+          await window.supabaseClient.from('profiles').insert([
+            { id: data.user.id, nickname, avatar_url: finalAvatarUrl }
+          ]);
+        }
+        
+        alert('注册成功！请检查邮箱激活邮件。');
+        closeModal();
+      } catch (err) {
+        alert(`注册或绑定失败: ${err.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   }
 
