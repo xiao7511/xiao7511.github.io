@@ -406,7 +406,7 @@
                         showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前上传进度: ${percent}%`, 'info');
                     });
 
-                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${fileName}`;
+                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/${fileName}`;
 
                     await window.supabaseClient
                         .from('deployed_images')
@@ -613,7 +613,7 @@
                     showStatus(`⏱️ 正在上传 [${currentBlockName}] 展示封面... 进度: ${percent}%`, 'info');
                 });
                 
-                coverUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${cName}`;
+                coverUrl = `${supabaseUrl}/storage/v1/object/public/images/${cName}`;
             } else {
                 const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).single();
                 if (data) coverUrl = data.cover_url;
@@ -633,7 +633,7 @@
                         showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
                     });
                     
-                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${dName}`;
+                    const dUrl = `${supabaseUrl}/storage/v1/object/public/images/${dName}`;
                     detailUrls.push(dUrl);
                 }
             } else {
@@ -675,7 +675,7 @@
     window.deploySection = async function(section, maxCount, supabaseUrl) {
         let deployedUrls = [];
         for (let i = 0; i < maxCount; i++) {
-            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/images/${section}_${i}.png`;
+            const liveUrl = `${supabaseUrl}/storage/v1/object/public/images/${section}_${i}.png`;
             deployedUrls.push(`${liveUrl}?t=${new Date().getTime()}`);
         }
 
