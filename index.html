@@ -171,6 +171,14 @@
               <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="Zoro 头像" loading="lazy" decoding="async">
             </button>
           </div>
+          <!-- ✨ 新增：自定义头像上传区域 -->
+          <div class="custom-avatar-upload" style="margin-top: 12px; text-align: center;">
+            <label for="reg-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 12px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.85rem;">
+              📷 上传自定义头像 (PNG/JPG)
+            </label>
+            <input type="file" id="reg-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <div id="avatar-file-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px;"></div>
+          </div>
         </div>
         <input type="text" id="reg-nickname" placeholder="动漫昵称" required autocomplete="nickname">
         <input type="email" id="reg-email" placeholder="邮箱" required autocomplete="email">
