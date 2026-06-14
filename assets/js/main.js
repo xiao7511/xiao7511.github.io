@@ -190,21 +190,26 @@ document.addEventListener('DOMContentLoaded', () => {
       // 🎯 核心修复 2：解耦身份监听状态。内部严禁做任何阻塞式高频操作，保证论坛状态与控制台不掉线
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         console.log(`🔑 认证状态变更事件触发: ${event}`);
+        // ✨ 新增：捕获用户从“忘记密码邮件”点进来的高光时刻
+        if (event === "PASSWORD_RECOVERY") {
+          setTimeout(() => {
+            const newPassword = prompt("🔒 监测到重置凭证成功！请输入您要设定的新密码（至少6位）：");
+            if (newPassword) {
+              if (newPassword.length < 6) {
+                alert("修改失败：密码长度不足6位！");
+                return;
+              }
+              window.supabaseClient.auth.updateUser({ password: newPassword }).then(({ error }) => {
+                if (error) alert("重置密码失败: " + error.message);
+                else alert("🎉 密码重置成功！请使用新密码重新登录异世界。");
+              });
+            }
+          }, 500);
+        }
         if (session && session.user) {
           updateUserUI(session.user);
         } else {
           updateUserUI(null);
-        }
-      if (event === "PASSWORD_RECOVERY") {
-          // 说明用户是从忘记密码邮件的链接点进来的！
-          // 这时候可以在前端弹出一个包含密码输入框的专属特殊小表单，或者直接引导其使用：
-          const newPassword = prompt("请输入您要修改的新密码：");
-          if (newPassword && newPassword.length >= 6) {
-            window.supabaseClient.auth.updateUser({ password: newPassword }).then(({ error }) => {
-              if (error) alert("重置密码失败: " + error.message);
-              else alert("密码已成功重置，请使用新密码登录！");
-            });
-          }
         }
       });
 
@@ -284,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function switchMode(mode) {
+  /*function switchMode(mode) {
     if (mode === 'login') {
       tabLogin.classList.add('is-active');
       tabReg.classList.remove('is-active');
@@ -304,9 +309,94 @@ document.addEventListener('DOMContentLoaded', () => {
       regForm.setAttribute('hidden', '');
       resetForm.removeAttribute('hidden');
     }
+  }*/
+  function switchMode(mode) {
+    if (mode === 'login') {
+      tabLogin.classList.add('is-active');
+      tabReg.classList.remove('is-active');
+      if(loginForm) loginForm.removeAttribute('hidden');
+      if(regForm) regForm.setAttribute('hidden', '');
+      if(resetForm) resetForm.setAttribute('hidden', '');
+      if(userProfileForm) userProfileForm.setAttribute('hidden', '');
+    } else if (mode === 'reg') {
+      tabLogin.classList.remove('is-active');
+      tabReg.classList.add('is-active');
+      if(loginForm) loginForm.setAttribute('hidden', '');
+      if(regForm) regForm.removeAttribute('hidden');
+      if(resetForm) resetForm.setAttribute('hidden', '');
+      if(userProfileForm) userProfileForm.setAttribute('hidden', '');
+    } else if (mode === 'reset') {
+      // 忘记密码模式：隐藏其他，只放行邮件发送框
+      tabLogin.classList.remove('is-active');
+      tabReg.classList.remove('is-active');
+      if(loginForm) loginForm.setAttribute('hidden', '');
+      if(regForm) regForm.setAttribute('hidden', '');
+      if(resetForm) resetForm.removeAttribute('hidden');
+      if(userProfileForm) userProfileForm.setAttribute('hidden', '');
+    } else if (mode === 'profile') {
+      // 登录后的头像修改个人中心模式
+      tabLogin.classList.remove('is-active');
+      tabReg.classList.remove('is-active');
+      if(loginForm) loginForm.setAttribute('hidden', '');
+      if(regForm) regForm.setAttribute('hidden', '');
+      if(resetForm) resetForm.setAttribute('hidden', '');
+      if(userProfileForm) userProfileForm.removeAttribute('hidden');
+    }
   }
-  
   if (userButton) {
+    userButton.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isLogged = userButton.textContent.indexOf('欢迎回来') !== -1;
+
+      if (isLogged) {
+        // ✨ 体验优化：已登录状态点击不再直接强制退出，而是拉起模态框切到“修改头像面板”
+        openModal('profile');
+        
+        // 顺便动态在头像面板底部加一个“退出登录”的安全微型纽带，防止用户找不到退出的地方
+        if (!document.getElementById('logout-link-btn')) {
+          const logoutBtnHtml = `<div style="text-align:center; margin-top:20px;"><button id="logout-link-btn" type="button" style="background:none; border:none; color:rgba(255,255,255,0.4); text-decoration:underline; font-size:0.8rem; cursor:pointer;">🔮 退出当前账号</button></div>`;
+          userProfileForm.insertAdjacentHTML('beforeend', logoutBtnHtml);
+          
+          document.getElementById('logout-link-btn').addEventListener('click', async () => {
+             if (confirm('确定要退出登录吗？')) {
+                 runPhysicalLogout();
+             }
+          });
+        }
+      } else {
+        if (typeof openModal === 'function') openModal('login');
+      }
+    });
+  }
+
+  // 抽离出的核心物理注销流，保持干净纯粹
+  async function runPhysicalLogout() {
+    console.log("启动终极物理熔断退出流...");
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-')) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (clearErr) {}
+    document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    localStorage.removeItem('is_admin');
+    localStorage.removeItem('user_nickname');
+    localStorage.removeItem('user_avatar');
+    sessionStorage.clear();
+    try {
+      if (window.supabaseClient && window.supabaseClient.auth) {
+        await window.supabaseClient.auth.signOut();
+      }
+    } catch (signOutErr) {}
+    alert('已安全退出登录！');
+    window.location.href = window.location.origin + window.location.pathname;
+  }
+  /*if (userButton) {
       userButton.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -353,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (typeof openModal === 'function') openModal('login');
         }
       });
-    }
+    }*/
 
   if (modalClose) modalClose.addEventListener('click', closeModal);
   if (tabLogin) tabLogin.addEventListener('click', () => switchMode('login'));
@@ -696,9 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // =========================================================
-        // 🎯 优化二：头像修改常驻面板——独立上传并无痕刷新
-        // =========================================================
+        // ✨ 1. 头像本地选择提示与 2MB 大小防跨界限拦截
         if (editAvatarFileInput && editAvatarHint) {
           editAvatarFileInput.addEventListener('change', () => {
             if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
@@ -709,11 +797,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 editAvatarHint.textContent = '';
                 return;
               }
-              editAvatarHint.textContent = `已选择新头像: ${file.name}`;
+              editAvatarHint.textContent = `已选择: ${file.name}`;
             }
           });
         }
 
+        // ✨ 2. 重构 resetForm 监听：全面转为合规的“发送重置密码邮件流”
+        if (resetForm) {
+          resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!window.supabaseClient) return;
+
+            const email = document.getElementById('forgot-email').value.trim();
+            const submitBtn = document.getElementById('forgot-submit-btn');
+
+            if (!email) {
+              alert('请输入你的注册邮箱哦！');
+              return;
+            }
+
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏱️ 正在发送链接...';
+
+            try {
+              // 调用 Supabase 官方发送重置邮件
+              const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname // 让链接跳回本页
+              });
+
+              if (error) throw error;
+
+              alert('📬 密码重置链接已发送！请登录邮箱点击链接以重新设定密码。');
+              closeModal();
+            } catch (err) {
+              alert(`发送失败: ${err.message}`);
+            } finally {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }
+          });
+        }
+
+        // ✨ 3. 拦截 userProfileForm 提交：处理头像存储桶上传并无缝同步至 profiles 数据表
         if (userProfileForm) {
           userProfileForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -723,12 +849,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = session?.user;
 
             if (!user) {
-              alert('请先登录账号才能修改头像哦！');
+              alert('登录状态已过期，请重新登录账号。');
               return;
             }
 
             if (!editAvatarFileInput.files || editAvatarFileInput.files.length === 0) {
-              alert('请先选取一张本地图片再点击更新。');
+              alert('请先选择一张精美的图片作为新头像喵！');
               return;
             }
 
@@ -740,40 +866,41 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
               const file = editAvatarFileInput.files[0];
               const fileExt = file.name.split('.').pop().toLowerCase();
-              const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖
+              const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖存储桶已有资源
 
-              // 上传覆盖旧文件
+              // 覆盖推送到存储桶
               const { error: uploadError } = await window.supabaseClient.storage
                 .from('avatars')
                 .upload(filePath, file, { upsert: true });
 
-              if (uploadError) throw new Error(`存储错误: ${uploadError.message}`);
+              if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
 
               const { data: publicUrlData } = window.supabaseClient.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
 
-              // 拼接防强缓存时间戳
+              // 拼接强刷时间戳
               const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
 
-              // 同步修改用户 profiles 关联表
+              // 写入 profiles 关系表
               const { error: profileError } = await window.supabaseClient
                 .from('profiles')
                 .update({ avatar_url: finalAvatarUrl })
                 .eq('id', user.id);
 
-              if (profileError) throw new Error(`同步资料失败: ${profileError.message}`);
+              if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
 
-              alert('🎉 头像更新成功！论坛各板块头像已同步刷新。');
-              
-              // 重置状态并刷新页面对齐 DOM 树
+              // 本地同步更新缓存
+              localStorage.setItem('user_avatar', finalAvatarUrl);
+
+              alert('🎉 头像修改成功！论坛各板块已同步刷新。');
               editAvatarFileInput.value = '';
               editAvatarHint.textContent = '';
               closeModal();
               window.location.reload();
 
             } catch (err) {
-              alert(`头像更新失败: ${err.message}`);
+              alert(`更换头像遇到异常: ${err.message}`);
             } finally {
               submitBtn.disabled = false;
               submitBtn.textContent = originalText;
