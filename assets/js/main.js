@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const avatarFileHint = document.getElementById('avatar-file-hint');
   // ✨ 新增：修改头像相关的 DOM 节点获取
   const updateAvatarForm = document.getElementById('update-avatar-form');
+
+  // 🔍 确保在文件顶部获取了新加入的 DOM 元素
+  const forgotPasswordForm = document.getElementById('forgot-password-form');
+  const userProfileForm = document.getElementById('user-profile-form');
   const editAvatarFileInput = document.getElementById('edit-avatar-file');
   const editAvatarHint = document.getElementById('edit-avatar-hint');
 
@@ -190,6 +194,17 @@ document.addEventListener('DOMContentLoaded', () => {
           updateUserUI(session.user);
         } else {
           updateUserUI(null);
+        }
+      if (event === "PASSWORD_RECOVERY") {
+          // 说明用户是从忘记密码邮件的链接点进来的！
+          // 这时候可以在前端弹出一个包含密码输入框的专属特殊小表单，或者直接引导其使用：
+          const newPassword = prompt("请输入您要修改的新密码：");
+          if (newPassword && newPassword.length >= 6) {
+            window.supabaseClient.auth.updateUser({ password: newPassword }).then(({ error }) => {
+              if (error) alert("重置密码失败: " + error.message);
+              else alert("密码已成功重置，请使用新密码登录！");
+            });
+          }
         }
       });
 
@@ -647,6 +662,124 @@ document.addEventListener('DOMContentLoaded', () => {
           if (typeof fetchPosts === 'function') await fetchPosts();
           window.location.reload();
         }
+        // =========================================================
+        // 🎯 优化一：忘记密码——发送安全重置邮件链接
+        // =========================================================
+        if (forgotPasswordForm) {
+          forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!window.supabaseClient) return;
+
+            const email = document.getElementById('forgot-email').value.trim();
+            const submitBtn = document.getElementById('forgot-submit-btn');
+            
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏱️ 正在发送链接...';
+
+            try {
+              // 调用 Supabase 发送官方合规的密码重置邮件
+              const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin // 用户点击邮件链接后，会跳回你的网站主页
+              });
+
+              if (error) throw error;
+
+              alert('📬 重置链接已成功发送至您的邮箱！请进入邮箱查收并点击链接修改密码。');
+              closeModal();
+            } catch (err) {
+              alert(`发送失败: ${err.message}`);
+            } finally {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }
+          });
+        }
+
+        // =========================================================
+        // 🎯 优化二：头像修改常驻面板——独立上传并无痕刷新
+        // =========================================================
+        if (editAvatarFileInput && editAvatarHint) {
+          editAvatarFileInput.addEventListener('change', () => {
+            if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
+              const file = editAvatarFileInput.files[0];
+              if (file.size > 2 * 1024 * 1024) {
+                alert('新头像文件不能超过 2MB 喵！');
+                editAvatarFileInput.value = '';
+                editAvatarHint.textContent = '';
+                return;
+              }
+              editAvatarHint.textContent = `已选择新头像: ${file.name}`;
+            }
+          });
+        }
+
+        if (userProfileForm) {
+          userProfileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!window.supabaseClient) return;
+
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            const user = session?.user;
+
+            if (!user) {
+              alert('请先登录账号才能修改头像哦！');
+              return;
+            }
+
+            if (!editAvatarFileInput.files || editAvatarFileInput.files.length === 0) {
+              alert('请先选取一张本地图片再点击更新。');
+              return;
+            }
+
+            const submitBtn = document.getElementById('update-avatar-submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏱️ 正在同步新头像...';
+
+            try {
+              const file = editAvatarFileInput.files[0];
+              const fileExt = file.name.split('.').pop().toLowerCase();
+              const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖
+
+              // 上传覆盖旧文件
+              const { error: uploadError } = await window.supabaseClient.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+              if (uploadError) throw new Error(`存储错误: ${uploadError.message}`);
+
+              const { data: publicUrlData } = window.supabaseClient.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+              // 拼接防强缓存时间戳
+              const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+
+              // 同步修改用户 profiles 关联表
+              const { error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .update({ avatar_url: finalAvatarUrl })
+                .eq('id', user.id);
+
+              if (profileError) throw new Error(`同步资料失败: ${profileError.message}`);
+
+              alert('🎉 头像更新成功！论坛各板块头像已同步刷新。');
+              
+              // 重置状态并刷新页面对齐 DOM 树
+              editAvatarFileInput.value = '';
+              editAvatarHint.textContent = '';
+              closeModal();
+              window.location.reload();
+
+            } catch (err) {
+              alert(`头像更新失败: ${err.message}`);
+            } finally {
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+            }
+          });
+        }
 
       } catch (err) {
         alert(`修改失败: ${err.message}`);
@@ -901,10 +1034,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
       userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
       userButton.style.background = 'rgba(255, 255, 255, 0.15)';
-      // ✨ 新增：登录成功后，让“修改头像表单”在主页的用户面板或弹窗里可以被看到
-      if (updateAvatarForm) {
-        updateAvatarForm.style.display = 'block';
-      }
+
+      // ✨ 修改：登录成功后，让“修改头像面板”浮现、让“忘记密码”隐藏
+      if (userProfileForm) userProfileForm.style.display = 'block';
+      if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
+
       // (2) 🚀 瞬间无缝唤醒论坛：全物理接触隐藏，彻底防止论坛处于断开或僵尸挂起状态
       if (postArea) {
         postArea.removeAttribute('hidden');
@@ -959,10 +1093,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // (4) 用户未登录或退出登录时，全面物理还原界面并封锁论坛发布功能
       clearUserUI();
-      // ✨ 新增：退出登录或未登录时，必须物理隐藏修改头像功能
-      if (updateAvatarForm) {
-        updateAvatarForm.style.display = 'none';
-      }
+
+      // ✨ 修改：未登录时，物理隐藏头像修改面板
+      if (userProfileForm) userProfileForm.style.display = 'none';
+
       document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       removeAdminButton();
