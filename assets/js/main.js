@@ -798,27 +798,88 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   // 当用户点击邮件跳回本页时，Supabase 触发 PASSWORD_RECOVERY 状态
   if (window.supabaseClient && window.supabaseClient.auth) {
+
+    // 1. 🔄 核心状态监听：捕获邮件链接，控制表单显隐
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // 1. 此时可以弹窗或者展示“新密码表单”让用户输入新密码
-        // 2. 用户输入新密码后，收集 `#new-password` 的值，调用以下方法：
-        
-        /* const newPassword = prompt("请输入您的新密码（不少于6位）："); 
-        if (newPassword) {
+        console.log('用户通过重置密码链接进入页面');
+
+        // 隐藏登录表单和发送邮件表单
+        const loginForm = document.getElementById('login-form');
+        const resetForm = document.getElementById('reset-password-form');
+        if (loginForm) loginForm.hidden = true;
+        if (resetForm) resetForm.hidden = true;
+
+        // 展现新密码确认表单
+        const recoveryForm = document.getElementById('recovery-password-form');
+        if (recoveryForm) {
+          recoveryForm.hidden = false;
+        }
+
+        // 唤起你的通用大弹窗（如果适用）
+        if (typeof openModal === 'function') {
+          openModal();
+        } else {
+          const authModal = document.getElementById('auth-modal'); // 替换为你大弹窗的ID
+          if (authModal) authModal.style.display = 'flex';
+        }
+      }
+    });
+
+    // 2. 🔐 绑定“新密码确认表单”的提交拦截逻辑
+    document.addEventListener('DOMContentLoaded', () => {
+      const recoveryForm = document.getElementById('recovery-password-form');
+
+      if (recoveryForm) {
+        recoveryForm.addEventListener('submit', async (e) => {
+          e.preventDefault(); // 阻止表单默认提交刷新
+
+          const passwordInput = document.getElementById('recovery-password');
+          const confirmPasswordInput = document.getElementById('recovery-confirm-password');
+          const submitBtn = document.getElementById('recovery-submit-btn');
+
+          const newPassword = passwordInput ? passwordInput.value : '';
+          const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+
+          // 🌟 校验一：基础长度检查
           if (newPassword.length < 6) {
-            alert('密码长度不能少于 6 位数哦！');
+            alert('新密码长度不能少于 6 位数哦！');
             return;
           }
+
+          // 🌟 校验二：两次密码一致性判定
+          if (newPassword !== confirmPassword) {
+            alert('❌ 两次输入的密码不一致，请重新检查喵！');
+            // 清空二次确认框并聚焦，提升用户体验
+            if (confirmPasswordInput) {
+              confirmPasswordInput.value = '';
+              confirmPasswordInput.focus();
+            }
+            return;
+          }
+
           try {
+            submitBtn.disabled = true;
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏱️ 正在安全加密并同步新密码...';
+
+            // 调用 Supabase 修改当前账户密码
             const { error } = await window.supabaseClient.auth.updateUser({ password: newPassword });
             if (error) throw error;
-            alert('密码修改成功，请重新登录。');
+
+            alert('🎉 密码重置成功！安全凭证已更新，请使用新密码登录。');
+
+            // 强制登出临时的 recovery 会话
+            await window.supabaseClient.auth.signOut();
+
+            // 刷新页面，让表单状态和页面完全复位
             window.location.reload();
           } catch (err) {
-            alert(`修改失败: ${err.message}`);
+            alert(`修改失败：${err.message}`);
+            submitBtn.disabled = false;
+            submitBtn.textContent = '确认修改密码';
           }
-        }
-        */
+        });
       }
     });
   }
