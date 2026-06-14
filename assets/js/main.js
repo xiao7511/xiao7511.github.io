@@ -75,27 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
     modal.classList.remove('is-active');
   };
 
-  // 获取并加载底层安全密钥（双源容灾防断流）
-  async function loadConfig() {
-    try {
-      let res = await fetch('config.json');
-      if (!res.ok) throw new Error();
-      window.sysConfig = await res.json();
-    } catch {
-      console.warn("⚠️ 本地边缘配置文件未响应，正在升级至远端 B 计划多媒体网关...");
-      try {
-        let resFallback = await fetch('https://xiao7511.github.io/config.json');
-        if (!resFallback.ok) throw new Error();
-        window.sysConfig = await resFallback.json();
-      } catch (err) {
-        console.error("🚨 灾难性链路阻断：全网核心配置文件抓取失败！", err);
-      }
-    }
-  }
-
   // 核心逻辑总入口
   async function initApp() {
-    await loadConfig();
     if (!window.sysConfig || !window.sysConfig.SUPABASE_URL || !window.sysConfig.SUPABASE_ANON_KEY) {
       console.error("🚨 安全证书校验未通过，Supabase 引擎被迫挂起。");
       return;
@@ -106,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 初始化唯一的 Supabase 实例
+    // 🔒 沿用并恢复您原有的非明文动态初始化机制
     window.supabaseClient = window.supabase.createClient(
       window.sysConfig.SUPABASE_URL,
       window.sysConfig.SUPABASE_ANON_KEY
@@ -168,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `;
           
-          // 点击顶栏已登录头像，直接拉起个人资料修改中心（包含密码直接更新与全端头像更换）
+          // 点击顶栏已登录头像，直接拉起个人资料修改中心
           const trigger = userButton.querySelector('.user-profile-trigger');
           if (trigger) {
             trigger.onclick = () => openModal('profile');
@@ -382,11 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => showSlideOld(currentSlideIndexOld + 1), 6000);
   }
 
-  // =========================================================
-  // 🎯 新增核心功能：已登录用户的“个人中心多端头像与密码”修改
-  // =========================================================
+  // ==============================================================================
+  // 🎯 【本次需求功能】: 个人中心全端头像实时覆盖与登录后密码直接修改
+  // ==============================================================================
   
-  // 1. 本地文件大小硬性拦截防线 (2MB)
+  // 1. 本地选择文件交互限制与大小防线校验 (2MB限制)
   if (editAvatarFileInput && editAvatarHint) {
     editAvatarFileInput.addEventListener('change', () => {
       if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
@@ -402,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. 提交表单：实现登录后无缝密码修改 + 覆写物理头像并刷爆全站历史发帖缓存
+  // 2. 个人中心表单提交处理（支持全端头像更新、已登录密码直接更改、击穿历史论坛头像缓存）
   if (userProfileForm) {
     userProfileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -415,89 +396,97 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const submitBtn = document.getElementById('update-profile-submit-btn');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = '⏱️ 正在同步更新中...';
+      const submitBtn = document.getElementById('update-profile-submit-btn') || userProfileForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn ? submitBtn.textContent : '保存';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏱️ 正在同步更新中...';
+      }
 
       try {
         let hasChanges = false;
 
-        // 【功能1实现】已登录状态下的直接修改密码
-        const profileNewPwd = document.getElementById('profile-new-password').value;
+        // 【优化一】: 用户已登录状态下，直接在输入框修改新密码
+        const profileNewPwd = document.getElementById('profile-new-password')?.value;
         if (profileNewPwd) {
           if (profileNewPwd.length < 6) {
-            throw new Error('密码长度不能少于 6 位数哦！');
+            throw new Error('新密码长度不能少于 6 位数哦！');
           }
           const { error: pwdError } = await window.supabaseClient.auth.updateUser({ password: profileNewPwd });
           if (pwdError) throw pwdError;
           hasChanges = true;
         }
 
-        // 【功能2实现】PC/移动通用头像更换 + 刷爆历史社区论坛头像缓存
-        if (editAvatarFileInput.files && editAvatarFileInput.files.length > 0) {
+        // 【优化二】: PC与移动端头像无缝覆盖上传 + 时间戳击穿全站历史发帖头像缓存
+        if (editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files.length > 0) {
           const file = editAvatarFileInput.files[0];
           const fileExt = file.name.split('.').pop().toLowerCase();
           const filePath = `${user.id}.${fileExt}`; 
 
-          // 物理上传至 avatars 存储桶，开启 upsert: true 实行全名覆写
+          // 通过 upsert: true 进行覆盖式物理上传
           const { error: uploadError } = await window.supabaseClient.storage
             .from('avatars')
             .upload(filePath, file, { upsert: true });
 
-          if (uploadError) throw new Error(`头像存储桶同步失败: ${uploadError.message}`);
+          if (uploadError) throw new Error(`头像存储网关同步失败: ${uploadError.message}`);
 
-          // 抓取公共外链
+          // 获取云端公共直链
           const { data: publicUrlData } = window.supabaseClient.storage
             .from('avatars')
             .getPublicUrl(filePath);
 
-          // ✨ 终极破局黑科技：注入微秒级动态时间戳参数。
-          // 彻底攻破 CDN、移动端和 PC 端浏览器的图片同名强缓存，强迫全站历史发布的帖子重新获取最新数据层。
+          // ✨ 时间戳破缓存：通过向公共外链强行注入动态时间戳参数，
+          // 彻底摧毁浏览器对同名头像图片的本地死缓存，强迫全站历史发布的论坛帖子在重载页面时向服务器重新要图。
           const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
 
-          // 将包含全新时间戳的外链直接写入 profiles 表
+          // 更新公共 profiles 用户关联数据表
           const { error: profileError } = await window.supabaseClient
             .from('profiles')
             .update({ avatar_url: finalAvatarUrl })
             .eq('id', user.id);
 
-          if (profileError) throw new Error(`关联用户 profiles 资料表失败: ${profileError.message}`);
+          if (profileError) throw new Error(`同步公共资料表失败: ${profileError.message}`);
 
-          // 更新本地临时缓存
+          // 更新本地临时存储
           localStorage.setItem('user_avatar', finalAvatarUrl);
           hasChanges = true;
         }
 
         if (!hasChanges) {
-          alert('您当前未作任何修改更改哦~');
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
+          alert('您当前没有做任何资料改动哦~');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
           return;
         }
 
-        alert('🎉 个人资料修改成功！正在重新对齐全站全端多媒体图层...');
-        document.getElementById('profile-new-password').value = '';
-        editAvatarFileInput.value = '';
-        editAvatarHint.textContent = '';
+        alert('🎉 个人设置同步成功！正在为您重新加载全端多媒体视图...');
+        
+        const pwdInput = document.getElementById('profile-new-password');
+        if (pwdInput) pwdInput.value = '';
+        if (editAvatarFileInput) editAvatarFileInput.value = '';
+        if (editAvatarHint) editAvatarHint.textContent = '';
         
         closeModal();
         
-        // 重新加载页面，配合带有时间戳的 `avatar_url`，使得历史帖子的所有头像全部瞬间无缝同步为最新头像
+        // 重新加载页面。全站历史帖子的头像会因绑定了最新时间戳的 `avatar_url` 而瞬间无缝统一更新。
         window.location.reload();
 
       } catch (err) {
         alert(`修改遇到异常失败: ${err.message}`);
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
       }
     });
   }
 
-  // =========================================================
-  // 🎯 新增功能：未登录状态下“忘记密码”邮件投递绑定
-  // =========================================================
+  // ==============================================================================
+  // 🎯 【本次需求功能】: 未登录状态下“忘记密码”邮件投递绑定
+  // ==============================================================================
   if (forgotPasswordForm) {
     forgotPasswordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
