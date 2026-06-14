@@ -156,6 +156,20 @@
         <input type="password" id="new-password" placeholder="输入新密码 (至少6位)" required autocomplete="new-password">
         <button class="primary-btn" type="submit">确认修改</button>
       </form>
+      <form id="update-avatar-form" class="form" style="display: none; margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px;">
+        <div class="avatar-selector">
+          <p style="color: #FF6EC7; font-weight: bold; margin-bottom: 10px;">🌟 修改我的个性头像</p>
+          
+          <div class="custom-avatar-upload" style="text-align: center; margin-bottom: 10px;">
+            <label for="edit-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 12px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.85rem;">
+              📷 选择新的头像图片 (PNG/JPG)
+            </label>
+            <input type="file" id="edit-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <div id="edit-avatar-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px;"></div>
+          </div>
+        </div>
+        <button class="primary-btn" type="submit" id="update-avatar-submit-btn">确认更新头像</button>
+      </form>
 
       <form id="reg-form" class="form" hidden>
         <div class="avatar-selector">
