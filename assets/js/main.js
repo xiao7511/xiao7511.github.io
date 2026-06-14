@@ -190,21 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // 🎯 核心修复 2：解耦身份监听状态。内部严禁做任何阻塞式高频操作，保证论坛状态与控制台不掉线
       window.supabaseClient.auth.onAuthStateChange((event, session) => {
         console.log(`🔑 认证状态变更事件触发: ${event}`);
-        // ✨ 新增：捕获用户从“忘记密码邮件”点进来的高光时刻
         if (event === "PASSWORD_RECOVERY") {
+          // 自动拉起重置密码表单，增强仪式感
           setTimeout(() => {
-            const newPassword = prompt("🔒 监测到重置凭证成功！请输入您要设定的新密码（至少6位）：");
-            if (newPassword) {
-              if (newPassword.length < 6) {
-                alert("修改失败：密码长度不足6位！");
-                return;
-              }
-              window.supabaseClient.auth.updateUser({ password: newPassword }).then(({ error }) => {
-                if (error) alert("重置密码失败: " + error.message);
-                else alert("🎉 密码重置成功！请使用新密码重新登录异世界。");
-              });
+            if (typeof openModal === 'function') {
+              openModal('reset'); // 完美唤起重置新密码输入界面
             }
-          }, 500);
+          }, 400);
         }
         if (session && session.user) {
           updateUserUI(session.user);
@@ -656,260 +648,38 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.reload();
     });
   }*/
- // =========================================================
-  // 🎯 核心重构：将“修改密码”与“修改头像”融为一体的混编表单
-  // =========================================================
+  // 🔍 找到 main.js 中原 resetForm 绑定的监听器，替换为干净纯粹的新密码重置逻辑：
   if (resetForm) {
     resetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!window.supabaseClient) return;
 
       const password = document.getElementById('new-password').value;
-      const hasFile = editAvatarFileInput && editAvatarFileInput.files && editAvatarFileInput.files[0];
-
-      // 1. 安全边界拦截：如果用户什么都没填/没选，不浪费网络请求
-      if (!password && !hasFile) {
-        alert('你还没有输入新密码，也没有选择新头像喵！');
+      if (!password || password.length < 6) {
+        alert('密码长度不能少于 6 位数哦！');
         return;
       }
 
-      // 获取当前在线用户态
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      const user = session?.user;
-      if (!user) {
-        alert('登录态已失效，请重新登录哦！');
-        return;
-      }
-
-      const submitBtn = resetForm.querySelector('button[type="submit"]');
+      const submitBtn = document.getElementById('reset-submit-btn') || resetForm.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = '⏱️ 正在同步资料...';
+      submitBtn.textContent = '⏱️ 正在加密同步新密码...';
 
       try {
-        let isAvatarUpdated = false;
-        let isPasswordUpdated = false;
-
-        // 2. ✨ 第一阶段：处理自定义头像上传与更新
-        if (hasFile) {
-          submitBtn.textContent = '⏱️ 正在上传新头像...';
-          const file = editAvatarFileInput.files[0];
-          const fileExt = file.name.split('.').pop().toLowerCase();
-          const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖旧图
-
-          // 推送到存储桶
-          const { error: uploadError } = await window.supabaseClient.storage
-            .from('avatars')
-            .upload(filePath, file, { upsert: true });
-
-          if (uploadError) throw new Error(`头像存储失败: ${uploadError.message}`);
-
-          // 捕获公开 URL
-          const { data: publicUrlData } = window.supabaseClient.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-          // 注入时间戳，强制前端刷新 5G 或浏览器缓存的同名头像文件
-          const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
-
-          // 更新用户资料表
-          const { error: profileError } = await window.supabaseClient
-            .from('profiles')
-            .update({ avatar_url: finalAvatarUrl })
-            .eq('id', user.id);
-
-          if (profileError) throw new Error(`同步资料表失败: ${profileError.message}`);
-          
-          isAvatarUpdated = true;
-        }
-
-        // 3. ✨ 第二阶段：处理密码安全修改
-        if (password) {
-          submitBtn.textContent = '⏱️ 正在加密新密码...';
-          if (password.length < 6) {
-            throw new Error('密码长度不能少于 6 位数哦！');
-          }
-          const { error: pwdError } = await window.supabaseClient.auth.updateUser({ password });
-          if (pwdError) throw pwdError;
-          isPasswordUpdated = true;
-        }
-
-        // 4. ✨ 第三阶段：根据执行结果判定后续的用户引导反馈
-        if (isPasswordUpdated) {
-          alert('密码修改成功，安全凭证已失效，请重新登录。');
-          // 密码修改在 Supabase 中通常会清除敏感 session，必须重新登录
-          closeModal();
-          window.location.reload();
-        } else if (isAvatarUpdated) {
-          alert('🎉 恭喜你，头像修改成功！论坛各模块已实时对齐。');
-          
-          // 重置上传控件显示状态
-          editAvatarFileInput.value = '';
-          editAvatarHint.textContent = '';
-          
-          closeModal();
-          // 触发论坛发帖刷新或页面重载，让新头像生效
-          if (typeof fetchPosts === 'function') await fetchPosts();
+        const { error } = await window.supabaseClient.auth.updateUser({ password });
+        if (error) throw error;
+        
+        alert('🎉 密码修改成功！安全凭证已成功对齐，请使用新密码登录。');
+        closeModal();
+        
+        // 密码更新后强制清除本地可能卡死的缓存，平滑重新引导登录
+        if (typeof runPhysicalLogout === 'function') {
+          await runPhysicalLogout();
+        } else {
           window.location.reload();
         }
-        // =========================================================
-        // 🎯 优化一：忘记密码——发送安全重置邮件链接
-        // =========================================================
-        if (forgotPasswordForm) {
-          forgotPasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!window.supabaseClient) return;
-
-            const email = document.getElementById('forgot-email').value.trim();
-            const submitBtn = document.getElementById('forgot-submit-btn');
-            
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏱️ 正在发送链接...';
-
-            try {
-              // 调用 Supabase 发送官方合规的密码重置邮件
-              const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin // 用户点击邮件链接后，会跳回你的网站主页
-              });
-
-              if (error) throw error;
-
-              alert('📬 重置链接已成功发送至您的邮箱！请进入邮箱查收并点击链接修改密码。');
-              closeModal();
-            } catch (err) {
-              alert(`发送失败: ${err.message}`);
-            } finally {
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-            }
-          });
-        }
-
-        // ✨ 1. 头像本地选择提示与 2MB 大小防跨界限拦截
-        if (editAvatarFileInput && editAvatarHint) {
-          editAvatarFileInput.addEventListener('change', () => {
-            if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
-              const file = editAvatarFileInput.files[0];
-              if (file.size > 2 * 1024 * 1024) {
-                alert('新头像文件不能超过 2MB 喵！');
-                editAvatarFileInput.value = '';
-                editAvatarHint.textContent = '';
-                return;
-              }
-              editAvatarHint.textContent = `已选择: ${file.name}`;
-            }
-          });
-        }
-
-        // ✨ 2. 重构 resetForm 监听：全面转为合规的“发送重置密码邮件流”
-        if (resetForm) {
-          resetForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!window.supabaseClient) return;
-
-            const email = document.getElementById('forgot-email').value.trim();
-            const submitBtn = document.getElementById('forgot-submit-btn');
-
-            if (!email) {
-              alert('请输入你的注册邮箱哦！');
-              return;
-            }
-
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏱️ 正在发送链接...';
-
-            try {
-              // 调用 Supabase 官方发送重置邮件
-              const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + window.location.pathname // 让链接跳回本页
-              });
-
-              if (error) throw error;
-
-              alert('📬 密码重置链接已发送！请登录邮箱点击链接以重新设定密码。');
-              closeModal();
-            } catch (err) {
-              alert(`发送失败: ${err.message}`);
-            } finally {
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-            }
-          });
-        }
-
-        // ✨ 3. 拦截 userProfileForm 提交：处理头像存储桶上传并无缝同步至 profiles 数据表
-        if (userProfileForm) {
-          userProfileForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!window.supabaseClient) return;
-
-            const { data: { session } } = await window.supabaseClient.auth.getSession();
-            const user = session?.user;
-
-            if (!user) {
-              alert('登录状态已过期，请重新登录账号。');
-              return;
-            }
-
-            if (!editAvatarFileInput.files || editAvatarFileInput.files.length === 0) {
-              alert('请先选择一张精美的图片作为新头像喵！');
-              return;
-            }
-
-            const submitBtn = document.getElementById('update-avatar-submit-btn');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '⏱️ 正在同步新头像...';
-
-            try {
-              const file = editAvatarFileInput.files[0];
-              const fileExt = file.name.split('.').pop().toLowerCase();
-              const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖存储桶已有资源
-
-              // 覆盖推送到存储桶
-              const { error: uploadError } = await window.supabaseClient.storage
-                .from('avatars')
-                .upload(filePath, file, { upsert: true });
-
-              if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
-
-              const { data: publicUrlData } = window.supabaseClient.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-              // 拼接强刷时间戳
-              const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
-
-              // 写入 profiles 关系表
-              const { error: profileError } = await window.supabaseClient
-                .from('profiles')
-                .update({ avatar_url: finalAvatarUrl })
-                .eq('id', user.id);
-
-              if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
-
-              // 本地同步更新缓存
-              localStorage.setItem('user_avatar', finalAvatarUrl);
-
-              alert('🎉 头像修改成功！论坛各板块已同步刷新。');
-              editAvatarFileInput.value = '';
-              editAvatarHint.textContent = '';
-              closeModal();
-              window.location.reload();
-
-            } catch (err) {
-              alert(`更换头像遇到异常: ${err.message}`);
-            } finally {
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-            }
-          });
-        }
-
       } catch (err) {
-        alert(`修改失败: ${err.message}`);
+        alert(`修改密码失败: ${err.message}`);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -1521,6 +1291,103 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => showSlideOld(currentSlideIndexOld + 1), 6000);
   }
 
+  // ... 上方是原有的 loginForm、regForm 或 resetForm 的监听逻辑 ...
+
+  // =========================================================
+  // 🎯 新增核心优化二：监听独立“更改头像”表单（userProfileForm）
+  // =========================================================
+  //const userProfileForm = document.getElementById('user-profile-form');
+  //const editAvatarFileInput = document.getElementById('edit-avatar-file');
+  //const editAvatarHint = document.getElementById('edit-avatar-hint');
+
+  // 1. 本地文件选取交互与 2MB 大小硬性防线
+  if (editAvatarFileInput && editAvatarHint) {
+    editAvatarFileInput.addEventListener('change', () => {
+      if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
+        const file = editAvatarFileInput.files[0];
+        if (file.size > 2 * 1024 * 1024) {
+          alert('新头像文件不能超过 2MB 喵！');
+          editAvatarFileInput.value = '';
+          editAvatarHint.textContent = '';
+          return;
+        }
+        editAvatarHint.textContent = `已选择: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      }
+    });
+  }
+
+  // 2. 头像物理上传与 Profiles 表双层写入
+  if (userProfileForm) {
+    userProfileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!window.supabaseClient) return;
+
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = session?.user;
+      if (!user) {
+        alert('登录态已过期，请重新登录账号哦！');
+        return;
+      }
+
+      if (!editAvatarFileInput.files || editAvatarFileInput.files.length === 0) {
+        alert('请先选择一张精美的图片作为新头像喵！');
+        return;
+      }
+
+      const submitBtn = document.getElementById('update-avatar-submit-btn');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏱️ 正在同步新头像至星穹存储...';
+
+      try {
+        const file = editAvatarFileInput.files[0];
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        // 使用 uid 命名，保证存储桶中一个用户永远只占有一张图
+        const filePath = `${user.id}.${fileExt}`; 
+
+        // 同步推送到 avatars 存储桶
+        const { error: uploadError } = await window.supabaseClient.storage
+          .from('avatars')
+          .upload(filePath, file, { upsert: true });
+
+        if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
+
+        // 实时获取外部公开 URL 
+        const { data: publicUrlData } = window.supabaseClient.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        // ✨ 强行拼接时间戳，突破 CDN 和浏览器强缓存
+        const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+
+        // 实时写入 Profiles 用户关联卡
+        const { error: profileError } = await window.supabaseClient
+          .from('profiles')
+          .update({ avatar_url: finalAvatarUrl })
+          .eq('id', user.id);
+
+        if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
+
+        // 实时同步本地临时缓存
+        localStorage.setItem('user_avatar', finalAvatarUrl);
+
+        alert('🎉 个人头像修改成功！正在为您对齐各板块多媒体图层。');
+        editAvatarFileInput.value = '';
+        editAvatarHint.textContent = '';
+        
+        if (typeof closeModal === 'function') closeModal();
+        
+        // 动态触发论坛等帖子列表无缝刷新或页面重载
+        if (typeof fetchPosts === 'function') await fetchPosts();
+        window.location.reload();
+      } catch (err) {
+        alert(`更换头像遇到异常: ${err.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+  }
   // 💥 唤起总初始化启动入口 💥
   initApp();
 });
