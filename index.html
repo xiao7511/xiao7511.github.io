@@ -151,45 +151,27 @@
         <button class="primary-btn" type="submit">进入异世界</button>
       </form>
 
-     <form id="forgot-password-form" class="auth-form" hidden>
-      <div class="form-group">
-        <label for="forgot-email">注册邮箱</label>
-        <input type="email" id="forgot-email" placeholder="请输入您的注册邮箱地址" required autocomplete="email">
-      </div>
-      <button type="submit" id="forgot-submit-btn" class="submit-btn">📬 发送重置密码邮件</button>
-      <div class="auth-links" style="margin-top: 10px; text-align: center;">
-        <a href="#" id="back-to-login-from-forgot" class="link-btn" style="color: #FF6EC7; font-size: 0.85rem;">返回登录</a>
-      </div>
-    </form>
+      <form id="reset-password-form" class="form" hidden>
+        <p class="form__hint" style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 12px; font-size: 0.85rem;">
+          🌟 请输入注册邮箱，我们将向你发送密码重置链接。
+        </p>
+        <input type="email" id="forgot-email" placeholder="注册电子邮箱" required autocomplete="email" style="margin-bottom: 15px;">
+        <button class="primary-btn" type="submit" id="forgot-submit-btn">发送重置邮件</button>
+      </form>
 
-    <form id="reset-password-form" class="auth-form" hidden>
-      <div class="form-group">
-        <label for="new-password">设定新密码</label>
-        <input type="password" id="new-password" placeholder="请输入新密码（至少6位）" required autocomplete="new-password">
-      </div>
-      <button type="submit" id="reset-submit-btn" class="submit-btn">🔒 确认修改新密码</button>
-    </form>
-
-    <form id="user-profile-form" class="auth-form" hidden>
-      <div style="text-align: center; margin-bottom: 15px;">
-        <p style="font-size: 0.9rem; color: #FF6EC7;">✨ 个人设置中心</p>
-      </div>
-      
-      <div class="form-group">
-        <label for="profile-new-password">修改密码（不填则不修改）</label>
-        <input type="password" id="profile-new-password" placeholder="请输入新密码（至少6位）" autocomplete="new-password">
-      </div>
-
-      <div class="custom-avatar-upload" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
-        <label for="edit-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 8px 16px; border: 1px dashed #FF6EC7; border-radius: 6px; color: #FF6EC7; font-size: 0.85rem;">
-          📷 更换自定义头像 (PNG/JPG)
-        </label>
-        <input type="file" id="edit-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
-        <div id="edit-avatar-hint" style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 8px;"></div>
-      </div>
-
-      <button type="submit" id="update-profile-submit-btn" class="submit-btn">💾 保存更新资料</button>
-    </form>
+      <form id="user-profile-form" class="form" hidden>
+        <div class="avatar-selector" style="margin-bottom: 15px; text-align: center;">
+          <p style="color: #FF6EC7; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold;">🌟 更换我的个性头像</p>
+          <div class="custom-avatar-upload">
+            <label for="edit-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 14px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.8rem; background: rgba(255,110,199,0.05);">
+              📷 选择本地头像图片 (PNG/JPG)
+            </label>
+            <input type="file" id="edit-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
+            <div id="edit-avatar-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 6px; min-height: 16px;"></div>
+          </div>
+        </div>
+        <button class="primary-btn" type="submit" id="update-avatar-submit-btn">确认更新头像</button>
+      </form>
 
       <form id="reg-form" class="form" hidden>
         <div class="avatar-selector">
