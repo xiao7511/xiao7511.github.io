@@ -801,28 +801,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. 🔄 核心状态监听：捕获邮件链接，控制表单显隐
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('用户通过重置密码链接进入页面');
+      
+      // 🎯 1. 它是最高优先级！一旦发现是重置信号，立刻拦截
+      if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
+        console.log('🚨 侦测到重置密码流，拦截普通登录主页逻辑');
 
-        // 隐藏登录表单和发送邮件表单
+        // 强行隐藏普通的已登录界面（防止它干扰用户）
+        const mainDashboard = document.getElementById('dashboard'); // 替换为你已登录主界面的ID
+        if (mainDashboard) mainDashboard.style.display = 'none';
+
+        // 隐藏弹窗内没用的表单
         const loginForm = document.getElementById('login-form');
         const resetForm = document.getElementById('reset-password-form');
         if (loginForm) loginForm.hidden = true;
         if (resetForm) resetForm.hidden = true;
 
-        // 展现新密码确认表单
+        // 只展示新密码再次确认表单
         const recoveryForm = document.getElementById('recovery-password-form');
         if (recoveryForm) {
           recoveryForm.hidden = false;
         }
 
-        // 唤起你的通用大弹窗（如果适用）
+        // 唤起大弹窗
         if (typeof openModal === 'function') {
           openModal();
         } else {
-          const authModal = document.getElementById('auth-modal'); // 替换为你大弹窗的ID
+          const authModal = document.getElementById('auth-modal');
           if (authModal) authModal.style.display = 'flex';
         }
+        
+        return; // 🛑 关键：直接返回，不再往下执行普通的“已登录主页”加载逻辑
+      }
+
+      // 2. 下面才是你原本的普通登录、未登录的首页逻辑
+      if (event === 'SIGNED_IN') {
+        // 处理普通用户登录成功、展示主页、加载数据的逻辑...
+        console.log('普通用户登录成功');
       }
     });
 
