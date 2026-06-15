@@ -69,8 +69,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     const imgId = el.getAttribute('data-id') || index;
                     
-                    // 【核心修复】移动端严格遵循标准参数拼接，防止路由解析脚本在手机上崩溃
-                    window.location.href = `detail.html?id=${imgId}&imageId=${imgId}&src=${encodeURIComponent(imgSrc)}`;
+                    // 盲拼所有常见的参数名称，不管老代码要 id、imageId 还是 imgId，一网打尽
+                    // 同时把原始图片地址也作为参数传过去
+                    window.location.href = `detail.html?id=${imgId}&imageId=${imgId}&imgId=${imgId}&index=${imgId}&src=${encodeURIComponent(imgSrc)}`;
                 });
             });
         };
