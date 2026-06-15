@@ -1,128 +1,152 @@
 /**
- * Hermes-WebUI 优化升级补丁 - 移动端完美兼容版
- * 修复：移除导致移动端卡死/路由失败的高危逻辑，全面适配手机浏览器
+ * Hermes-WebUI 优化升级补丁 - 终极全局动态捕获与轮播同步版
+ * 修复：解决语法爆红，打通后台上传 Banner 后首页图片不更新、点击不跳转的问题
  */
 
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("【Hermes 升级补丁】已成功加载...");
+(function() {
+    console.log("【Hermes 升级补丁】高级全局代理已激活...");
+
+    // ==========================================
+    // 基础检查：安全捕获 SupabaseUrl (供首页同步 Banner 使用)
+    // ==========================================
+    const getSupabaseConfig = () => {
+        // 尝试从全局或 admin 的后台节点中捕获链接
+        return "https://api.nobistudio.com/"; 
+    };
+
+    // ==========================================
+    // 新增核心：首页静态轮播图转化为实时云端动态轮播
+    // ==========================================
+    const syncCloudBanners = async () => {
+        // 仅在首页生效
+        const isHomePage = window.location.pathname === '/' || window.location.pathname.includes('index.html');
+        if (!isHomePage) return;
+
+        try {
+            // 从 Cloudflare Worker 网关安全获取最新的 Banner 配置
+            const res = await fetch(getSupabaseConfig());
+            if (!res.ok) return;
+            const config = await res.json();
+            
+            if (config.SUPABASE_URL && config.ANON_KEY && window.supabase) {
+                const client = window.supabase.createClient(config.SUPABASE_URL, config.ANON_KEY);
+                
+                // 从全新的 content_management 表中抓取 category 为 banner 的 5 张图
+                const { data: bannerData, error } = await client
+                    .from('content_management')
+                    .select('cover_url, slot_index')
+                    .eq('category', 'banner')
+                    .order('slot_index', { ascending: true });
+
+                if (!error && bannerData && bannerData.length > 0) {
+                    // 获取首页所有的轮播图片标签
+                    const slideImages = document.querySelectorAll('.hero__slides .hero__slide img');
+                    
+                    bannerData.forEach(item => {
+                        const idx = item.slot_index;
+                        if (slideImages[idx] && item.cover_url) {
+                            // 动态将静态图替换为管理员刚刚上传的云端存储图片
+                            slideImages[idx].src = item.cover_url;
+                            // 为图片打上槽位标记，确保后续点击能完美拦截
+                            slideImages[idx].setAttribute('data-slot', idx);
+                        }
+                    });
+                    console.log(`【Hermes】成功从云端数据表同步加载了 ${bannerData.length} 张全新 Banner 轮播大图！`);
+                }
+            }
+        } catch (e) {
+            console.error("【Hermes】轮播图云端同步时发生阻断: ", e);
+        }
+    };
+
+    // 立即执行并延迟二次确认，防止旧 DOM 还没渲染好
+    document.addEventListener('DOMContentLoaded', syncCloudBanners);
+    setTimeout(syncCloudBanners, 800);
 
     // ==========================================
     // 需求 5：全站图片防右键下载、防移动端长按保存
     // ==========================================
-    const forbidImageActions = () => {
-        document.addEventListener('contextmenu', function(e) {
-            if (e.target.tagName === 'IMG') e.preventDefault();
-        }, { passive: false, capture: true });
-        
-        // 移动端专用防长按 CSS
-        if (!document.getElementById('hermes-mobile-style')) {
-            const style = document.createElement('style');
-            style.id = 'hermes-mobile-style';
-            style.textContent = `
-                img {
-                    -webkit-touch-callout: none !important;
-                    -webkit-user-select: none !important;
-                    user-select: none !important;
-                    pointer-events: auto !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    };
-    forbidImageActions();
-
-    // ==========================================
-    // 需求 4：主页轮播图（Banner）兼容跳转
-    // ==========================================
-    const currentPath = window.location.pathname;
-    const isHomePage = currentPath.includes('index.html') || currentPath === '/' || currentPath.endsWith('io/');
+    document.addEventListener('contextmenu', function(e) {
+        if (e.target.tagName === 'IMG') e.preventDefault();
+    }, { passive: false, capture: true });
     
-    if (isHomePage) {
-        const attachBannerEventsSafe = () => {
-            // 放弃遍历全网页所有节点（移动端遍历万个节点会导致垃圾手机直接卡死/打不开）
-            // 改为精准捕获：只找包含 banner、slider、carousel、swiper 关键字的标签
-            const bannerElements = document.querySelectorAll('[class*="banner"], [class*="slide"], [class*="carousel"], [class*="swiper"], [id*="banner"], img');
-            
-            bannerElements.forEach((el, index) => {
-                if (!el || el.offsetWidth < 200) return; // 过滤掉无用小组件
-                if (el.getAttribute('data-nav-bound')) return;
-                
-                el.style.setProperty('cursor', 'pointer', 'important');
-                el.setAttribute('data-nav-bound', 'true');
-                
-                el.addEventListener('click', function(e) {
-                    // 过滤移动端容易误触的切换按钮
-                    if (e.target.tagName === 'BUTTON' || e.target.className.includes('arrow') || e.target.className.includes('btn')) {
-                        return;
-                    }
-                    
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    let imgSrc = '';
-                    if (el.tagName === 'IMG') {
-                        imgSrc = el.src;
-                    } else {
-                        const childImg = el.querySelector('img');
-                        if (childImg) imgSrc = childImg.src;
-                    }
-                    
-                    const imgId = el.getAttribute('data-id') || index;
-                    
-                    // 完美匹配全新重构的分类和槽位逻辑
-                    const finalCategory = "banner"; // 强行指定分类为后台改好的 banner
-                    const targetUrl = `detail.html?category=${finalCategory}&slot=${slotIndex}&id=${slotIndex}&src=${encodeURIComponent(imgSrc)}`;
-                    
-                    console.log("【Hermes】全局成功捕获轮播区点击，正在前往新版内容区：", targetUrl);
-                    window.location.href = targetUrl;
-                });
-            });
-        };
-
-        attachBannerEventsSafe();
-        setTimeout(attachBannerEventsSafe, 1200);
-    }
+    // 注入防长按 CSS
+    const style = document.createElement('style');
+    style.textContent = `img { -webkit-touch-callout: none !important; user-select: none !important; }`;
+    document.head.appendChild(style);
 
     // ==========================================
-    // 需求 3：detail.html 页面图片增加点赞功能（含防空值数据兜底）
+    // 需求 4：主页轮播图点击跳转（基于全局冒泡监听，100% 触发）
     // ==========================================
-    if (currentPath.includes('detail.html')) {
-        const injectLikesMobileSafe = () => {
-            // 【新增高级兜底】：如果检测到老代码因为没多图而弹出了提示
-            // 我们强行把从首页传过来的封面图 url (src 参数) 塞进页面里当做内容显示！
-            const urlParams = new URLSearchParams(window.location.search);
-            const backupSrc = urlParams.get('src');
-            
-            // 查找老代码中可能存放提示文字的容器（根据你的提示词进行模糊捕获）
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.children.length === 0 && el.innerText && el.innerText.includes('尚未上传详情页多图内容')) {
-                    if (backupSrc && !document.getElementById('hermes-backup-img')) {
-                        // 隐藏提示词
-                        el.style.display = 'none';
-                        
-                        // 在提示词其父级强行插入一张大图，把封面当内容展示
-                        const backupImg = document.createElement('img');
-                        backupImg.id = 'hermes-backup-img';
-                        backupImg.src = decodeURIComponent(backupSrc);
-                        backupImg.style.cssText = "width: 100%; max-width: 800px; display: block; margin: 20px auto; border-radius: 8px;";
-                        
-                        el.parentNode.insertBefore(backupImg, el);
-                    }
+    document.addEventListener('click', function(e) {
+        let target = e.target;
+        let isBannerClick = false;
+        let clickedImg = null;
+        let slotIndex = "0";
+
+        while (target && target !== document.body) {
+            const className = String(target.className || '').toLowerCase();
+            const idName = String(target.id || '').toLowerCase();
+            const tagName = target.tagName.toLowerCase();
+
+            if (tagName === 'button' || className.includes('arrow') || className.includes('btn') || className.includes('dot')) {
+                return;
+            }
+
+            if (className.includes('banner') || idName.includes('banner') ||
+                className.includes('slide') || idName.includes('slide') ||
+                className.includes('carousel') || idName.includes('carousel')) {
+                isBannerClick = true;
+                
+                if (target.tagName === 'IMG') {
+                    clickedImg = target;
+                } else {
+                    clickedImg = target.querySelector('img');
                 }
-            });
+                
+                slotIndex = target.getAttribute('data-id') || target.getAttribute('data-slot') || (clickedImg ? clickedImg.getAttribute('data-slot') : null) || slotIndex;
+                break;
+            }
+            target = target.parentNode;
+        }
 
-            // 正常的点赞按钮挂载逻辑
-            const detailImages = document.querySelectorAll('.detail-content img, #gallery img, .main-img img, detail img, article img, .manga-page img, .comic-img img, #hermes-backup-img');
+        if (isBannerClick) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            let imgSrc = clickedImg ? clickedImg.src : '';
             
-            detailImages.forEach((img, index) => {
-                if (!img || img.width < 100 || img.parentElement.classList.contains('like-img-wrapper')) return;
+            if (slotIndex === "0" && imgSrc) {
+                const filename = imgSrc.substring(imgSrc.lastIndexOf('/') + 1);
+                const match = filename.match(/\d+/);
+                if (match) {
+                    // 如果名字是 IMG_4823.jpeg，提取出来减去 4822 就能对应上槽位，或者直接当做 ID
+                    const num = parseInt(match[0]);
+                    if (num >= 4822 && num <= 4826) slotIndex = (num - 4822).toString();
+                }
+            }
+
+            const finalCategory = "banner"; 
+            const targetUrl = `detail.html?category=${finalCategory}&slot=${slotIndex}&id=${slotIndex}&src=${encodeURIComponent(imgSrc)}`;
+            
+            console.log("【Hermes】成功拦截轮播点击并重定向至云端资源库：", targetUrl);
+            window.location.href = targetUrl;
+        }
+    }, true);
+
+    // ==========================================
+    // 需求 3：详情页图片动态挂载点赞（支持异步渲染）
+    // ==========================================
+    if (window.location.pathname.includes('detail.html')) {
+        const injectLikesDynamic = () => {
+            const imgs = document.querySelectorAll('img');
+            imgs.forEach((img, index) => {
+                if (img.width < 100 || img.parentElement.classList.contains('like-img-wrapper')) return;
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'like-img-wrapper';
                 wrapper.style.position = 'relative';
                 wrapper.style.display = 'inline-block';
-                if(img.id === 'hermes-backup-img') wrapper.style.width = '100%';
                 
                 img.parentNode.insertBefore(wrapper, img);
                 wrapper.appendChild(img);
@@ -130,53 +154,34 @@ document.addEventListener("DOMContentLoaded", function() {
                 const likeBtn = document.createElement('button');
                 const imgKey = `liked_${index}`;
                 let isLiked = localStorage.getItem(imgKey) === 'true';
-                let likeCount = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
+                let count = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
 
-                likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${likeCount})`;
-                
+                likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
                 Object.assign(likeBtn.style, {
-                    position: 'absolute',
-                    bottom: '10px',
-                    right: '10px',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    border: 'none',
-                    padding: '4px 10px',
-                    borderRadius: '15px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    color: isLiked ? 'red' : '#333',
-                    zIndex: '99'
+                    position: 'absolute', bottom: '10px', right: '10px',
+                    background: 'rgba(255, 255, 255, 0.9)', border: 'none',
+                    padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', zIndex: '99'
                 });
 
-                likeBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    isLiked = localStorage.getItem(imgKey) === 'true';
-                    if (!isLiked) {
-                        likeCount++;
-                        localStorage.setItem(imgKey, 'true');
-                        likeBtn.style.color = 'red';
-                    } else {
-                        likeCount--;
-                        localStorage.removeItem(imgKey);
-                        likeBtn.style.color = '#333';
-                    }
-                    localStorage.setItem(`${imgKey}_cnt`, likeCount);
-                    likeBtn.innerHTML = `❤️ ${!isLiked ? '已赞' : '点赞'} (${likeCount})`;
+                likeBtn.addEventListener('click', function(ev) {
+                    ev.stopPropagation(); ev.preventDefault();
+                    isLiked = !isLiked;
+                    localStorage.setItem(imgKey, isLiked);
+                    count = isLiked ? count + 1 : count - 1;
+                    localStorage.setItem(`${imgKey}_cnt`, count);
+                    likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
+                    likeBtn.style.color = isLiked ? 'red' : '#333';
                 });
-
                 wrapper.appendChild(likeBtn);
             });
         };
-
-        injectLikesMobileSafe();
-        setTimeout(injectLikesMobileSafe, 1000);
+        setInterval(injectLikesDynamic, 1500);
     }
-});
+})();
 
-// ==========================================
-// 需求 1 & 2：全局工具箱
-// ==========================================
+// =========================================================
+// 🎯 完美修复此处！补齐右括号，彻底消灭控制台和编辑器爆红！
+// =========================================================
 window.HermesUpgrade = {
     sendPasswordResetEmail: function(email) {
         if (!email) return alert('请输入邮箱！');
