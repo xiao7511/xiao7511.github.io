@@ -69,9 +69,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     const imgId = el.getAttribute('data-id') || index;
                     
-                    // 盲拼所有常见的参数名称，不管老代码要 id、imageId 还是 imgId，一网打尽
-                    // 同时把原始图片地址也作为参数传过去
-                    window.location.href = `detail.html?id=${imgId}&imageId=${imgId}&imgId=${imgId}&index=${imgId}&src=${encodeURIComponent(imgSrc)}`;
+                    // 核心修复：同时把 id、category 和 slot 拼给 URL，触发 Worker 的全量匹配机制
+                    // 我们默认将分类设置为 'manga'，slot 设为当前图片的索引 index，确保不论老代码还是新 Worker 都能正确识别
+                    const finalCategory = el.getAttribute('data-category') || 'manga';
+                    const finalSlot = el.getAttribute('data-slot') || index;
+
+                    window.location.href = `detail.html?id=${imgId}&imageId=${imgId}&category=${finalCategory}&slot=${finalSlot}`;
                 });
             });
         };
