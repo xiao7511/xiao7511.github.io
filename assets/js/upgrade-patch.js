@@ -137,45 +137,97 @@
     // ==========================================
     // 需求 3：详情页图片动态挂载点赞（支持异步渲染）
     // ==========================================
+    // ==========================================
+    // 针对 detail.html 页面的 Banner 分类全多图强行展示引擎
+    // ==========================================
     if (window.location.pathname.includes('detail.html')) {
-        const injectLikesDynamic = () => {
-            const imgs = document.querySelectorAll('img');
-            imgs.forEach((img, index) => {
-                if (img.width < 100 || img.parentElement.classList.contains('like-img-wrapper')) return;
+        const forceRenderBannerGallery = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category');
+            const slot = urlParams.get('slot');
 
-                const wrapper = document.createElement('div');
-                wrapper.className = 'like-img-wrapper';
-                wrapper.style.position = 'relative';
-                wrapper.style.display = 'inline-block';
-                
-                img.parentNode.insertBefore(wrapper, img);
-                wrapper.appendChild(img);
+            // 只有当点击的是 Banner 分类进入的详情页才启动本引擎
+            if (category !== 'banner') return;
 
-                const likeBtn = document.createElement('button');
-                const imgKey = `liked_${index}`;
-                let isLiked = localStorage.getItem(imgKey) === 'true';
-                let count = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
+            // 如果页面已经渲染出多图了，或者我们已经挂载过了，就不用重复挂载
+            if (document.getElementById('hermes-banner-gallery-loaded')) return;
 
-                likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
-                Object.assign(likeBtn.style, {
-                    position: 'absolute', bottom: '10px', right: '10px',
-                    background: 'rgba(255, 255, 255, 0.9)', border: 'none',
-                    padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', zIndex: '99'
-                });
+            try {
+                // 1. 去和你的 Cloudflare Worker 的 detail 路由申请真实数据
+                // 拼装符合你 Worker 校验的路径：/api/detail?category=banner&slot=X
+                const apiRes = await fetch(`https://api.nobistudio.com/api/detail?category=banner&slot=${slot || 0}`);
+                if (!apiRes.ok) return;
+                const data = await apiRes.json();
 
-                likeBtn.addEventListener('click', function(ev) {
-                    ev.stopPropagation(); ev.preventDefault();
-                    isLiked = !isLiked;
-                    localStorage.setItem(imgKey, isLiked);
-                    count = isLiked ? count + 1 : count - 1;
-                    localStorage.setItem(`${imgKey}_cnt`, count);
-                    likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
-                    likeBtn.style.color = isLiked ? 'red' : '#333';
-                });
-                wrapper.appendChild(likeBtn);
-            });
+                // 2. 提取出我们在后台塞入的 detail_urls 全图集数组
+                // 兼容处理：有些数据库返回单条对象，有些返回数组，我们做个安全兼容
+                const record = Array.isArray(data) ? data[0] : data;
+                let imagesArray = record ? (record.detail_urls || record.images || []) : [];
+
+                // 如果是字符串格式，强行解析成 JSON 数组
+                if (typeof imagesArray === 'string') {
+                    try { imagesArray = JSON.parse(imagesArray); } catch(e) {}
+                }
+
+                // 3. 开始在详情页里找地方强行塞入这 5 张图
+                if (imagesArray && imagesArray.length > 0) {
+                    // 动态寻找原本页面存放详情内容的容器（根据 index.html 的结构，通常是 .detail-content, .gallery, #gallery, article 等）
+                    let container = document.querySelector('.detail-content, #gallery, .gallery-container, .main-content, article');
+                    
+                    // 如果这些容器都没找到，我们直接创建一个挂载在 body 顶部
+                    if (!container) {
+                        container = document.createElement('div');
+                        container.className = 'detail-content';
+                        document.body.appendChild(container);
+                    }
+
+                    // 先把老代码可能弹出来的“尚未上传详情页多图内容”提示语给彻底清除/隐藏
+                    const allTexts = container.querySelectorAll('*');
+                    allTexts.forEach(el => {
+                        if (el.innerText && el.innerText.includes('尚未上传详情页多图内容')) {
+                            el.style.display = 'none';
+                        }
+                    });
+
+                    // 4. 循环所有的 Banner 图片，全部生成并整整齐齐地平铺在详情页中央！
+                    imagesArray.forEach((imgUrl, i) => {
+                        // 检查是否已经存在这张图，防止重复生成
+                        if (document.querySelector(`img[data-banner-idx="${i}"]`)) return;
+
+                        const imgEl = document.createElement('img');
+                        imgEl.src = imgUrl;
+                        imgEl.setAttribute('data-banner-idx', i);
+                        imgEl.style.cssText = `
+                            width: 100%;
+                            max-width: 800px;
+                            display: block;
+                            margin: 25px auto;
+                            border-radius: 12px;
+                            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                            transition: transform 0.3s;
+                        `;
+                        // 移动端长按防下载
+                        imgEl.style.setProperty('-webkit-touch-callout', 'none', 'important');
+
+                        container.appendChild(imgEl);
+                    });
+
+                    // 打上成功标记
+                    const flag = document.createElement('div');
+                    flag.id = 'hermes-banner-gallery-loaded';
+                    flag.style.display = 'none';
+                    container.appendChild(flag);
+                    
+                    console.log(`【Hermes】成功在详情页强行横向铺开了完整的 ${imagesArray.length} 张 Banner 艺术多图集！`);
+                }
+            } catch (err) {
+                console.error("【Hermes】详情页强行多图渲染引擎发生阻断: ", err);
+            }
         };
-        setInterval(injectLikesDynamic, 1500);
+
+        // 轮询和动态监听，确保在 DOM 加载完的第一时间完成多图替换
+        forceRenderBannerGallery();
+        setInterval(forceRenderBannerGallery, 1000);
     }
 })();
 

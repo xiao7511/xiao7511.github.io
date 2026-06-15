@@ -399,46 +399,46 @@
                 const maxCount = Math.min(selectedFilesCache.length, 5);
                 let deployedUrls = [];
 
+                // 【阶段 1】：先批量上传所有图片，收集到完整的图片链接池 (deployedUrls)
                 for (let i = 0; i < maxCount; i++) {
                     const file = selectedFilesCache[i];
-                    
-                    // 💡 优化 1：精准动态捕获用户上传图片的真实后缀 (jpg/png/jpeg/webp等)
                     const fileExt = file.name.split('.').pop().toLowerCase() || 'png';
                     const baseName = `banner_slot_${i}_cover_${Date.now()}.${fileExt}`; 
-                    
-                    // 💡 优化 2：明确上传路径。注意：如果你的桶名字就叫 images，那么上传路径里不要再重复写 images/ 目录
-                    // 直接写文件名，让它乖乖待在桶的根目录下
-                    const uploadPath = baseName; 
 
-                    await executeSingleUpload(file, uploadPath, (percent) => {
-                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前进度: ${percent}%`, 'info');
+                    await executeSingleUpload(file, baseName, (percent) => {
+                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 上传进度: ${percent}%`, 'info');
                     });
 
-                    // 💡 优化 3：动态拼接线上可访问的绝对 URL 链接
                     const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/${baseName}`;
-                    deployedUrls.push(`${storageUrl}?t=${new Date().getTime()}`);
+                    deployedUrls.push(storageUrl);
+                }
 
-                    // 同步更新到内容管理表
+                // 【阶段 2】：将这批完整的 deployedUrls “全家福”一次性同步给所有的 Banner 席位！
+                for (let i = 0; i < deployedUrls.length; i++) {
+                    const storageUrl = deployedUrls[i];
+                    
                     await window.supabaseClient
                         .from('content_management')
                         .upsert({
                             category: 'banner',
                             slot_index: i,
-                            title: `轮播大图推荐 ${i + 1}`,
-                            subtitle: '点击查看艺术详情',
-                            theme_tags: ['Banner', '精选'],
+                            title: `精选轮播推荐集`,
+                            subtitle: `幻灯片精选系列 (第 ${i + 1} 页)`,
+                            theme_tags: ['Banner', '全集展出'],
                             cover_url: storageUrl,
-                            detail_urls: [storageUrl], // 默认包含自身
+                            // 🎯 【核心改动】：这里不再只传自己，而是直接把整套 5 张图的数组全塞进去！
+                            detail_urls: deployedUrls, 
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'category,slot_index' });
                 }
 
-                // 广播 site_config
+                // 广播 site_config 保持首页渲染正常
+                const cacheBustedUrls = deployedUrls.map(url => `${url}?t=${new Date().getTime()}`);
                 await window.supabaseClient
                     .from('site_config')
-                    .upsert([{ section: 'section_banner', url: JSON.stringify(deployedUrls) }]);
+                    .upsert([{ section: 'section_banner', url: JSON.stringify(cacheBustedUrls) }]);
 
-                showStatus('🎉 首页轮播大图已成功同步注册（404路径已全面修复）！', 'success');
+                showStatus('🎉 首页轮播大图全集联动注册成功！点击任意一张均能看全集多图！', 'success');
                 selectedFilesCache = [];
                 fileInput.value = '';
                 await refreshLiveDashboard(supabaseUrl);
