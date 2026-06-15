@@ -32,45 +32,48 @@ document.addEventListener("DOMContentLoaded", function() {
     forbidImageActions();
 
     // ==========================================
-    // 需求 4：主页轮播图（Banner）点击跳转 detail.html（增强匹配版）
+    // 需求 4：主页轮播图（Banner）智能识别跳转（终极强弹版）
     // ==========================================
     const currentPath = window.location.pathname;
     const isHomePage = currentPath.includes('index.html') || currentPath === '/' || currentPath.endsWith('io/');
     
     if (isHomePage) {
-        // 1. 广谱匹配：把所有可能跟 banner、轮播、滑块相关的图片全部一网打尽
-        const bannerSelectors = [
-            '.banner img', '.carousel img', '.slider img', 
-            '#banner img', '#carousel img', '.swiper-slide img',
-            '.banner-container img', '.index-banner img',
-            '.slide img', '.focus img', '.home-kv img',
-            // 如果你的轮播图在外层有特定的包裹，可以在下面继续追加
-        ];
-        
-        const attachBannerEvents = () => {
-            const bannerImages = document.querySelectorAll(bannerSelectors.join(','));
-            console.log(`【需求4】当前页面共抓取到 ${bannerImages.length} 张 Banner 图片`);
+        const attachBannerEventsSmart = () => {
+            // 简单粗暴：直接抓取全网页所有的 img 标签
+            const allImages = document.querySelectorAll('img');
+            let boundCount = 0;
             
-            bannerImages.forEach((img, index) => {
-                // 确保图片有源地址，且还没被绑定过
-                if (!img || img.getAttribute('data-nav-bound')) return;
+            allImages.forEach((img, index) => {
+                // 核心逻辑：通过图片的实际渲染宽度或样式宽度来筛选 Banner 大图
+                // 正常首页的 Banner 宽度绝对会大于 400px，而图标和小图会被自动过滤
+                const isLargeImage = img.offsetWidth > 400 || img.clientWidth > 400 || (img.style.width && parseInt(img.style.width) > 400);
                 
-                img.style.cursor = 'pointer';
-                img.setAttribute('data-nav-bound', 'true'); // 标记已绑定
-                
-                img.addEventListener('click', function() {
-                    const imgId = img.getAttribute('data-id') || img.getAttribute('data-image-id') || index;
-                    const imgSrc = encodeURIComponent(img.src);
-                    window.location.href = `detail.html?imageId=${imgId}&src=${imgSrc}`;
-                });
+                if (isLargeImage) {
+                    if (img.getAttribute('data-nav-bound')) return; // 防止重复绑定
+                    
+                    // 强行改变指针样式，如果没有变，说明样式被原生 CSS 的 !important 覆盖了
+                    img.style.setProperty('cursor', 'pointer', 'important');
+                    img.title = "点击查看详情";
+                    img.setAttribute('data-nav-bound', 'true');
+                    
+                    // 绑定点击跳转
+                    img.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const imgId = img.getAttribute('data-id') || img.getAttribute('data-image-id') || index;
+                        const imgSrc = encodeURIComponent(img.src);
+                        window.location.href = `detail.html?imageId=${imgId}&src=${imgSrc}`;
+                    });
+                    
+                    boundCount++;
+                }
             });
+            console.log(`【需求4智能扫描】成功强行绑定了 ${boundCount} 张大图 Banner 的点击事件`);
         };
 
-        // 2. 立即执行一次
-        attachBannerEvents();
-        
-        // 3. 核心机制：针对 Swiper/Slick 等动态轮播图插件，延迟 1.5 秒等它们生成完毕后再抓一次
-        setTimeout(attachBannerEvents, 1500);
+        // 立即执行一次
+        attachBannerEventsSmart();
+        // 延迟 1.5 秒再执行一次，防止动态轮播插件生成滞后
+        setTimeout(attachBannerEventsSmart, 1500);
     }
 
     // ==========================================
