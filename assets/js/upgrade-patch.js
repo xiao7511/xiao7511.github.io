@@ -32,32 +32,45 @@ document.addEventListener("DOMContentLoaded", function() {
     forbidImageActions();
 
     // ==========================================
-    // 需求 4：主页轮播图（Banner）点击跳转 detail.html
+    // 需求 4：主页轮播图（Banner）点击跳转 detail.html（增强匹配版）
     // ==========================================
     const currentPath = window.location.pathname;
     const isHomePage = currentPath.includes('index.html') || currentPath === '/' || currentPath.endsWith('io/');
     
     if (isHomePage) {
-        // 广谱匹配所有可能的轮播图和 Banner 区域
+        // 1. 广谱匹配：把所有可能跟 banner、轮播、滑块相关的图片全部一网打尽
         const bannerSelectors = [
             '.banner img', '.carousel img', '.slider img', 
             '#banner img', '#carousel img', '.swiper-slide img',
-            '.banner-container img', '.index-banner img'
+            '.banner-container img', '.index-banner img',
+            '.slide img', '.focus img', '.home-kv img',
+            // 如果你的轮播图在外层有特定的包裹，可以在下面继续追加
         ];
         
-        const bannerImages = document.querySelectorAll(bannerSelectors.join(','));
-        console.log(`【需求4】扫描到首页 Banner 图片数量: ${bannerImages.length}`);
-        
-        bannerImages.forEach((img, index) => {
-            img.style.cursor = 'pointer';
-            img.title = "点击查看详情";
-            img.addEventListener('click', function() {
-                // 优先获取图片自带的 ID，没有就用索引，同时把图片路径传过去
-                const imgId = img.getAttribute('data-id') || img.getAttribute('data-image-id') || index;
-                const imgSrc = encodeURIComponent(img.src);
-                window.location.href = `detail.html?imageId=${imgId}&src=${imgSrc}`;
+        const attachBannerEvents = () => {
+            const bannerImages = document.querySelectorAll(bannerSelectors.join(','));
+            console.log(`【需求4】当前页面共抓取到 ${bannerImages.length} 张 Banner 图片`);
+            
+            bannerImages.forEach((img, index) => {
+                // 确保图片有源地址，且还没被绑定过
+                if (!img || img.getAttribute('data-nav-bound')) return;
+                
+                img.style.cursor = 'pointer';
+                img.setAttribute('data-nav-bound', 'true'); // 标记已绑定
+                
+                img.addEventListener('click', function() {
+                    const imgId = img.getAttribute('data-id') || img.getAttribute('data-image-id') || index;
+                    const imgSrc = encodeURIComponent(img.src);
+                    window.location.href = `detail.html?imageId=${imgId}&src=${imgSrc}`;
+                });
             });
-        });
+        };
+
+        // 2. 立即执行一次
+        attachBannerEvents();
+        
+        // 3. 核心机制：针对 Swiper/Slick 等动态轮播图插件，延迟 1.5 秒等它们生成完毕后再抓一次
+        setTimeout(attachBannerEvents, 1500);
     }
 
     // ==========================================
