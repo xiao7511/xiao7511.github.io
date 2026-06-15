@@ -84,12 +84,36 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     // ==========================================
-    // 需求 3：detail.html 页面图片增加点赞功能
+    // 需求 3：detail.html 页面图片增加点赞功能（含防空值数据兜底）
     // ==========================================
     if (currentPath.includes('detail.html')) {
         const injectLikesMobileSafe = () => {
-            // 精准针对详情页的图片
-            const detailImages = document.querySelectorAll('.detail-content img, #gallery img, .main-img img, detail img, article img');
+            // 【新增高级兜底】：如果检测到老代码因为没多图而弹出了提示
+            // 我们强行把从首页传过来的封面图 url (src 参数) 塞进页面里当做内容显示！
+            const urlParams = new URLSearchParams(window.location.search);
+            const backupSrc = urlParams.get('src');
+            
+            // 查找老代码中可能存放提示文字的容器（根据你的提示词进行模糊捕获）
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(el => {
+                if (el.children.length === 0 && el.innerText && el.innerText.includes('尚未上传详情页多图内容')) {
+                    if (backupSrc && !document.getElementById('hermes-backup-img')) {
+                        // 隐藏提示词
+                        el.style.display = 'none';
+                        
+                        // 在提示词其父级强行插入一张大图，把封面当内容展示
+                        const backupImg = document.createElement('img');
+                        backupImg.id = 'hermes-backup-img';
+                        backupImg.src = decodeURIComponent(backupSrc);
+                        backupImg.style.cssText = "width: 100%; max-width: 800px; display: block; margin: 20px auto; border-radius: 8px;";
+                        
+                        el.parentNode.insertBefore(backupImg, el);
+                    }
+                }
+            });
+
+            // 正常的点赞按钮挂载逻辑
+            const detailImages = document.querySelectorAll('.detail-content img, #gallery img, .main-img img, detail img, article img, .manga-page img, .comic-img img, #hermes-backup-img');
             
             detailImages.forEach((img, index) => {
                 if (!img || img.width < 100 || img.parentElement.classList.contains('like-img-wrapper')) return;
@@ -98,6 +122,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 wrapper.className = 'like-img-wrapper';
                 wrapper.style.position = 'relative';
                 wrapper.style.display = 'inline-block';
+                if(img.id === 'hermes-backup-img') wrapper.style.width = '100%';
                 
                 img.parentNode.insertBefore(wrapper, img);
                 wrapper.appendChild(img);
@@ -147,7 +172,6 @@ document.addEventListener("DOMContentLoaded", function() {
         injectLikesMobileSafe();
         setTimeout(injectLikesMobileSafe, 1000);
     }
-});
 
 // ==========================================
 // 需求 1 & 2：全局工具箱
