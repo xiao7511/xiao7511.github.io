@@ -172,6 +172,7 @@ document.addEventListener("DOMContentLoaded", function() {
         injectLikesMobileSafe();
         setTimeout(injectLikesMobileSafe, 1000);
     }
+});
 
 // ==========================================
 // 需求 1 & 2：全局工具箱
