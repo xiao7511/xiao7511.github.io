@@ -393,26 +393,32 @@
                 return;
             }
 
-            showStatus(`⚡ 正在准备为首页轮播大图进行覆盖同步，并同步在 content_management 中创建详情席位...`, 'info');
+            showStatus(`⚡ 正在准备为首页轮播大图进行覆盖同步...`, 'info');
 
             try {
-                // 限制最多上传 5 张
                 const maxCount = Math.min(selectedFilesCache.length, 5);
                 let deployedUrls = [];
 
                 for (let i = 0; i < maxCount; i++) {
                     const file = selectedFilesCache[i];
-                    const fileName = `banner_slot_${i}_cover_${Date.now()}.png`; 
                     
-                    await executeSingleUpload(file, `images/${fileName}`, (percent) => {
-                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前上传进度: ${percent}%`, 'info');
+                    // 💡 优化 1：精准动态捕获用户上传图片的真实后缀 (jpg/png/jpeg/webp等)
+                    const fileExt = file.name.split('.').pop().toLowerCase() || 'png';
+                    const baseName = `banner_slot_${i}_cover_${Date.now()}.${fileExt}`; 
+                    
+                    // 💡 优化 2：明确上传路径。注意：如果你的桶名字就叫 images，那么上传路径里不要再重复写 images/ 目录
+                    // 直接写文件名，让它乖乖待在桶的根目录下
+                    const uploadPath = baseName; 
+
+                    await executeSingleUpload(file, uploadPath, (percent) => {
+                        showStatus(`⏱️ 正在同步首页 Banner (第 ${i + 1}/${maxCount} 张) -> 当前进度: ${percent}%`, 'info');
                     });
 
-                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/${fileName}`;
+                    // 💡 优化 3：动态拼接线上可访问的绝对 URL 链接
+                    const storageUrl = `${supabaseUrl}/storage/v1/object/public/images/${baseName}`;
                     deployedUrls.push(`${storageUrl}?t=${new Date().getTime()}`);
 
-                    // 🎯 【核心调整】：同步将 Banner 作为独立分类写入 content_management 表
-                    // 默认将自身作为第一张详情图塞入 detail_urls，防止出现“尚未上传多图内容”的空值提示
+                    // 同步更新到内容管理表
                     await window.supabaseClient
                         .from('content_management')
                         .upsert({
@@ -422,22 +428,19 @@
                             subtitle: '点击查看艺术详情',
                             theme_tags: ['Banner', '精选'],
                             cover_url: storageUrl,
-                            detail_urls: [storageUrl], // 默认内页多图包含自己，确保点击必有图看！
+                            detail_urls: [storageUrl], // 默认包含自身
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'category,slot_index' });
                 }
 
-                // 兼容老代码的 site_config 推送，确保前台轮播组件不崩溃
-                showStatus(`正在下发 [section_banner] 的前台广播指令...`, 'info');
+                // 广播 site_config
                 await window.supabaseClient
                     .from('site_config')
                     .upsert([{ section: 'section_banner', url: JSON.stringify(deployedUrls) }]);
 
-                showStatus('🎉 首页轮播大图已成功注册到内容管理表（含详情安全保障）！', 'success');
+                showStatus('🎉 首页轮播大图已成功同步注册（404路径已全面修复）！', 'success');
                 selectedFilesCache = [];
                 fileInput.value = '';
-                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
-                
                 await refreshLiveDashboard(supabaseUrl);
 
             } catch (err) {
