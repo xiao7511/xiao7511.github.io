@@ -32,48 +32,71 @@ document.addEventListener("DOMContentLoaded", function() {
     forbidImageActions();
 
     // ==========================================
-    // 需求 4：主页轮播图（Banner）智能识别跳转（终极强弹版）
+    // 需求 4：主页轮播图（Banner）全动态盲扫（终极兼容版）
     // ==========================================
     const currentPath = window.location.pathname;
     const isHomePage = currentPath.includes('index.html') || currentPath === '/' || currentPath.endsWith('io/');
     
     if (isHomePage) {
-        const attachBannerEventsSmart = () => {
-            // 简单粗暴：直接抓取全网页所有的 img 标签
-            const allImages = document.querySelectorAll('img');
+        const attachBannerEventsOmni = () => {
+            // 1. 扫描全网页所有标签，只要类名或ID里包含轮播/Banner关键词就抓出来
+            const allElements = document.querySelectorAll('*');
             let boundCount = 0;
             
-            allImages.forEach((img, index) => {
-                // 核心逻辑：通过图片的实际渲染宽度或样式宽度来筛选 Banner 大图
-                // 正常首页的 Banner 宽度绝对会大于 400px，而图标和小图会被自动过滤
-                const isLargeImage = img.offsetWidth > 400 || img.clientWidth > 400 || (img.style.width && parseInt(img.style.width) > 400);
+            allElements.forEach((el, index) => {
+                const className = String(el.className || '').toLowerCase();
+                const idName = String(el.id || '').toLowerCase();
+                const tagName = el.tagName.toLowerCase();
                 
-                if (isLargeImage) {
-                    if (img.getAttribute('data-nav-bound')) return; // 防止重复绑定
-                    
-                    // 强行改变指针样式，如果没有变，说明样式被原生 CSS 的 !important 覆盖了
-                    img.style.setProperty('cursor', 'pointer', 'important');
-                    img.title = "点击查看详情";
-                    img.setAttribute('data-nav-bound', 'true');
-                    
-                    // 绑定点击跳转
-                    img.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const imgId = img.getAttribute('data-id') || img.getAttribute('data-image-id') || index;
-                        const imgSrc = encodeURIComponent(img.src);
-                        window.location.href = `detail.html?imageId=${imgId}&src=${imgSrc}`;
-                    });
-                    
-                    boundCount++;
+                // 判断是否是轮播图区域（包含 banner, slide, carousel, swiper 关键词的容器或图片）
+                const isBannerElement = className.includes('banner') || idName.includes('banner') ||
+                                        className.includes('slide') || idName.includes('slide') ||
+                                        className.includes('carousel') || idName.includes('carousel') ||
+                                        tagName === 'banner';
+                                        
+                if (isBannerElement) {
+                    // 排除掉太小的元素（比如小图标或按钮），Banner区域通常宽度或高度很大
+                    if (el.offsetWidth > 200 || el.clientWidth > 200) {
+                        if (el.getAttribute('data-nav-bound')) return; // 防止重复绑定
+                        
+                        // 强行改变指针样式（加入 !important 确保变成手掌）
+                        el.style.setProperty('cursor', 'pointer', 'important');
+                        el.setAttribute('data-nav-bound', 'true');
+                        
+                        // 绑定点击跳转
+                        el.addEventListener('click', function(e) {
+                            // 如果用户点的是轮播图里的按钮或切换箭头，则不触发跳转
+                            if (e.target.tagName === 'BUTTON' || e.target.className.includes('arrow') || e.target.className.includes('btn')) {
+                                return;
+                            }
+                            
+                            e.preventDefault();
+                            e.stopPropagation();
+                            
+                            // 尝试获取可能存在的图片源
+                            let imgSrc = '';
+                            if (el.tagName === 'IMG') {
+                                imgSrc = el.src;
+                            } else {
+                                const childImg = el.querySelector('img');
+                                if (childImg) imgSrc = childImg.src;
+                            }
+                            
+                            const imgId = el.getAttribute('data-id') || index;
+                            window.location.href = `detail.html?imageId=${imgId}&src=${encodeURIComponent(imgSrc)}`;
+                        });
+                        
+                        boundCount++;
+                    }
                 }
             });
-            console.log(`【需求4智能扫描】成功强行绑定了 ${boundCount} 张大图 Banner 的点击事件`);
+            console.log(`【需求4盲扫】成功强行绑定了 ${boundCount} 个轮播/Banner区域的点击事件`);
         };
 
-        // 立即执行一次
-        attachBannerEventsSmart();
-        // 延迟 1.5 秒再执行一次，防止动态轮播插件生成滞后
-        setTimeout(attachBannerEventsSmart, 1500);
+        // 立即执行并多次延迟巡检，防止动态插件异步生成
+        attachBannerEventsOmni();
+        setTimeout(attachBannerEventsOmni, 1000);
+        setTimeout(attachBannerEventsOmni, 2500);
     }
 
     // ==========================================
