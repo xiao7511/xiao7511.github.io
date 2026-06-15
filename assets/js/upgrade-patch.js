@@ -69,12 +69,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     const imgId = el.getAttribute('data-id') || index;
                     
-                    // 核心修复：同时把 id、category 和 slot 拼给 URL，触发 Worker 的全量匹配机制
-                    // 我们默认将分类设置为 'manga'，slot 设为当前图片的索引 index，确保不论老代码还是新 Worker 都能正确识别
-                    const finalCategory = el.getAttribute('data-category') || 'manga';
-                    const finalSlot = el.getAttribute('data-slot') || index;
-
-                    window.location.href = `detail.html?id=${imgId}&imageId=${imgId}&category=${finalCategory}&slot=${finalSlot}`;
+                    // 完美匹配全新重构的分类和槽位逻辑
+                    const finalCategory = "banner"; // 强行指定分类为后台改好的 banner
+                    const targetUrl = `detail.html?category=${finalCategory}&slot=${slotIndex}&id=${slotIndex}&src=${encodeURIComponent(imgSrc)}`;
+                    
+                    console.log("【Hermes】全局成功捕获轮播区点击，正在前往新版内容区：", targetUrl);
+                    window.location.href = targetUrl;
                 });
             });
         };
