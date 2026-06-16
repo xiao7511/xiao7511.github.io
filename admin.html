@@ -166,6 +166,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            position: relative;
         }
 
         .img-container { 
@@ -203,6 +204,30 @@
         .badge {
             font-size: 0.75rem; padding: 4px 8px; border-radius: 4px; display: inline-block;
             background: rgba(255,255,255,0.06); color: var(--text-muted);
+        }
+
+        /* ✨ 新增：删除/擦除内容悬浮按钮样式 */
+        .delete-float-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 71, 87, 0.85);
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+        .delete-float-btn:hover {
+            background: #ff4757;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.5);
         }
 
         @media (max-width: 768px) {
@@ -257,6 +282,13 @@
     </div>
 
 <script>
+    // 🎯 优化 1：彻底瓦解前台补丁劫持。在捕获阶段拦截全站的跳转干扰流，确保上传弹窗 100% 正常弹起！
+    window.addEventListener('click', function(e) {
+        if (window.location.pathname.includes('admin.html')) {
+            e.stopPropagation(); 
+        }
+    }, true);
+
     function safeBack() {
         const hasReferrer = document.referrer && document.referrer.trim() !== "";
         if (hasReferrer && history.length > 1) {
@@ -337,7 +369,6 @@
         return session;
     }
 
-    // 🎯 通用高级百分比进度跟踪文件上传引擎（自动处理大视频架构标头）
     async function executeSingleUpload(file, pathName, onPercentProgress) {
         const fileExt = file.name.split('.').pop().toLowerCase();
         let calculatedMimeType = file.type || 'application/octet-stream';
@@ -399,7 +430,6 @@
                 const maxCount = Math.min(selectedFilesCache.length, 5);
                 let deployedUrls = [];
 
-                // 【阶段 1】：先批量上传所有图片，收集到完整的图片链接池 (deployedUrls)
                 for (let i = 0; i < maxCount; i++) {
                     const file = selectedFilesCache[i];
                     const fileExt = file.name.split('.').pop().toLowerCase() || 'png';
@@ -413,7 +443,6 @@
                     deployedUrls.push(storageUrl);
                 }
 
-                // 【阶段 2】：将这批完整的 deployedUrls “全家福”一次性同步给所有的 Banner 席位！
                 for (let i = 0; i < deployedUrls.length; i++) {
                     const storageUrl = deployedUrls[i];
                     
@@ -426,13 +455,11 @@
                             subtitle: `幻灯片精选系列 (第 ${i + 1} 页)`,
                             theme_tags: ['Banner', '全集展出'],
                             cover_url: storageUrl,
-                            // 🎯 【核心改动】：这里不再只传自己，而是直接把整套 5 张图的数组全塞进去！
                             detail_urls: deployedUrls, 
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'category,slot_index' });
                 }
 
-                // 广播 site_config 保持首页渲染正常
                 const cacheBustedUrls = deployedUrls.map(url => `${url}?t=${new Date().getTime()}`);
                 await window.supabaseClient
                     .from('site_config')
@@ -448,6 +475,60 @@
             }
         });
     }
+
+    // 🎯 优化 2：高级云端数据单槽擦除删除引擎
+    window.eraseSlotContent = async function(category, slotIndex, supabaseUrl) {
+        if (!confirm(`⚠️ 确定要彻底擦除此格的所有云端配置和发布的图集内容吗？`)) return;
+
+        showStatus(`正在擦除 [${category}] 分类第 ${slotIndex + 1} 个槽位资源...`, 'info');
+        try {
+            if (category === 'banner') {
+                // 1. 如果擦除的是 Banner，先同步将 content_management 中的记录安全擦除/置空
+                await window.supabaseClient
+                    .from('content_management')
+                    .upsert({
+                        category: 'banner',
+                        slot_index: slotIndex,
+                        title: '', subtitle: '', theme_tags: [],
+                        cover_url: '', detail_urls: [],
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'category,slot_index' });
+
+                // 2. 从 site_config 中获取老轮播图并去除当前槽位
+                const { data } = await window.supabaseClient.from('site_config').select('url').eq('section', 'section_banner').maybeSingle();
+                if (data && data.url) {
+                    let urls = JSON.parse(data.url);
+                    if (urls[slotIndex]) {
+                        urls[slotIndex] = ""; // 设为空字符串以供前台忽略
+                        await window.supabaseClient
+                            .from('site_config')
+                            .upsert([{ section: 'section_banner', url: JSON.stringify(urls) }]);
+                    }
+                }
+            } else {
+                // 针对动漫和漫画专区，直接在 content_management 中对当前槽位执行重置清洗
+                await window.supabaseClient
+                    .from('content_management')
+                    .upsert({
+                        category: category,
+                        slot_index: slotIndex,
+                        title: '',
+                        subtitle: '',
+                        theme_tags: [],
+                        cover_url: '',
+                        detail_urls: [],
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'category,slot_index' });
+            }
+
+            showStatus('🎉 选定区域云端内容已成功擦除并重置！', 'success');
+            await refreshLiveDashboard(supabaseUrl);
+
+        } catch (err) {
+            console.error(err);
+            showStatus('擦除流发生阻断: ' + err.message, 'error');
+        }
+    };
 
     function generateMediaTag(url) {
         if (!url) return `<span style="font-size:0.8rem; color:var(--text-muted);">📷 暂无内容，请选取上传</span>`;
@@ -473,12 +554,6 @@
             if (data && !error) managementData = data;
         } catch (err) { console.error(err); }
 
-        let bannerList = [];
-        try {
-            const { data } = await window.supabaseClient.from('deployed_images').select('*').eq('section_id', 'section_banner');
-            if (data) bannerList = data;
-        } catch(e){}
-
         const modules = [
             { id: 'banner', name: '🎪 首页 5 张大图轮播区详情图发布通道', type: 'content', maxCount: 5 },
             { id: 'anime', name: '📺 动漫推荐专区 (已深度优化大文件详情视频高速流秒开上传)', type: 'content', maxCount: 4 },
@@ -494,90 +569,67 @@
             const grid = document.createElement('div');
             grid.className = 'image-flow-grid';
 
-            if (mod.type === 'banner') {
-                for (let i = 0; i < mod.maxCount; i++) {
-                    const card = document.createElement('div');
-                    card.className = 'img-preview-card';
-                    const match = bannerList.find(b => b.image_index === i);
-                    const cacheBuster = `?t=${new Date().getTime()}`;
+            for (let i = 0; i < mod.maxCount; i++) {
+                const card = document.createElement('div');
+                card.className = 'img-preview-card';
 
-                    if (match) {
-                        card.innerHTML = `
-                            <div class="img-container">${generateMediaTag(match.storage_url + cacheBuster)}</div>
-                            <span class="badge" style="background:#2ecc71; color:#fff; text-align:center; margin-top:4px;">● 已上线 轮播位 [${i+1}]</span>
-                        `;
-                    } else {
-                        card.innerHTML = `
-                            <div class="img-container" style="color:var(--text-muted); font-size:0.8rem;">📷 席位空缺 [${i+1}]</div>
-                            <span class="badge" style="text-align:center; margin-top:4px;">未部署</span>
-                        `;
-                    }
-                    grid.appendChild(card);
-                }
-                block.appendChild(grid);
-            } 
-            else {
-                for (let i = 0; i < mod.maxCount; i++) {
-                    const card = document.createElement('div');
-                    card.className = 'img-preview-card';
+                const record = managementData.find(d => d.category === mod.id && d.slot_index === i) || {
+                    title: '', subtitle: '', theme_tags: [], cover_url: '', detail_urls: []
+                };
 
-                    const record = managementData.find(d => d.category === mod.id && d.slot_index === i) || {
-                        title: '', subtitle: '', theme_tags: [], cover_url: '', detail_urls: []
-                    };
+                const cacheBuster = `?t=${new Date().getTime()}`;
+                const mediaTagHtml = record.cover_url ? generateMediaTag(record.cover_url + cacheBuster) : generateMediaTag(null);
 
-                    const cacheBuster = `?t=${new Date().getTime()}`;
-                    const mediaTagHtml = record.cover_url ? generateMediaTag(record.cover_url + cacheBuster) : generateMediaTag(null);
+                const acceptCoverType = 'image/*';
+                const acceptDetailType = 'image/*,video/*';
+                const uploadLabel = '📁 选取主封面(仅限图片，禁止视频)';
+                const detailLabel = '📂 详情内容图集/视频流';
 
-                    // 🎯 严格限定：主封面只能传图片，禁止视频文件
-                    const acceptCoverType = 'image/*';
-                    const acceptDetailType = 'image/*,video/*';
-                    const uploadLabel = '📁 选取主封面(仅限图片，禁止视频)';
-                    const detailLabel = '📂 详情内容图集/视频流';
+                // ✨ 注入全新删除核心：不论哪个卡片板块，全部注入顶层绝对定位的 [❌ 擦除内容] 霓虹按钮
+                card.innerHTML = `
+                    <button class="delete-float-btn" onclick="eraseSlotContent('${mod.id}', ${i}, '${supabaseUrl}')" title="清空此单元内容及数据">❌ 擦除内容</button>
+                    
+                    <div style="font-size:0.85rem; font-weight:bold; color:#fff;">🖼️ 首页展示封面 (格子 ${i+1})</div>
+                    <div class="img-container">
+                        ${mediaTagHtml}
+                    </div>
+                    
+                    <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.12);">
+                        <div id="cover-count-lbl-${mod.id}-${i}" style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">${uploadLabel} (未选新文件)</div>
+                        <input type="file" id="cover-file-${mod.id}-${i}" accept="${acceptCoverType}" onchange="handleCoverFileSelect('${mod.id}', ${i})" style="font-size:0.75rem; color:#fff; width:100%;" />
+                    </div>
 
-                    card.innerHTML = `
-                        <div style="font-size:0.85rem; font-weight:bold; color:#fff;">🖼️ 首页展示封面 (格子 ${i+1})</div>
-                        <div class="img-container">
-                            ${mediaTagHtml}
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
+                            <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：火影忍者剧场版" />
                         </div>
-                        
-                        <div style="background:rgba(255,255,255,0.03); padding:6px; border-radius:6px; border:1px dashed rgba(255,255,255,0.12);">
-                            <div id="cover-count-lbl-${mod.id}-${i}" style="font-size:0.7rem; color:var(--text-muted); margin-bottom:2px;">${uploadLabel} (未选新文件)</div>
-                            <input type="file" id="cover-file-${mod.id}-${i}" accept="${acceptCoverType}" onchange="handleCoverFileSelect('${mod.id}', ${i})" style="font-size:0.75rem; color:#fff; width:100%;" />
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题 / 最新集数</label>
+                            <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 720 话" />
                         </div>
-
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <div>
-                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">📌 主标题名称</label>
-                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：火影忍者剧场版" />
-                            </div>
-                            <div>
-                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🎬 连载副标题 / 最新集数</label>
-                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 720 话" />
-                            </div>
-                            <div>
-                                <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 连载主题标签 (多个用英文逗号隔开)</label>
-                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,羁绊,冒险" />
-                            </div>
+                        <div>
+                            <label style="font-size:0.7rem; color:var(--text-muted); display:block; margin-bottom:2px;">🏷️ 连载主题标签 (多个用英文逗号隔开)</label>
+                            <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,羁绊,冒险" />
                         </div>
+                    </div>
 
-                        <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; margin-top:4px;">
-                            <div style="font-size:0.75rem; color:var(--accent-neon); margin-bottom:4px; font-weight:bold;">${detailLabel} (已存: ${(record.detail_urls || []).length})</div>
-                            <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="${acceptDetailType}" style="font-size:0.75rem; color:var(--text-muted); width:100%;" />
-                        </div>
+                    <div style="background:rgba(0,0,0,0.3); padding:8px; border-radius:6px; margin-top:4px;">
+                        <div style="font-size:0.75rem; color:var(--accent-neon); margin-bottom:4px; font-weight:bold;">${detailLabel} (已存: ${(record.detail_urls || []).length})</div>
+                        <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="${acceptDetailType}" style="font-size:0.75rem; color:var(--text-muted); width:100%;" />
+                    </div>
 
-                        <button id="save-btn-${mod.id}-${i}" onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; margin-top:auto; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:10px; border-radius:6px; cursor:pointer; font-size:0.85rem;">
-                            💾 保存该格配置并同步发布
-                        </button>
-                    `;
-                    grid.appendChild(card);
-                }
-                block.appendChild(grid);
+                    <button id="save-btn-${mod.id}-${i}" onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" style="width:100%; margin-top:auto; background:linear-gradient(135deg, #00f5ff 0%, #0055ff 100%); color:#000; font-weight:bold; border:none; padding:10px; border-radius:6px; cursor:pointer; font-size:0.85rem;">
+                        💾 保存该格配置并同步发布
+                    </button>
+                `;
+                grid.appendChild(card);
             }
+            block.appendChild(grid);
             wrapper.appendChild(block);
         }
     }
 
-    // 🎯 精准拦截非图片输入，并计算联动主封面的选择数量
     window.handleCoverFileSelect = function(category, slotIndex) {
         const input = document.getElementById(`cover-file-${category}-${slotIndex}`);
         const lbl = document.getElementById(`cover-count-lbl-${category}-${slotIndex}`);
@@ -589,7 +641,6 @@
             return;
         }
 
-        // 🎯 严格防线二：除 Banner 外，所有主封面选择视频时立即重置拦截
         const hasVideo = files.some(f => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/));
         if(hasVideo) {
             alert('🚨 权限拦截：主封面区域不允许使用视频作为展示封面，请选择纯图片格式素材！');
@@ -598,8 +649,7 @@
             return;
         }
 
-        // 🎯 主封面上传后，精确回显文件状态与选中的数量
-        lbl.innerHTML = `📁 主封面已就绪 —— <em style="color:#00f5ff; font-weight:bold;">已选择文件数量: ${files.length} 个</em>`;
+        lbl.innerHTML = `📁 主封面已就绪 —— <em style="color:#00f5ff; font-weight:bold;">已选择新文件</em>`;
     };
 
     window.saveContentModule = async function(category, slotIndex, supabaseUrl) {
@@ -613,7 +663,10 @@
         const saveButton = document.getElementById(`save-btn-${category}-${slotIndex}`);
         
         try {
-            const currentBlockName = category === 'anime' ? '动漫推荐专区' : '漫画连载专区';
+            let currentBlockName = "推荐专区";
+            if (category === 'banner') currentBlockName = "轮播推荐专区";
+            if (category === 'anime') currentBlockName = "动漫推荐专区";
+            if (category === 'manga') currentBlockName = "漫画连载专区";
             
             saveButton.disabled = true;
             saveButton.innerText = "⏳ 正在分析媒体架构...";
@@ -632,7 +685,7 @@
                 
                 coverUrl = `${supabaseUrl}/storage/v1/object/public/images/${cName}`;
             } else {
-                const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).single();
+                const { data } = await window.supabaseClient.from('content_management').select('cover_url').eq('category', category).eq('slot_index', slotIndex).maybeSingle();
                 if (data) coverUrl = data.cover_url;
             }
 
@@ -644,7 +697,6 @@
                     const dFileExt = dFile.name.split('.').pop().toLowerCase();
                     const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.${dFileExt}`;
                     
-                    // 📡 详情内容区多媒体/大视频文件批量上传高频百分比追踪，解决大文件保存无反应
                     await executeSingleUpload(dFile, `images/${dName}`, (percent) => {
                         saveButton.innerText = `⏳ 正在传输文件 ${k+1}/${files.length} (${percent}%)`;
                         showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
@@ -654,8 +706,13 @@
                     detailUrls.push(dUrl);
                 }
             } else {
-                const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).single();
+                const { data } = await window.supabaseClient.from('content_management').select('detail_urls').eq('category', category).eq('slot_index', slotIndex).maybeSingle();
                 if (data && data.detail_urls) detailUrls = data.detail_urls;
+            }
+
+            // 如果是 Banner 分类单独单格发布更新，默认补充 detail_urls 机制防止崩坏
+            if (category === 'banner' && detailUrls.length === 0 && coverUrl) {
+                detailUrls = [coverUrl];
             }
 
             saveButton.innerText = "💾 正在写入云端集群数据...";
