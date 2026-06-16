@@ -76,9 +76,14 @@
     document.head.appendChild(style);
 
     // ==========================================
-    // 需求 4：主页轮播图点击跳转（基于全局冒泡监听，100% 触发）
+    // 需求 4：主页轮播图点击跳转（具备安全免疫环境，绝不误伤后台管理）
     // ==========================================
     document.addEventListener('click', function(e) {
+        // 🎯 核心修复防护墙：如果当前就在 admin.html 后台管理页面，前台拦截逻辑原地瘫痪，绝不拦截！
+        if (window.location.pathname.includes('admin.html')) {
+            return; 
+        }
+
         let target = e.target;
         let isBannerClick = false;
         let clickedImg = null;
@@ -89,7 +94,8 @@
             const idName = String(target.id || '').toLowerCase();
             const tagName = target.tagName.toLowerCase();
 
-            if (tagName === 'button' || className.includes('arrow') || className.includes('btn') || className.includes('dot')) {
+            // 如果点击到了切换按钮、左右箭头、或者任何表单输入框、上传按钮，直接放行
+            if (tagName === 'button' || tagName === 'input' || className.includes('arrow') || className.includes('btn') || className.includes('dot')) {
                 return;
             }
 
@@ -120,7 +126,6 @@
                 const filename = imgSrc.substring(imgSrc.lastIndexOf('/') + 1);
                 const match = filename.match(/\d+/);
                 if (match) {
-                    // 如果名字是 IMG_4823.jpeg，提取出来减去 4822 就能对应上槽位，或者直接当做 ID
                     const num = parseInt(match[0]);
                     if (num >= 4822 && num <= 4826) slotIndex = (num - 4822).toString();
                 }
