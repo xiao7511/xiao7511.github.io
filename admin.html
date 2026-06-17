@@ -672,13 +672,15 @@
             saveButton.innerText = "⏳ 正在分析媒体架构...";
             showStatus(`正在处理发布 [${currentBlockName}] 第 ${slotIndex + 1} 个槽位资源...`, 'info');
 
+            // 🎯 修复 1：清理主封面上传路径，去除多余的 images/ 前缀，直接置于桶根目录
             let coverUrl = "";
             if (coverInput && coverInput.files.length > 0) {
                 const cFile = coverInput.files[0];
                 const fileExt = cFile.name.split('.').pop().toLowerCase();
+                // 优化命名：用真实的当前模块分类（category）命名，防止全部变成 banner
                 const cName = `${category}_slot_${slotIndex}_cover_${Date.now()}.${fileExt}`;
                 
-                await executeSingleUpload(cFile, `images/${cName}`, (percent) => {
+                await executeSingleUpload(cFile, cName, (percent) => {
                     saveButton.innerText = `⏳ 正在上传封面 (${percent}%)`;
                     showStatus(`⏱️ 正在上传 [${currentBlockName}] 展示封面... 进度: ${percent}%`, 'info');
                 });
@@ -689,15 +691,18 @@
                 if (data) coverUrl = data.cover_url;
             }
 
+            // 🎯 修复 2：清理详情多图图集上传路径，彻底消灭 404 找不到对象问题
             let detailUrls = [];
             if (detailInput && detailInput.files.length > 0) {
                 const files = detailInput.files;
                 for (let k = 0; k < files.length; k++) {
                     const dFile = files[k];
                     const dFileExt = dFile.name.split('.').pop().toLowerCase();
+                    // 优化命名：精准使用对应分类，不再混淆
                     const dName = `${category}_slot_${slotIndex}_detail_${k}_${Date.now()}.${dFileExt}`;
                     
-                    await executeSingleUpload(dFile, `images/${dName}`, (percent) => {
+                    // 核心修改：这里传入 dName，而不是 images/${dName}，防止路径套娃
+                    await executeSingleUpload(dFile, dName, (percent) => {
                         saveButton.innerText = `⏳ 正在传输文件 ${k+1}/${files.length} (${percent}%)`;
                         showStatus(`⏱️ 正在上传详情内容 (${k + 1}/${files.length}): [${dFile.name}] -> 进度: ${percent}%`, 'info');
                     });
@@ -710,7 +715,6 @@
                 if (data && data.detail_urls) detailUrls = data.detail_urls;
             }
 
-            // 如果是 Banner 分类单独单格发布更新，默认补充 detail_urls 机制防止崩坏
             if (category === 'banner' && detailUrls.length === 0 && coverUrl) {
                 detailUrls = [coverUrl];
             }
