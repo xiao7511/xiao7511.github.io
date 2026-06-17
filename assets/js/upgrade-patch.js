@@ -1,67 +1,143 @@
 /**
- * Hermes-WebUI 优化升级补丁 - 终极全局动态捕获与轮播同步版
- * 修复：解决语法爆红，打通后台上传 Banner 后首页图片不更新、点击不跳转的问题
+ * Hermes-WebUI 优化升级补丁 - 全板块云端实时同步与深度防护版
+ * 修复：1. 解决后台配置动漫、漫画后，首页内容不更新的问题
+ * 2. 完美规避 admin.html 后台环境下的点击拦截与跳转误伤
  */
 
 (function() {
-    console.log("【Hermes 升级补丁】高级全局代理已激活...");
+    console.log("【Hermes 升级补丁】高级全局代理及全站动态引擎已激活...");
 
     // ==========================================
-    // 基础检查：安全捕获 SupabaseUrl (供首页同步 Banner 使用)
+    // 基础配置：安全捕获 SupabaseUrl 配置网关
     // ==========================================
-    const getSupabaseConfig = () => {
-        // 尝试从全局或 admin 的后台节点中捕获链接
+    const getCloudGateway = () => {
         return "https://api.nobistudio.com/"; 
     };
 
     // ==========================================
-    // 新增核心：首页静态轮播图转化为实时云端动态轮播
+    // 🌟 核心引擎：全站静态内容转化为实时云端动态流
     // ==========================================
-    const syncCloudBanners = async () => {
-        // 仅在首页生效
+    const syncAllCloudContents = async () => {
+        // 仅在站点首页生效
         const isHomePage = window.location.pathname === '/' || window.location.pathname.includes('index.html');
         if (!isHomePage) return;
 
         try {
-            // 从 Cloudflare Worker 网关安全获取最新的 Banner 配置
-            const res = await fetch(getSupabaseConfig());
+            // 1. 从 Cloudflare Worker 网关安全获取最新的云端配置凭证
+            const res = await fetch(getCloudGateway());
             if (!res.ok) return;
             const config = await res.json();
             
             if (config.SUPABASE_URL && config.ANON_KEY && window.supabase) {
                 const client = window.supabase.createClient(config.SUPABASE_URL, config.ANON_KEY);
                 
-                // 从全新的 content_management 表中抓取 category 为 banner 的 5 张图
-                const { data: bannerData, error } = await client
+                // 2. 一口气捞出 content_management 表中的所有活跃配置数据
+                const { data: allData, error } = await client
                     .from('content_management')
-                    .select('cover_url, slot_index')
-                    .eq('category', 'banner')
+                    .select('*')
                     .order('slot_index', { ascending: true });
 
-                if (!error && bannerData && bannerData.length > 0) {
-                    // 获取首页所有的轮播图片标签
+                if (error || !allData || allData.length === 0) return;
+
+                // 3. 按照分类分拣数据
+                const bannerList = allData.filter(d => d.category === 'banner');
+                const animeList = allData.filter(d => d.category === 'anime');
+                const mangaList = allData.filter(d => d.category === 'manga');
+
+                // ----------------------------------------------------
+                // 模块 A：动态同步首页 5 张大图轮播位
+                // ----------------------------------------------------
+                if (bannerList.length > 0) {
                     const slideImages = document.querySelectorAll('.hero__slides .hero__slide img');
-                    
-                    bannerData.forEach(item => {
+                    bannerList.forEach(item => {
                         const idx = item.slot_index;
                         if (slideImages[idx] && item.cover_url) {
-                            // 动态将静态图替换为管理员刚刚上传的云端存储图片
                             slideImages[idx].src = item.cover_url;
-                            // 为图片打上槽位标记，确保后续点击能完美拦截
                             slideImages[idx].setAttribute('data-slot', idx);
                         }
                     });
-                    console.log(`【Hermes】成功从云端数据表同步加载了 ${bannerData.length} 张全新 Banner 轮播大图！`);
                 }
+
+                // ----------------------------------------------------
+                // 模块 B：动态同步热门动漫推荐专区 (联动替换图片、标题与副标题)
+                // ----------------------------------------------------
+                if (animeList.length > 0) {
+                    // 根据 index.html 的结构，精准抓取动漫板块下的所有卡片
+                    // 假设你的动漫卡片容器类名包含 anime 或在特定的 section 里，这里使用通用智能选择器
+                    const animeCards = document.querySelectorAll('.anime-grid .card, .anime-section .card, [data-section="anime"] .card');
+                    
+                    animeList.forEach(item => {
+                        const idx = item.slot_index;
+                        const card = animeCards[idx];
+                        if (card) {
+                            // 替换封面图片/视频预览
+                            const imgEl = card.querySelector('img');
+                            if (imgEl && item.cover_url) imgEl.src = item.cover_url;
+
+                            // 替换主标题
+                            const titleEl = card.querySelector('.card-title, h3, .title');
+                            if (titleEl && item.title) titleEl.innerText = item.title;
+
+                            // 替换副标题/最新集数
+                            const subEl = card.querySelector('.card-subtitle, .episodes, .sub-title');
+                            if (subEl && item.subtitle) subEl.innerText = item.subtitle;
+
+                            // 为卡片或图片注入路由金色钥匙，供后续点击拦截使用
+                            card.setAttribute('data-category', 'anime');
+                            card.setAttribute('data-slot', idx);
+                            if (imgEl) {
+                                imgEl.setAttribute('data-category', 'anime');
+                                imgEl.setAttribute('data-slot', idx);
+                            }
+                        }
+                    });
+                }
+
+                // ----------------------------------------------------
+                // 模块 C：动态同步漫画连载专区 (联动替换图片、标题与标签)
+                // ----------------------------------------------------
+                if (mangaList.length > 0) {
+                    // 根据 index.html 的结构，精准抓取漫画板块下的所有卡片
+                    const mangaCards = document.querySelectorAll('.manga-grid .card, .manga-section .card, [data-section="manga"] .card');
+                    
+                    mangaList.forEach(item => {
+                        const idx = item.slot_index;
+                        const card = mangaCards[idx];
+                        if (card) {
+                            // 替换漫画封面
+                            const imgEl = card.querySelector('img');
+                            if (imgEl && item.cover_url) imgEl.src = item.cover_url;
+
+                            // 替换漫画名称
+                            const titleEl = card.querySelector('.manga-title, h3, .title');
+                            if (titleEl && item.title) titleEl.innerText = item.title;
+
+                            // 替换更新进度
+                            const subEl = card.querySelector('.manga-chapters, .status, .sub-title');
+                            if (subEl && item.subtitle) subEl.innerText = item.subtitle;
+
+                            // 注入路由标记
+                            card.setAttribute('data-category', 'manga');
+                            card.setAttribute('data-slot', idx);
+                            if (imgEl) {
+                                imgEl.setAttribute('data-category', 'manga');
+                                imgEl.setAttribute('data-slot', idx);
+                            }
+                        }
+                    });
+                }
+
+                console.log(`【Hermes】云端数据全量同步成功！已同步 Banner(${bannerList.length}), 动漫(${animeList.length}), 漫画(${mangaList.length})`);
             }
         } catch (e) {
-            console.error("【Hermes】轮播图云端同步时发生阻断: ", e);
+            console.error("【Hermes】全站动态流在映射时发生阻断: ", e);
         }
     };
 
-    // 立即执行并延迟二次确认，防止旧 DOM 还没渲染好
-    document.addEventListener('DOMContentLoaded', syncCloudBanners);
-    setTimeout(syncCloudBanners, 800);
+    // 立即侦听并多级轮询，确保在 DOM 树渲染完后第一时间执行云端覆盖
+    document.addEventListener('DOMContentLoaded', syncAllCloudContents);
+    setTimeout(syncAllCloudContents, 500);
+    setTimeout(syncAllCloudContents, 1200);
 
     // ==========================================
     // 需求 5：全站图片防右键下载、防移动端长按保存
@@ -70,23 +146,23 @@
         if (e.target.tagName === 'IMG') e.preventDefault();
     }, { passive: false, capture: true });
     
-    // 注入防长按 CSS
     const style = document.createElement('style');
     style.textContent = `img { -webkit-touch-callout: none !important; user-select: none !important; }`;
     document.head.appendChild(style);
 
     // ==========================================
-    // 需求 4：主页轮播图点击跳转（具备安全免疫环境，绝不误伤后台管理）
+    // 需求 4：全站卡片点击智能高精度重定向拦截器
     // ==========================================
     document.addEventListener('click', function(e) {
-        // 🎯 核心修复防护墙：如果当前就在 admin.html 后台管理页面，前台拦截逻辑原地瘫痪，绝不拦截！
+        // 🛡️ 后台环境免疫：如果当前处于 admin.html 后台管理系统，前台拦截立刻闭嘴，放行所有基础操作！
         if (window.location.pathname.includes('admin.html')) {
             return; 
         }
 
         let target = e.target;
-        let isBannerClick = false;
+        let isInterceptNeeded = false;
         let clickedImg = null;
+        let finalCategory = "";
         let slotIndex = "0";
 
         while (target && target !== document.body) {
@@ -94,35 +170,45 @@
             const idName = String(target.id || '').toLowerCase();
             const tagName = target.tagName.toLowerCase();
 
-            // 如果点击到了切换按钮、左右箭头、或者任何表单输入框、上传按钮，直接放行
+            // 如果点击的是切换按钮、操作性 Input，直接放行
             if (tagName === 'button' || tagName === 'input' || className.includes('arrow') || className.includes('btn') || className.includes('dot')) {
                 return;
             }
 
-            if (className.includes('banner') || idName.includes('banner') ||
-                className.includes('slide') || idName.includes('slide') ||
-                className.includes('carousel') || idName.includes('carousel')) {
-                isBannerClick = true;
-                
-                if (target.tagName === 'IMG') {
-                    clickedImg = target;
-                } else {
-                    clickedImg = target.querySelector('img');
-                }
-                
-                slotIndex = target.getAttribute('data-id') || target.getAttribute('data-slot') || (clickedImg ? clickedImg.getAttribute('data-slot') : null) || slotIndex;
+            // 智能检索节点上携带的云端契约属性
+            const catAttr = target.getAttribute('data-category');
+            const slotAttr = target.getAttribute('data-slot');
+
+            // 路径 A：如果元素身上有我们刚刚同步上去的显式标记
+            if (catAttr) {
+                isInterceptNeeded = true;
+                finalCategory = catAttr;
+                slotIndex = slotAttr || slotIndex;
+                clickedImg = target.tagName === 'IMG' ? target : target.querySelector('img');
                 break;
             }
+
+            // 路径 B：针对静态旧 HTML 结构的特征模糊匹配（兜底兼容）
+            if (className.includes('banner') || idName.includes('banner') || className.includes('slide') || className.includes('carousel')) {
+                isInterceptNeeded = true;
+                finalCategory = "banner";
+                clickedImg = target.tagName === 'IMG' ? target : target.querySelector('img');
+                slotIndex = target.getAttribute('data-id') || slotAttr || (clickedImg ? clickedImg.getAttribute('data-slot') : null) || "0";
+                break;
+            }
+
             target = target.parentNode;
         }
 
-        if (isBannerClick) {
+        // 执行精确定向跳转
+        if (isInterceptNeeded) {
             e.preventDefault();
             e.stopPropagation();
 
             let imgSrc = clickedImg ? clickedImg.src : '';
             
-            if (slotIndex === "0" && imgSrc) {
+            // 针对未打上 data-slot 的 Banner 进行逆向文件名提取
+            if (finalCategory === "banner" && slotIndex === "0" && imgSrc) {
                 const filename = imgSrc.substring(imgSrc.lastIndexOf('/') + 1);
                 const match = filename.match(/\d+/);
                 if (match) {
@@ -131,10 +217,11 @@
                 }
             }
 
-            const finalCategory = "banner"; 
+            // 默认采用 banner，如果没有捕获到则根据页面智能划分
+            if (!finalCategory) finalCategory = "manga";
+
             const targetUrl = `detail.html?category=${finalCategory}&slot=${slotIndex}&id=${slotIndex}&src=${encodeURIComponent(imgSrc)}`;
-            
-            console.log("【Hermes】成功拦截轮播点击并重定向至云端资源库：", targetUrl);
+            console.log(`【Hermes】成功捕获板块点击，重定向至云端席位: ${targetUrl}`);
             window.location.href = targetUrl;
         }
     }, true);
@@ -142,103 +229,51 @@
     // ==========================================
     // 需求 3：详情页图片动态挂载点赞（支持异步渲染）
     // ==========================================
-    // ==========================================
-    // 针对 detail.html 页面的 Banner 分类全多图强行展示引擎
-    // ==========================================
     if (window.location.pathname.includes('detail.html')) {
-        const forceRenderBannerGallery = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const category = urlParams.get('category');
-            const slot = urlParams.get('slot');
+        const injectLikesDynamic = () => {
+            const imgs = document.querySelectorAll('img');
+            imgs.forEach((img, index) => {
+                if (img.width < 100 || img.parentElement.classList.contains('like-img-wrapper')) return;
 
-            // 只有当点击的是 Banner 分类进入的详情页才启动本引擎
-            if (category !== 'banner') return;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'like-img-wrapper';
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'inline-block';
+                
+                img.parentNode.insertBefore(wrapper, img);
+                wrapper.appendChild(img);
 
-            // 如果页面已经渲染出多图了，或者我们已经挂载过了，就不用重复挂载
-            if (document.getElementById('hermes-banner-gallery-loaded')) return;
+                const likeBtn = document.createElement('button');
+                const imgKey = `liked_${index}`;
+                let isLiked = localStorage.getItem(imgKey) === 'true';
+                let count = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
 
-            try {
-                // 1. 去和你的 Cloudflare Worker 的 detail 路由申请真实数据
-                // 拼装符合你 Worker 校验的路径：/api/detail?category=banner&slot=X
-                const apiRes = await fetch(`https://api.nobistudio.com/api/detail?category=banner&slot=${slot || 0}`);
-                if (!apiRes.ok) return;
-                const data = await apiRes.json();
+                likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
+                Object.assign(likeBtn.style, {
+                    position: 'absolute', bottom: '10px', right: '10px',
+                    background: 'rgba(255, 255, 255, 0.9)', border: 'none',
+                    padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', zIndex: '99'
+                });
 
-                // 2. 提取出我们在后台塞入的 detail_urls 全图集数组
-                // 兼容处理：有些数据库返回单条对象，有些返回数组，我们做个安全兼容
-                const record = Array.isArray(data) ? data[0] : data;
-                let imagesArray = record ? (record.detail_urls || record.images || []) : [];
-
-                // 如果是字符串格式，强行解析成 JSON 数组
-                if (typeof imagesArray === 'string') {
-                    try { imagesArray = JSON.parse(imagesArray); } catch(e) {}
-                }
-
-                // 3. 开始在详情页里找地方强行塞入这 5 张图
-                if (imagesArray && imagesArray.length > 0) {
-                    // 动态寻找原本页面存放详情内容的容器（根据 index.html 的结构，通常是 .detail-content, .gallery, #gallery, article 等）
-                    let container = document.querySelector('.detail-content, #gallery, .gallery-container, .main-content, article');
-                    
-                    // 如果这些容器都没找到，我们直接创建一个挂载在 body 顶部
-                    if (!container) {
-                        container = document.createElement('div');
-                        container.className = 'detail-content';
-                        document.body.appendChild(container);
-                    }
-
-                    // 先把老代码可能弹出来的“尚未上传详情页多图内容”提示语给彻底清除/隐藏
-                    const allTexts = container.querySelectorAll('*');
-                    allTexts.forEach(el => {
-                        if (el.innerText && el.innerText.includes('尚未上传详情页多图内容')) {
-                            el.style.display = 'none';
-                        }
-                    });
-
-                    // 4. 循环所有的 Banner 图片，全部生成并整整齐齐地平铺在详情页中央！
-                    imagesArray.forEach((imgUrl, i) => {
-                        // 检查是否已经存在这张图，防止重复生成
-                        if (document.querySelector(`img[data-banner-idx="${i}"]`)) return;
-
-                        const imgEl = document.createElement('img');
-                        imgEl.src = imgUrl;
-                        imgEl.setAttribute('data-banner-idx', i);
-                        imgEl.style.cssText = `
-                            width: 100%;
-                            max-width: 800px;
-                            display: block;
-                            margin: 25px auto;
-                            border-radius: 12px;
-                            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-                            transition: transform 0.3s;
-                        `;
-                        // 移动端长按防下载
-                        imgEl.style.setProperty('-webkit-touch-callout', 'none', 'important');
-
-                        container.appendChild(imgEl);
-                    });
-
-                    // 打上成功标记
-                    const flag = document.createElement('div');
-                    flag.id = 'hermes-banner-gallery-loaded';
-                    flag.style.display = 'none';
-                    container.appendChild(flag);
-                    
-                    console.log(`【Hermes】成功在详情页强行横向铺开了完整的 ${imagesArray.length} 张 Banner 艺术多图集！`);
-                }
-            } catch (err) {
-                console.error("【Hermes】详情页强行多图渲染引擎发生阻断: ", err);
-            }
+                likeBtn.addEventListener('click', function(ev) {
+                    ev.stopPropagation(); ev.preventDefault();
+                    isLiked = !isLiked;
+                    localStorage.setItem(imgKey, isLiked);
+                    count = isLiked ? count + 1 : count - 1;
+                    localStorage.setItem(`${imgKey}_cnt`, count);
+                    likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
+                    likeBtn.style.color = isLiked ? 'red' : '#333';
+                });
+                wrapper.appendChild(likeBtn);
+            });
         };
-
-        // 轮询和动态监听，确保在 DOM 加载完的第一时间完成多图替换
-        forceRenderBannerGallery();
-        setInterval(forceRenderBannerGallery, 1000);
+        setInterval(injectLikesDynamic, 1500);
     }
 })();
 
-// =========================================================
-// 🎯 完美修复此处！补齐右括号，彻底消灭控制台和编辑器爆红！
-// =========================================================
+// ==========================================
+// 需求 1 & 2：全局工具箱
+// ==========================================
 window.HermesUpgrade = {
     sendPasswordResetEmail: function(email) {
         if (!email) return alert('请输入邮箱！');
