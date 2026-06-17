@@ -1,7 +1,6 @@
 /**
- * Hermes-WebUI 优化升级补丁 - 全板块云端实时同步与深度防护版
- * 修复：1. 解决后台配置动漫、漫画后，首页内容不更新的问题
- * 2. 完美规避 admin.html 后台环境下的点击拦截与跳转误伤
+ * Hermes-WebUI 优化升级补丁 - 结构完美对齐与数据流全闭环版
+ * 修复：精准对齐 index.html 的 .anime-card 和 .manga-card 节点，让新提交的图片完美呈现
  */
 
 (function() {
@@ -15,7 +14,7 @@
     };
 
     // ==========================================
-    // 🌟 核心引擎：全站静态内容转化为实时云端动态流
+    // 🌟 核心引擎：将云端 content_management 数据精准投递到首页卡片
     // ==========================================
     const syncAllCloudContents = async () => {
         // 仅在站点首页生效
@@ -51,7 +50,7 @@
                     const slideImages = document.querySelectorAll('.hero__slides .hero__slide img');
                     bannerList.forEach(item => {
                         const idx = item.slot_index;
-                        if (slideImages[idx] && item.cover_url) {
+                        if (slideImages[idx] && item.cover_url && item.cover_url.trim() !== "") {
                             slideImages[idx].src = item.cover_url;
                             slideImages[idx].setAttribute('data-slot', idx);
                         }
@@ -59,30 +58,29 @@
                 }
 
                 // ----------------------------------------------------
-                // 模块 B：动态同步热门动漫推荐专区 (联动替换图片、标题与副标题)
+                // 🎯 模块 B：精准对接【热门动漫推荐】（对齐 .anime-card 结构）
                 // ----------------------------------------------------
                 if (animeList.length > 0) {
-                    // 根据 index.html 的结构，精准抓取动漫板块下的所有卡片
-                    // 假设你的动漫卡片容器类名包含 anime 或在特定的 section 里，这里使用通用智能选择器
-                    const animeCards = document.querySelectorAll('.anime-grid .card, .anime-section .card, [data-section="anime"] .card');
+                    // 完美锁定 index.html 里的 .anime-card 集合
+                    const animeCards = document.querySelectorAll('.anime-card');
                     
                     animeList.forEach(item => {
                         const idx = item.slot_index;
                         const card = animeCards[idx];
-                        if (card) {
-                            // 替换封面图片/视频预览
-                            const imgEl = card.querySelector('img');
-                            if (imgEl && item.cover_url) imgEl.src = item.cover_url;
+                        if (card && item.cover_url && item.cover_url.trim() !== "") {
+                            // 1. 替换封面图片
+                            const imgEl = card.querySelector('.anime-card__img, img');
+                            if (imgEl) imgEl.src = item.cover_url;
 
-                            // 替换主标题
-                            const titleEl = card.querySelector('.card-title, h3, .title');
+                            // 2. 替换主标题
+                            const titleEl = card.querySelector('.anime-card__title, h3');
                             if (titleEl && item.title) titleEl.innerText = item.title;
 
-                            // 替换副标题/最新集数
-                            const subEl = card.querySelector('.card-subtitle, .episodes, .sub-title');
+                            // 3. 替换副标题/更新进度
+                            const subEl = card.querySelector('.anime-card__episodes, .anime-card__sub, span');
                             if (subEl && item.subtitle) subEl.innerText = item.subtitle;
 
-                            // 为卡片或图片注入路由金色钥匙，供后续点击拦截使用
+                            // 为元素打上路由通行证标签
                             card.setAttribute('data-category', 'anime');
                             card.setAttribute('data-slot', idx);
                             if (imgEl) {
@@ -94,29 +92,29 @@
                 }
 
                 // ----------------------------------------------------
-                // 模块 C：动态同步漫画连载专区 (联动替换图片、标题与标签)
+                // 🎯 模块 C：精准对接【漫画连载专区】（对齐 .manga-card 结构）
                 // ----------------------------------------------------
                 if (mangaList.length > 0) {
-                    // 根据 index.html 的结构，精准抓取漫画板块下的所有卡片
-                    const mangaCards = document.querySelectorAll('.manga-grid .card, .manga-section .card, [data-section="manga"] .card');
+                    // 完美锁定 index.html 里的 .manga-card 集合
+                    const mangaCards = document.querySelectorAll('.manga-card');
                     
                     mangaList.forEach(item => {
                         const idx = item.slot_index;
                         const card = mangaCards[idx];
-                        if (card) {
-                            // 替换漫画封面
-                            const imgEl = card.querySelector('img');
-                            if (imgEl && item.cover_url) imgEl.src = item.cover_url;
+                        if (card && item.cover_url && item.cover_url.trim() !== "") {
+                            // 1. 替换漫画封面
+                            const imgEl = card.querySelector('.manga-card__img, img');
+                            if (imgEl) imgEl.src = item.cover_url;
 
-                            // 替换漫画名称
-                            const titleEl = card.querySelector('.manga-title, h3, .title');
+                            // 2. 替换漫画名称
+                            const titleEl = card.querySelector('.manga-card__title, h3');
                             if (titleEl && item.title) titleEl.innerText = item.title;
 
-                            // 替换更新进度
-                            const subEl = card.querySelector('.manga-chapters, .status, .sub-title');
+                            // 3. 替换更新进度副标题
+                            const subEl = card.querySelector('.manga-card__chapters, span');
                             if (subEl && item.subtitle) subEl.innerText = item.subtitle;
 
-                            // 注入路由标记
+                            // 为元素打上路由通行证标签
                             card.setAttribute('data-category', 'manga');
                             card.setAttribute('data-slot', idx);
                             if (imgEl) {
@@ -127,7 +125,7 @@
                     });
                 }
 
-                console.log(`【Hermes】云端数据全量同步成功！已同步 Banner(${bannerList.length}), 动漫(${animeList.length}), 漫画(${mangaList.length})`);
+                console.log(`【Hermes】云端数据结构化精准映射完成！`);
             }
         } catch (e) {
             console.error("【Hermes】全站动态流在映射时发生阻断: ", e);
@@ -136,8 +134,8 @@
 
     // 立即侦听并多级轮询，确保在 DOM 树渲染完后第一时间执行云端覆盖
     document.addEventListener('DOMContentLoaded', syncAllCloudContents);
-    setTimeout(syncAllCloudContents, 500);
-    setTimeout(syncAllCloudContents, 1200);
+    setTimeout(syncAllCloudContents, 300);
+    setTimeout(syncAllCloudContents, 1000);
 
     // ==========================================
     // 需求 5：全站图片防右键下载、防移动端长按保存
@@ -154,7 +152,7 @@
     // 需求 4：全站卡片点击智能高精度重定向拦截器
     // ==========================================
     document.addEventListener('click', function(e) {
-        // 🛡️ 后台环境免疫：如果当前处于 admin.html 后台管理系统，前台拦截立刻闭嘴，放行所有基础操作！
+        // 后台环境自动关闭拦截
         if (window.location.pathname.includes('admin.html')) {
             return; 
         }
@@ -170,16 +168,14 @@
             const idName = String(target.id || '').toLowerCase();
             const tagName = target.tagName.toLowerCase();
 
-            // 如果点击的是切换按钮、操作性 Input，直接放行
             if (tagName === 'button' || tagName === 'input' || className.includes('arrow') || className.includes('btn') || className.includes('dot')) {
                 return;
             }
 
-            // 智能检索节点上携带的云端契约属性
             const catAttr = target.getAttribute('data-category');
             const slotAttr = target.getAttribute('data-slot');
 
-            // 路径 A：如果元素身上有我们刚刚同步上去的显式标记
+            // 智能检索节点上携带的云端契约属性
             if (catAttr) {
                 isInterceptNeeded = true;
                 finalCategory = catAttr;
@@ -188,7 +184,7 @@
                 break;
             }
 
-            // 路径 B：针对静态旧 HTML 结构的特征模糊匹配（兜底兼容）
+            // 针对静态旧 HTML 结构的特征模糊匹配（Banner 兜底兼容）
             if (className.includes('banner') || idName.includes('banner') || className.includes('slide') || className.includes('carousel')) {
                 isInterceptNeeded = true;
                 finalCategory = "banner";
@@ -207,7 +203,6 @@
 
             let imgSrc = clickedImg ? clickedImg.src : '';
             
-            // 针对未打上 data-slot 的 Banner 进行逆向文件名提取
             if (finalCategory === "banner" && slotIndex === "0" && imgSrc) {
                 const filename = imgSrc.substring(imgSrc.lastIndexOf('/') + 1);
                 const match = filename.match(/\d+/);
@@ -217,7 +212,6 @@
                 }
             }
 
-            // 默认采用 banner，如果没有捕获到则根据页面智能划分
             if (!finalCategory) finalCategory = "manga";
 
             const targetUrl = `detail.html?category=${finalCategory}&slot=${slotIndex}&id=${slotIndex}&src=${encodeURIComponent(imgSrc)}`;
@@ -271,9 +265,6 @@
     }
 })();
 
-// ==========================================
-// 需求 1 & 2：全局工具箱
-// ==========================================
 window.HermesUpgrade = {
     sendPasswordResetEmail: function(email) {
         if (!email) return alert('请输入邮箱！');
