@@ -337,8 +337,9 @@
         return session;
     }
 
-    // 🎯 通用高级百分比进度跟踪文件上传引擎
+    // 🎨 终极优化：带前端智能像素级压制的图片上传流
     async function executeSingleUpload(file, pathName, onPercentProgress) {
+        const cleanPathName = pathName.replace(/^images\//, '');
         const fileExt = file.name.split('.').pop().toLowerCase();
         let calculatedMimeType = file.type || 'application/octet-stream';
         
@@ -346,15 +347,56 @@
         if (fileExt === 'webm') calculatedMimeType = 'video/webm';
         if (fileExt === 'mov') calculatedMimeType = 'video/quicktime';
 
+        let uploadBlob = file;
+
+        // 🚀 如果是静态图片（png, jpg, jpeg），在上传前进行瞬时画布压缩
+        if (['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+            uploadBlob = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // 设定安全大图上限（如等比缩放到最大宽/高 1600px，既保质又能暴跌体积）
+                        const MAX_WIDTH = 1600;
+                        const MAX_HEIGHT = 1600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                        } else {
+                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // 核心高保真高压缩率：压制到质量 0.75，输出为通用高质量 jpeg
+                        canvas.toBlob((blob) => {
+                            resolve(blob || file);
+                        }, 'image/jpeg', 0.75);
+                    };
+                };
+            });
+            calculatedMimeType = 'image/jpeg';
+        }
+
+        // 执行最终上传
         const { data, error } = await window.supabaseClient.storage
             .from('images')
-            .upload(pathName, file, { 
+            .upload(cleanPathName, uploadBlob, { 
                 upsert: true,
                 contentType: calculatedMimeType, 
                 onUploadProgress: (progress) => {
-                    if (progress.total) {
+                    if (progress.total && typeof onPercentProgress === 'function') {
                         const currentPercentage = Math.round((progress.loaded / progress.total) * 100);
-                        if (typeof onPercentProgress === 'function') onPercentProgress(currentPercentage);
+                        onPercentProgress(currentPercentage);
                     }
                 }
             });
