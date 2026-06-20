@@ -152,7 +152,7 @@ main {
   height: 100%;
   z-index: 1;
 }
-
+/*
 .hero__slide {
   position: absolute;
   inset: 0;
@@ -166,16 +166,16 @@ main {
 .hero__slide.is-active {
   opacity: 1;
   visibility: visible;
-}
+}*/
 
 /* 🎯 终极突破：强力干掉 contain，切换至 100% 铺满平铺不留白 */
+/*
 .hero__slide img {
   width: 100% !important;
-  /*height: 100% !important;*/
   object-fit: cover !important; 
   object-position: center center !important; 
   image-rendering: -webkit-optimize-contrast;
-}
+}*/
 
 .hero::after {
   content: "";
@@ -694,4 +694,73 @@ main {
     opacity: 0.35; /* 保持暗色调，不抢镜 */
     transform: scale(1.1); /* 稍微放大防止边缘发白 */
   }
+}
+
+/* ==========================================================================
+   🎯 方案二：全端自适应+高斯模糊背景衬底（完美适配移动端）
+   ========================================================================== */
+
+/* 1. 轮播图单页容器：基础自适应布局 */
+.hero__slide {
+    position: relative;        /* 必须为相对定位，作为背景和前景的基准 */
+    width: 100%;
+    overflow: hidden;          /* 极其重要：防止背景图模糊后扩散到容器外面去 */
+    background-color: #0d0a1a; /* 兜底深色背景，防止图片加载前白屏 */
+    display: none;             /* 默认隐藏（配合你原有的切换逻辑） */
+    
+    /* 📱 默认移动端（手机）比例：让高度自动随宽度变化（保持大约 16:9 ~ 4:3 之间的黄金视觉高度） */
+    height: auto;
+    aspect-ratio: 16 / 10;     /* 核心：设定移动端纵横比，高度随宽度等比缩放 */
+    min-height: 230px;         /* 设定手机端最小保障高度，防止小屏幕太矮 */
+}
+
+/* 保持你原本的激活显示逻辑 */
+.hero__slide.is-active {
+    display: block; 
+}
+
+/* 💻 2. 针对大屏幕（电脑端 / 宽度大于 768px）进行微调 */
+@media (min-width: 768px) {
+    .hero__slide {
+        /* 电脑端屏幕宽，如果继续按比例会太高，所以固定一个黄金视觉高度 */
+        height: 480px;         
+        aspect-ratio: auto;    /* 取消移动端的比例限制 */
+    }
+}
+
+/* 3. 🔥 核心：利用 ::before 伪元素在不修改 HTML 的情况下，凭空创造高斯模糊背景 */
+.hero__slide::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* 继承在 JS 里动态写入容器的 background-image 路径 */
+    background-image: inherit; 
+    background-position: center center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    
+    /* 完美的模糊与暗化滤镜组合：适合手机和电脑 */
+    filter: blur(20px) brightness(0.45); 
+    
+    /* 微微放大 1.15 倍，完美消除高斯模糊带来的边缘白边/虚边 */
+    transform: scale(1.15); 
+    z-index: 1;                 /* 钉在最底层 */
+    pointer-events: none;       /* 禁用背景层的一切鼠标事件，防止干扰 */
+}
+
+/* 4. 约束前台真实展示的高清图片 */
+.hero__slide img {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    
+    /* 🌟 灵魂属性：contain 确保不管手机怎么转，图片都能100%不拉伸、完整不裁剪地显示在正中间 */
+    object-fit: contain; 
+    
+    z-index: 2;                 /* 层级高于模糊背景层，浮在最上面 */
+    display: block;
 }
