@@ -121,16 +121,15 @@ main {
 }
 
 /* ==========================================================
-   🔒 后台管理快捷键（特定修改：默认绝对隐藏，严防闪烁）
+   🔒 后台管理快捷键
    ========================================================== */
 #admin-entrance-wrapper {
-  display: none !important; /* 🎯 核心修改：默认强制隐身，只有通过 JS 验证后才会放行 */
+  display: none !important; 
   margin-left: 6px;
 }
 
-
 /* ==========================================================
-   📺 2. 轮播图区域自适应（全面覆盖、满屏无黑边）
+   📺 2. 轮播图区域自适应（大底座）
    ========================================================== */
 .hero {
   position: relative !important;
@@ -139,10 +138,22 @@ main {
   border-radius: 24px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #111;
+  background: #0d0a1a;
   touch-action: pan-y;
   margin: 16px 5% 0;
-  height: 460px; /* PC 端大气大图视界高度 */
+  
+  /* 📱 默认移动端（手机）长宽比：完美自适应不坍塌 */
+  height: auto;
+  aspect-ratio: 16 / 10;
+  min-height: 230px;
+}
+
+/* 💻 电脑端锁定大气大图视界高度 */
+@media (min-width: 768px) {
+  .hero {
+    height: 460px; 
+    aspect-ratio: auto;
+  }
 }
 
 .hero__slides {
@@ -152,36 +163,66 @@ main {
   height: 100%;
   z-index: 1;
 }
-/*
+
+/* ==========================================================
+   🔄 轮播单页核心控制（解决不轮播的源头）
+   ========================================================== */
 .hero__slide {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  background-color: #0d0a1a;
+  
+  /* 🌟 保留你原本依靠不透明度控制切换的轮播底流逻辑 */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
 }
 
+/* 激活时优雅浮现，同时保障轮播流正常滚动 */
 .hero__slide.is-active {
   opacity: 1;
   visibility: visible;
-}*/
+  z-index: 2;
+}
 
-/* 🎯 终极突破：强力干掉 contain，切换至 100% 铺满平铺不留白 */
-/*
+/* 动态背景图：动态抓取、高斯模糊衬底 */
+.hero__slide::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  
+  /* 自动抓取后台写入元素的图片路径 */
+  background-image: inherit; 
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  
+  /* 黄金动漫氛围滤镜组合 */
+  filter: blur(22px) brightness(0.45); 
+  transform: scale(1.15); /* 放大防虚边白边 */
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 前景核心高清展示图：完美不拉伸、不裁切、完整居中 */
 .hero__slide img {
+  position: relative;
   width: 100% !important;
-  object-fit: cover !important; 
-  object-position: center center !important; 
+  height: 100% !important;
+  object-fit: contain !important; /* 🌟 灵魂属性：保障图片内容 100% 完美完整全显 */
   image-rendering: -webkit-optimize-contrast;
-}*/
+  z-index: 2; 
+  display: block !important;
+}
 
 .hero::after {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3; /* 高于 slide 但低于 content */
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
@@ -191,7 +232,7 @@ main {
   bottom: 0;
   left: 0;
   width: 100%;
-  z-index: 3;
+  z-index: 4; /* 置于最顶层可见 */
   padding: 30px 24px !important;
   background: transparent !important;
   pointer-events: none;
@@ -589,23 +630,21 @@ main {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  cursor: pointer !important;
   box-shadow: 0 2px 6px rgba(255, 71, 87, 0.4);
   z-index: 10;
   padding: 0 !important;
 }
 
 /* ==========================================================
-   📱 6. 移动端专属极致响应式断点（核心升级区）
+   📱 6. 移动端专属极致响应式断点
    ========================================================== */
 @media (max-width: 768px) {
-  /* 🎯 极其精准的黄金空白占位：完美容纳高度增加的双行头部，并顶出舒适间距 */
   main {
     padding-top: 154px !important; 
   }
 
   .site-header {
-    flex-direction: column !important; /* 开启纵向列排布：标题在上，导航在下 */
+    flex-direction: column !important; 
     align-items: center !important;
     padding: 12px 10px !important;
     gap: 10px !important;
@@ -616,7 +655,6 @@ main {
     font-size: 1.1rem !important;
   }
 
-  /* 🎯 导航网格重组：开启换行，丢弃横向滚动条，让其自然分行 */
   .nav {
     width: 100% !important;
     flex-direction: row !important;
@@ -627,14 +665,12 @@ main {
     padding: 0 !important;
   }
 
-  /* 🛠️ 这一步非常重要：前4个基础链接不设满宽，而是通过 Flex 基础控制让其整齐在第一行排开 */
   .nav__link {
     padding: 5px 10px !important;
     font-size: 0.85rem !important;
     flex: 0 1 auto !important;
   }
 
-  /* 🛠️ 终极隔离：将第2行的两个动作元素通过强制前置换行（或者独立边距提升）另起一行并居中 */
   #user-btn, #admin-entrance-wrapper {
     margin-top: 2px !important;
   }
@@ -644,10 +680,10 @@ main {
     font-size: 0.82rem !important;
   }
 
-  /* 📱 手机端 Banner 高保真炫目满屏自适应（绝无留白） */
+  /* 📱 手机端高保真绚目满屏自适应高度 */
   .hero {
     margin: 12px 14px 0 !important; 
-    height: 240px !important; /* 调大至优雅的 240px */
+    height: auto !important; /* 解锁高度限制，由纵横比全自动控制 */
   }
 
   .hero__content {
@@ -659,108 +695,4 @@ main {
     padding-top: 20px;
     padding-bottom: 20px;
   }
-}
-/* ==========================================================
-   🖥️ 精准优化：PC端 Banner 高保真完整显示（带高级感幻灯片虚化底衬）
-   ========================================================== */
-@media (min-width: 769px) {
-  /* 1. 为轮播的每一个滑块容器垫上高档的毛玻璃底衬 */
-  .hero__slide {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background-color: rgba(0, 0, 0, 0.4) !important; /* 基础深色调 */
-  }
-
-  /* 2. 核心魔法：原图无拉伸、无裁切、百分之百完整展现 */
-  .hero__slide img {
-    width: 100% !important;
-    /*height: 100% !important;*/
-    object-fit: contain !important; /* 🎯 改为 contain：原图比例不走样，完整画面全显 */
-    position: relative;
-    z-index: 2; /* 让原图浮在虚化背景上方 */
-  }
-
-  /* 3. 利用伪元素，在原图背后生成一个满屏铺满并被高级虚化的背景层 */
-  .hero__slide::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    background-image: inherit; /* 继承幻灯片图片 */
-    /* 如果你的轮播图是通过 JS 动态改写 img 的 src，这里会自动匹配底层 */
-    background: var(--bg-start); /* 兜底渐变色 */
-    filter: blur(20px); /* 强力模糊，营造画廊环境感 */
-    opacity: 0.35; /* 保持暗色调，不抢镜 */
-    transform: scale(1.1); /* 稍微放大防止边缘发白 */
-  }
-}
-
-/* ==========================================================================
-   🎯 方案二：全端自适应+高斯模糊背景衬底（完美适配移动端）
-   ========================================================================== */
-
-/* 1. 轮播图单页容器：基础自适应布局 */
-.hero__slide {
-    position: relative;        /* 必须为相对定位，作为背景和前景的基准 */
-    width: 100%;
-    overflow: hidden;          /* 极其重要：防止背景图模糊后扩散到容器外面去 */
-    background-color: #0d0a1a; /* 兜底深色背景，防止图片加载前白屏 */
-    display: none;             /* 默认隐藏（配合你原有的切换逻辑） */
-    
-    /* 📱 默认移动端（手机）比例：让高度自动随宽度变化（保持大约 16:9 ~ 4:3 之间的黄金视觉高度） */
-    height: auto;
-    aspect-ratio: 16 / 10;     /* 核心：设定移动端纵横比，高度随宽度等比缩放 */
-    min-height: 230px;         /* 设定手机端最小保障高度，防止小屏幕太矮 */
-}
-
-/* 保持你原本的激活显示逻辑 */
-.hero__slide.is-active {
-    display: block; 
-}
-
-/* 💻 2. 针对大屏幕（电脑端 / 宽度大于 768px）进行微调 */
-@media (min-width: 768px) {
-    .hero__slide {
-        /* 电脑端屏幕宽，如果继续按比例会太高，所以固定一个黄金视觉高度 */
-        height: 480px;         
-        aspect-ratio: auto;    /* 取消移动端的比例限制 */
-    }
-}
-
-/* 3. 🔥 核心：利用 ::before 伪元素在不修改 HTML 的情况下，凭空创造高斯模糊背景 */
-.hero__slide::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    
-    /* 继承在 JS 里动态写入容器的 background-image 路径 */
-    background-image: inherit; 
-    background-position: center center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    
-    /* 完美的模糊与暗化滤镜组合：适合手机和电脑 */
-    filter: blur(20px) brightness(0.45); 
-    
-    /* 微微放大 1.15 倍，完美消除高斯模糊带来的边缘白边/虚边 */
-    transform: scale(1.15); 
-    z-index: 1;                 /* 钉在最底层 */
-    pointer-events: none;       /* 禁用背景层的一切鼠标事件，防止干扰 */
-}
-
-/* 4. 约束前台真实展示的高清图片 */
-.hero__slide img {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    
-    /* 🌟 灵魂属性：contain 确保不管手机怎么转，图片都能100%不拉伸、完整不裁剪地显示在正中间 */
-    object-fit: contain; 
-    
-    z-index: 2;                 /* 层级高于模糊背景层，浮在最上面 */
-    display: block;
 }
