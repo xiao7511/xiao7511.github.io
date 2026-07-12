@@ -69,8 +69,8 @@
         try {
             // 🌟 统一使用你已有的 Worker 地址进行带参抓取
             const workerUrl = 'https://api.nobistudio.com/';
-            //const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/detail?category=${category}&slot=${slot}`;
-            const apiTarget = `${workerUrl.replace(/\/$/, '')}/content_management?category=eq.${category}&slot_index=eq.${slot}`;
+            const apiTarget = `${workerUrl.replace(/\/$/, '')}/api/detail?category=${category}&slot=${slot}`;
+            //const apiTarget = `${workerUrl.replace(/\/$/, '')}/content_management?category=eq.${category}&slot_index=eq.${slot}`;
             
             const response = await fetch(apiTarget);
             if (!response.ok) throw new Error("网关传输失败");
