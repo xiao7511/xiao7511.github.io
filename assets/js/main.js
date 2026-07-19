@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error("云端载入的通信凭证不完整。");
       }
 
-      // 创建客户端 
+      // 创建客户端2026.7.10修改
       window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
         auth: { persistSession: true, autoRefreshToken: true }
       });
