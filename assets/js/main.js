@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { error: uploadError } = await window.supabaseClient.storage
               .from('avatars')
               .upload(filePath, file, { 
-                upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
+                upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
               })
               .then(res => console.log('上传结果:', res))
               .catch(err => console.error('捕获错误:', err));
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error: uploadError } = await window.supabaseClient.storage
           .from('avatars')
           .upload(filePath, file, {
-            upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
+            upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
           })
           .then(res => console.log('上传结果:', res))
           .catch(err => console.error('捕获错误:', err));
