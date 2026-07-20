@@ -596,7 +596,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 上传至 Supabase 存储空间里的 'avatars' 存储桶
             const { error: uploadError } = await window.supabaseClient.storage
               .from('avatars')
-              .upload(filePath, file, { upsert: true });
+              .upload(filePath, file, { upsert: true }{
+                upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
+              });
 
             if (uploadError) {
               // 🎯 拒绝静默失败，抛出异常让开发者和用户能直接看到原因
@@ -710,7 +712,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 覆盖推送到存储桶
         const { error: uploadError } = await window.supabaseClient.storage
           .from('avatars')
-          .upload(filePath, file, { upsert: true });
+          .upload(filePath, file, { upsert: true }{
+            upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
+          });
 
         if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
 
