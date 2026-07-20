@@ -391,10 +391,7 @@
         const { data, error } = await window.supabaseClient.storage
             .from('images')
             .upload(cleanPathName, uploadBlob, { 
-                upsert: false,
-                headers: {
-                  'x-upsert': null 
-                },   //新增2026.07。20
+                upsert: true,
                 contentType: calculatedMimeType, 
                 onUploadProgress: (progress) => {
                     if (progress.total && typeof onPercentProgress === 'function') {
