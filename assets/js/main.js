@@ -596,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 上传至 Supabase 存储空间里的 'avatars' 存储桶
             const { error: uploadError } = await window.supabaseClient.storage
               .from('avatars')
-              .upload(filePath, file, { upsert: true }{
+              .upload(filePath, file, { 
                 upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
               });
 
