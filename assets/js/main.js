@@ -598,7 +598,9 @@ document.addEventListener('DOMContentLoaded', () => {
               .from('avatars')
               .upload(filePath, file, { 
                 upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
-              });
+              })
+              .then(res => console.log('上传结果:', res))
+              .catch(err => console.error('捕获错误:', err));
 
             if (uploadError) {
               // 🎯 拒绝静默失败，抛出异常让开发者和用户能直接看到原因
@@ -714,7 +716,9 @@ document.addEventListener('DOMContentLoaded', () => {
           .from('avatars')
           .upload(filePath, file, {
             upsert: false // 显式设置 upsert 为 false，避免携带 x-upsert header
-          });
+          })
+          .then(res => console.log('上传结果:', res))
+          .catch(err => console.error('捕获错误:', err));
 
         if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
 
