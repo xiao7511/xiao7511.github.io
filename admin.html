@@ -391,7 +391,7 @@
         const { data, error } = await window.supabaseClient.storage
             .from('images')
             .upload(cleanPathName, uploadBlob, { 
-                upsert: true,
+                upsert: false, 
                 contentType: calculatedMimeType, 
                 onUploadProgress: (progress) => {
                     if (progress.total && typeof onPercentProgress === 'function') {
