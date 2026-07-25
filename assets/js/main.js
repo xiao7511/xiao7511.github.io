@@ -733,11 +733,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
 
         // 写入 profiles 关系表
-        const { error: profileError } = await window.supabaseClient
+        //const { error: profileError } = await window.supabaseClient
+        //  .from('profiles')
+        //  .update({ avatar_url: finalAvatarUrl })
+        //  .eq('id', user.id);
+        // 修改后（增加容错处理，防止因返回 undefined 导致页面崩溃）
+        const updateRes = await window.supabaseClient
           .from('profiles')
           .update({ avatar_url: finalAvatarUrl })
           .eq('id', user.id);
-
+        
+        const profileError = updateRes ? updateRes.error : null;
+        
+        if (profileError) {
+          throw new Error(`更新头像失败: ${profileError.message}`);
+        }
         if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
 
         // 本地同步更新缓存
