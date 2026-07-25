@@ -577,9 +577,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data, error } = await window.supabaseClient.auth.signUp({
           email, password, options: { redirectTo: REDIRECT_URL }
         });
-
+        // 修改后（打印完整错误对象到控制台）
+        console.error("注册详细错误：", error);
+        alert(`注册或验证失败: ${err.message || JSON.stringify(error)}`);
+        
         if (error) throw error;
-
+        
         if (data.user) {
           // 预设一个基础头像地址（如果用户没选本地文件，则沿用 DiceBear 默认值）
           let finalAvatarUrl = selectedAvatar;
