@@ -787,6 +787,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
         // 本地同步更新缓存
         localStorage.setItem('user_avatar', finalAvatarUrl);
+        // 如果您页面上还有全局的 profile 变量，也一并更新：
+        if (typeof profile !== 'undefined' && profile) {
+          profile.avatar_url = finalAvatarUrl;
+        }
 
         alert('🎉 头像修改成功！论坛各模块已同步刷新。');
         editAvatarFileInput.value = '';
