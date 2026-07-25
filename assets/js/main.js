@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (publishBtn) {
+  /*if (publishBtn) {
     publishBtn.addEventListener('click', async () => {
       if (!window.supabaseClient) return;
       const content = postContent.value.trim();
@@ -989,12 +989,205 @@ document.addEventListener('DOMContentLoaded', () => {
       postContent.value = '';
       await fetchPosts();
     });
+  }*/
+ // 当前分页状态变量
+  let currentForumPage = 1;
+  const pageSize = 20;
+
+  if (publishBtn) {
+    publishBtn.addEventListener('click', async () => {
+      if (!window.supabaseClient) return;
+      const content = postContent.value.trim();
+      if (!content) { alert('内容不能为空喵！'); return; }
+
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = session ? session.user : null;
+      if (!user) { alert('请先登录后再发帖。'); return; }
+      
+      // 实时获取最新的 profiles 数据，保证昵称和最新头像同步
+      const { data: profile } = await window.supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      // 优先采用数据库最新 profiles 的头像，其次取 localStorage，最后兜底
+      const finalAvatar = profile?.avatar_url || localStorage.getItem('user_avatar') || selectedAvatar;
+      const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
+
+      const { error } = await window.supabaseClient.from('posts').insert([
+        {
+          content,
+          user_id: user.id,
+          nickname: finalNickname,
+          avatar_url: finalAvatar,
+          parent_id: null // 确保是主帖子
+        },
+      ]);
+
+      if (error) { alert(`发布失败: ${error.message}`); return; }
+      postContent.value = '';
+      
+      // 发帖成功后回到第一页，并刷新列表查看最新置顶内容
+      currentForumPage = 1;
+      await fetchPosts();
+    });
   }
 
   // ==========================================
-  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
+  // 🎯 论坛全新架构：支持分页（每页20条）与最新置顶
   // ==========================================
   async function fetchPosts() {
+    if (!postsList) return;
+    
+    try {
+      // 1. 先计算分页的起止范围 (Supabase range 是闭区间)
+      const startIndex = (currentForumPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize - 1;
+
+      // 获取总记录数用于计算总页数（可选，但对分页UI很重要）
+      const { count: totalCount } = await window.supabaseClient
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .is('parent_id', null); // 只统计主贴
+
+      // 2. 分页查询主贴：按创建时间降序排列（created_at 大的/最新的在最前面）
+      const { data: mainPosts, error, count } = await window.supabaseClient
+        .from('posts')
+        .select('*', { count: 'exact' })
+        .is('parent_id', null)
+        .order('created_at', { ascending: false }) // ✨ 核心：最新发布的记录放在最上面
+        .range(startIndex, endIndex);
+
+      if (error) throw error;
+
+      // 3. 获取当前页主贴对应的所有回复评论
+      const mainPostIds = (mainPosts || []).map(p => p.id);
+      let replies = [];
+      if (mainPostIds.length > 0) {
+        const { data: replyData } = await window.supabaseClient
+          .from('posts')
+          .select('*')
+          .in('parent_id', mainPostIds)
+          .order('created_id', { ascending: true }); // 评论按时间正序
+        replies = replyData || [];
+      }
+
+      postsList.innerHTML = '';
+      
+      if (!mainPosts || mainPosts.length === 0) {
+        postsList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); padding:20px;">暂无社区动态，快来发表第一条内容吧~</div>';
+        return;
+      }
+
+      // 4. 渲染主贴与回复
+      mainPosts.forEach(post => {
+        const postCard = document.createElement('div');
+        postCard.className = 'post-card';
+        postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
+
+        const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
+        const likesArray = post.likes_users || [];
+        const isLiked = likesArray.includes(currentEmail);
+        const likeCount = likesArray.length;
+
+        let htmlContent = `
+          <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />
+            <div>
+              <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
+              <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
+          
+          <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
+            <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
+              ${(isLiked || likeCount > 0) ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
+            </button>
+            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
+              💬 回复
+            </button>
+          </div>
+
+          <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
+        `;
+
+        const currentReplies = replies.filter(r => r.parent_id === post.id);
+        currentReplies.forEach(reply => {
+          htmlContent += `
+            <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                <img src="${reply.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
+                <span style="font-weight:bold; color:#ffe066;">${reply.nickname}</span>
+                <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
+              </div>
+              <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
+            </div>
+          `;
+        });
+
+        htmlContent += `
+          </div>
+          <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
+            <input type="text" id="reply-input-${post.id}" placeholder="写下你的精彩回复..." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;" />
+            <button onclick="submitReply('${post.id}')" style="background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">发送</button>
+          </div>
+        `;
+
+        postCard.innerHTML = htmlContent;
+        postsList.appendChild(postCard);
+
+        const likeBtn = postCard.querySelector('.like-action-btn');
+        if (likeBtn) {
+          likeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation(); 
+            await window.toggleLike(post.id, likesArray);
+          });
+        }
+      });
+
+      // 5. 渲染分页控制条
+      const totalPages = Math.ceil((totalCount || 0) / pageSize);
+      if (totalPages > 1) {
+        const paginationDiv = document.createElement('div');
+        paginationDiv.className = 'forum-pagination';
+        paginationDiv.style = "display:flex; justify-content:center; align-items:center; gap:12px; margin-top:20px; padding:10px;";
+        
+        paginationDiv.innerHTML = `
+          <button id="prev-page-btn" ${currentForumPage === 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer;">上一页</button>
+          <span style="font-size:0.85rem; color:rgba(255,255,255,0.8);">第 ${currentForumPage} / ${totalPages} 页 (共 ${totalCount} 条)</span>
+          <button id="next-page-btn" ${currentForumPage >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer;">下一页</button>
+        `;
+        postsList.appendChild(paginationDiv);
+
+        // 绑定分页点击事件
+        document.getElementById('prev-page-btn')?.addEventListener('click', () => {
+          if (currentForumPage > 1) {
+            currentForumPage--;
+            fetchPosts();
+            postsList.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+
+        document.getElementById('next-page-btn')?.addEventListener('click', () => {
+          if (currentForumPage < totalPages) {
+            currentForumPage++;
+            fetchPosts();
+            postsList.scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+      }
+
+    } catch (err) {
+      console.error("加载论坛卡死:", err);
+    }
+  }
+  // ==========================================
+  // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
+  // ==========================================
+  /*async function fetchPosts() {
     if (!postsList) return;
     
     try {
@@ -1079,7 +1272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("加载论坛卡死:", err);
     }
-  }
+  }*/
 
   window.toggleLike = async function(postId, currentLikes) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
