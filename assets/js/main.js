@@ -579,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // 修改后（打印完整错误对象到控制台）
         console.error("注册详细错误：", error);
-        alert(`注册或验证失败: ${err.message || JSON.stringify(error)}`);
+        //alert(`注册或验证失败: ${err.message || JSON.stringify(error)}`);
         
         if (error) throw error;
         
@@ -675,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
       editAvatarFileInput.addEventListener('change', () => {
         if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
           const file = editAvatarFileInput.files[0];
-          if (file.size > 2 * 1024 * 1024) {
+          if (file.size > 20 * 1024 * 1024) {
             alert('新头像文件不能超过 2MB 喵！');
             editAvatarFileInput.value = '';
             editAvatarHint.textContent = '';
