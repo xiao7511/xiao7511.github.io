@@ -1316,7 +1316,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+
+  // 3. 提交回复逻辑：同步更新最新的头像与昵称
   window.submitReply = async function(postId) {
+    if (!window.supabaseClient) return;
+    const inputElem = document.getElementById(`reply-input-${postId}`);
+    if (!inputElem) return;
+    const content = inputElem.value.trim();
+    if (!content) { alert('回复内容不能为空喵！'); return; }
+
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const user = session ? session.user : null;
+    if (!user) { alert('请先登录后再回复。'); return; }
+
+    // ✨ 核心修复：回复时也实时获取 profiles 表中的最新昵称和头像
+    const { data: profile } = await window.supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
+    const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
+
+    const { error } = await window.supabaseClient.from('posts').insert([
+      {
+        content,
+        user_id: user.id,
+        nickname: finalNickname,
+        avatar_url: finalAvatar,
+        parent_id: postId // 关联到对应的主贴 ID
+      },
+    ]);
+
+    if (error) {
+      alert(`回复失败: ${error.message}`);
+      return;
+    }
+
+    inputElem.value = '';
+    await fetchPosts(); // 刷新列表以展示最新回复
+  };
+  
+ /* window.submitReply = async function(postId) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
 
@@ -1350,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       alert("回复失败: " + err.message);
     }
-  };
+  };*/
 
   function setupLikeButtons() {
     const buttons = Array.from(document.querySelectorAll('.like-btn'));
