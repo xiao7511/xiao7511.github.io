@@ -990,10 +990,10 @@ document.addEventListener('DOMContentLoaded', () => {
       await fetchPosts();
     });
   }*/
- // 当前分页状态变量
   let currentForumPage = 1;
   const pageSize = 20;
 
+  // 1. 发帖逻辑：确保获取最新个人头像与昵称
   if (publishBtn) {
     publishBtn.addEventListener('click', async () => {
       if (!window.supabaseClient) return;
@@ -1004,15 +1004,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const user = session ? session.user : null;
       if (!user) { alert('请先登录后再发帖。'); return; }
       
-      // 实时获取最新的 profiles 数据，保证昵称和最新头像同步
+      // 获取最新 profiles 数据
       const { data: profile } = await window.supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
-      // 优先采用数据库最新 profiles 的头像，其次取 localStorage，最后兜底
-      const finalAvatar = profile?.avatar_url || localStorage.getItem('user_avatar') || selectedAvatar;
+      const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
       const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
 
       const { error } = await window.supabaseClient.from('posts').insert([
@@ -1021,55 +1020,55 @@ document.addEventListener('DOMContentLoaded', () => {
           user_id: user.id,
           nickname: finalNickname,
           avatar_url: finalAvatar,
-          parent_id: null // 确保是主帖子
+          parent_id: null // 主贴
         },
       ]);
 
       if (error) { alert(`发布失败: ${error.message}`); return; }
       postContent.value = '';
-      
-      // 发帖成功后回到第一页，并刷新列表查看最新置顶内容
       currentForumPage = 1;
       await fetchPosts();
     });
   }
 
-  // ==========================================
-  // 🎯 论坛全新架构：支持分页（每页20条）与最新置顶
-  // ==========================================
+  // 2. 渲染主贴、回复与分页
   async function fetchPosts() {
     if (!postsList) return;
     
     try {
-      // 1. 先计算分页的起止范围 (Supabase range 是闭区间)
       const startIndex = (currentForumPage - 1) * pageSize;
       const endIndex = startIndex + pageSize - 1;
 
-      // 获取总记录数用于计算总页数（可选，但对分页UI很重要）
+      // 获取主贴总数
       const { count: totalCount } = await window.supabaseClient
         .from('posts')
         .select('*', { count: 'exact', head: true })
-        .is('parent_id', null); // 只统计主贴
+        .is('parent_id', null);
 
-      // 2. 分页查询主贴：按创建时间降序排列（created_at 大的/最新的在最前面）
-      const { data: mainPosts, error, count } = await window.supabaseClient
+      // 查询当前页主贴（按最新排序）
+      const { data: mainPosts, error } = await window.supabaseClient
         .from('posts')
-        .select('*', { count: 'exact' })
+        .select('*')
         .is('parent_id', null)
-        .order('created_at', { ascending: false }) // ✨ 核心：最新发布的记录放在最上面
+        .order('created_at', { ascending: false })
         .range(startIndex, endIndex);
 
-      if (error) throw error;
+      if (error) {
+        console.error("查询主贴报错:", error);
+        throw error;
+      }
 
-      // 3. 获取当前页主贴对应的所有回复评论
+      // 获取对应主贴的回复（修正了之前写错的 created_id 字段）
       const mainPostIds = (mainPosts || []).map(p => p.id);
       let replies = [];
       if (mainPostIds.length > 0) {
-        const { data: replyData } = await window.supabaseClient
+        const { data: replyData, error: replyError } = await window.supabaseClient
           .from('posts')
           .select('*')
           .in('parent_id', mainPostIds)
-          .order('created_id', { ascending: true }); // 评论按时间正序
+          .order('created_at', { ascending: true }); // 按回复时间正序
+        
+        if (replyError) console.error("查询回复报错:", replyError);
         replies = replyData || [];
       }
 
@@ -1080,7 +1079,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 4. 渲染主贴与回复
       mainPosts.forEach(post => {
         const postCard = document.createElement('div');
         postCard.className = 'post-card';
@@ -1093,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let htmlContent = `
           <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />
+            <img src="${post.avatar_url || post.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />
             <div>
               <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
               <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
@@ -1113,13 +1111,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
         `;
 
+        // 筛选并渲染该主贴的回复
         const currentReplies = replies.filter(r => r.parent_id === post.id);
         currentReplies.forEach(reply => {
           htmlContent += `
             <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
               <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                <img src="${reply.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
-                <span style="font-weight:bold; color:#ffe066;">${reply.nickname}</span>
+                <img src="${reply.avatar_url || reply.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
+                <span style="font-weight:bold; color:#ffe066;">${reply.nickname || '热心网友'}</span>
                 <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
               </div>
               <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
@@ -1148,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // 5. 渲染分页控制条
+      // 渲染分页栏
       const totalPages = Math.ceil((totalCount || 0) / pageSize);
       if (totalPages > 1) {
         const paginationDiv = document.createElement('div');
@@ -1162,7 +1161,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         postsList.appendChild(paginationDiv);
 
-        // 绑定分页点击事件
         document.getElementById('prev-page-btn')?.addEventListener('click', () => {
           if (currentForumPage > 1) {
             currentForumPage--;
@@ -1181,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
     } catch (err) {
-      console.error("加载论坛卡死:", err);
+      console.error("fetchPosts 渲染异常:", err);
     }
   }
   // ==========================================
