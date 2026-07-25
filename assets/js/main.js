@@ -960,9 +960,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const content = postContent.value.trim();
       if (!content) { alert('内容不能为空喵！'); return; }
 
-      const { data: { user } } = await window.supabaseClient.auth.getUser();
+     // const { data: { user } } = await window.supabaseClient.auth.getUser();
+    //  if (!user) { alert('请先登录后再发帖。'); return; }
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = session ? session.user : null;
       if (!user) { alert('请先登录后再发帖。'); return; }
-
+      
       const { data: profile } = await window.supabaseClient
         .from('profiles')
         .select('*')
