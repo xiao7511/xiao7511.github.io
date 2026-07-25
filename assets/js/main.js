@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖存储桶已有资源
 
         // 覆盖推送到存储桶
-        const { error: uploadError } = await window.supabaseClient.storage
+     /*   const { error: uploadError } = await window.supabaseClient.storage
           .from('avatars')
           .upload(filePath, file, {
             upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
@@ -749,7 +749,42 @@ document.addEventListener('DOMContentLoaded', () => {
           throw new Error(`更新头像失败: ${profileError.message}`);
         }
         if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
+        */
+        // 1. 覆盖推送到存储桶（移除会导致返回值变 undefined 的 .then 和 .catch 链式混用）
+        const uploadResult = await window.supabaseClient.storage
+          .from('avatars')
+          .upload(filePath, file, {
+            upsert: true // 允许覆盖
+          });
 
+        // 安全地从上传结果中提取 error
+        const uploadError = uploadResult ? uploadResult.error : null;
+
+        if (uploadError) {
+          throw new Error(`存储桶同步失败: ${uploadError.message}`);
+        }
+
+        const { data: publicUrlData } = window.supabaseClient.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        // 拼接强刷时间戳
+        const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+
+        // 2. 写入 profiles 关系表（增加容错处理，防止因返回 undefined 导致页面崩溃）
+        const updateRes = await window.supabaseClient
+          .from('profiles')
+          .update({ avatar_url: finalAvatarUrl })
+          .eq('id', user.id);
+        
+        const profileError = updateRes ? updateRes.error : null;
+        
+        // 合并并精简重复的错误校验
+        if (profileError) {
+          throw new Error(`更新头像/关联资料表失败: ${profileError.message}`);
+        }
+
+                
         // 本地同步更新缓存
         localStorage.setItem('user_avatar', finalAvatarUrl);
 
