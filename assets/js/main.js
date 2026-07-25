@@ -991,7 +991,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }*/
   let currentForumPage = 1;
-  const pageSize = 20;
+  const pageSize = 5;
 
   // 1. 发帖逻辑：确保获取最新个人头像与昵称
   if (publishBtn) {
