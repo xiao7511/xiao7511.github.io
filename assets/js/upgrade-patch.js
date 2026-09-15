@@ -44,7 +44,7 @@
                 const mangaList = allData.filter(d => d.category === 'manga');
 
                 // ----------------------------------------------------
-                // 模块 A：动态同步首页 5 张大图轮播位
+                // 模块 A：动态同步首页大图轮播位
                 // ----------------------------------------------------
                 if (bannerList.length > 0) {
                     const slideImages = document.querySelectorAll('.hero__slides .hero__slide img');
