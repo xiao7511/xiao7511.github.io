@@ -105,10 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fallbackImages = {
       section_banner: [
         'images/IMG_4822.jpeg',
-        'images/IMG_4823.jpeg',
-        'images/IMG_4824.jpeg',
-        'images/IMG_4825.jpeg',
-        'images/IMG_4826.jpeg'
+        'images/IMG_4873.png',
+        'images/IMG_4886.png'
       ]
     };
 
@@ -1776,27 +1774,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
-
-  let currentSlideIndexOld = 0;
-  let carouselSlidesOld = Array.from(document.querySelectorAll('.hero__slide'));
-  function showSlideOld(idx) {
-    if (!carouselSlidesOld.length) return;
-    carouselSlidesOld.forEach(s => s.classList.remove('is-active'));
-    let target = idx;
-    if (idx >= carouselSlidesOld.length) target = 0;
-    if (idx < 0) target = carouselSlidesOld.length - 1;
-    currentSlideIndexOld = target;
-    carouselSlidesOld[currentSlideIndexOld].classList.add('is-active');
-  }
-
-  const prevBtn = document.querySelector('.hero__btn--prev');
-  const nextBtn = document.querySelector('.hero__btn--next');
-  if (prevBtn) prevBtn.onclick = () => showSlideOld(currentSlideIndexOld - 1);
-  if (nextBtn) nextBtn.onclick = () => showSlideOld(currentSlideIndexOld + 1);
-
-  if (carouselSlidesOld.length > 0) {
-    setInterval(() => showSlideOld(currentSlideIndexOld + 1), 6000);
-  }
 
   // 💥 唤起总初始化启动入口 💥
   initApp();
