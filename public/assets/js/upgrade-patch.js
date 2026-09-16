@@ -10,7 +10,7 @@
     // 基础配置：安全捕获 SupabaseUrl 配置网关
     // ==========================================
     const getCloudGateway = () => {
-        return "https://api.nobistudio.com/"; 
+        return `${window.SiteConfig.apiOrigin}/`;
     };
 
     // ==========================================
@@ -26,10 +26,10 @@
             const res = await fetch(getCloudGateway());
             if (!res.ok) return;
             const config = await res.json();
-            
+
             if (config.SUPABASE_URL && config.ANON_KEY && window.supabase) {
                 const client = window.supabase.createClient(config.SUPABASE_URL, config.ANON_KEY);
-                
+
                 // 2. 一口气捞出 content_management 表中的所有活跃配置数据
                 const { data: allData, error } = await client
                     .from('content_management')
@@ -63,7 +63,7 @@
                 if (animeList.length > 0) {
                     // 完美锁定 index.html 里的 .anime-card 集合
                     const animeCards = document.querySelectorAll('.anime-card');
-                    
+
                     animeList.forEach(item => {
                         const idx = item.slot_index;
                         const card = animeCards[idx];
@@ -97,7 +97,7 @@
                 if (mangaList.length > 0) {
                     // 完美锁定 index.html 里的 .manga-card 集合
                     const mangaCards = document.querySelectorAll('.manga-card');
-                    
+
                     mangaList.forEach(item => {
                         const idx = item.slot_index;
                         const card = mangaCards[idx];
@@ -143,7 +143,7 @@
     document.addEventListener('contextmenu', function(e) {
         if (e.target.tagName === 'IMG') e.preventDefault();
     }, { passive: false, capture: true });
-    
+
     const style = document.createElement('style');
     style.textContent = `img { -webkit-touch-callout: none !important; user-select: none !important; }`;
     document.head.appendChild(style);
@@ -154,7 +154,7 @@
     document.addEventListener('click', function(e) {
         // 后台环境自动关闭拦截
         if (window.location.pathname.includes('admin.html')) {
-            return; 
+            return;
         }
 
         let target = e.target;
@@ -202,7 +202,7 @@
             e.stopPropagation();
 
             let imgSrc = clickedImg ? clickedImg.src : '';
-            
+
             if (finalCategory === "banner" && slotIndex === "0" && imgSrc) {
                 const filename = imgSrc.substring(imgSrc.lastIndexOf('/') + 1);
                 const match = filename.match(/\d+/);
@@ -233,7 +233,7 @@
                 wrapper.className = 'like-img-wrapper';
                 wrapper.style.position = 'relative';
                 wrapper.style.display = 'inline-block';
-                
+
                 img.parentNode.insertBefore(wrapper, img);
                 wrapper.appendChild(img);
 
@@ -242,7 +242,7 @@
                 let isLiked = localStorage.getItem(imgKey) === 'true';
                 let count = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
 
-                likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
+                likeBtn.textContent = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
                 Object.assign(likeBtn.style, {
                     position: 'absolute', bottom: '10px', right: '10px',
                     background: 'rgba(255, 255, 255, 0.9)', border: 'none',
@@ -255,7 +255,7 @@
                     localStorage.setItem(imgKey, isLiked);
                     count = isLiked ? count + 1 : count - 1;
                     localStorage.setItem(`${imgKey}_cnt`, count);
-                    likeBtn.innerHTML = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
+                    likeBtn.textContent = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
                     likeBtn.style.color = isLiked ? 'red' : '#333';
                 });
                 wrapper.appendChild(likeBtn);
