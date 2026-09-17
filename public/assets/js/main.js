@@ -1055,19 +1055,29 @@ document.addEventListener('DOMContentLoaded', () => {
         throw error;
       }
 
-      // 获取对应主贴的回复（修正了之前写错的 created_id 字段）
+      // 当前页的回复与点赞均使用批量查询，避免 N+1 请求。
       const mainPostIds = (mainPosts || []).map(p => p.id);
       let replies = [];
+      let likeRows = [];
+      let currentUser = null;
       if (mainPostIds.length > 0) {
-        const { data: replyData, error: replyError } = await window.supabaseClient
-          .from('posts')
-          .select('*')
-          .in('parent_id', mainPostIds)
-          .order('created_at', { ascending: true }); // 按回复时间正序
-
-        if (replyError) console.error("查询回复报错:", replyError);
-        replies = replyData || [];
+        const [replyResult, likeResult, sessionResult] = await Promise.all([
+          window.supabaseClient.from('posts').select('*').in('parent_id', mainPostIds).order('created_at', { ascending: true }),
+          window.supabaseClient.from('post_likes').select('post_id,user_id').in('post_id', mainPostIds),
+          window.supabaseClient.auth.getSession()
+        ]);
+        if (replyResult.error) console.error("查询回复报错:", replyResult.error);
+        if (likeResult.error) throw likeResult.error;
+        replies = replyResult.data || [];
+        likeRows = likeResult.data || [];
+        currentUser = sessionResult.data?.session?.user || null;
       }
+
+      const likesByPostId = new Map();
+      likeRows.forEach(({ post_id, user_id }) => {
+        if (!likesByPostId.has(post_id)) likesByPostId.set(post_id, []);
+        likesByPostId.get(post_id).push(user_id);
+      });
 
       postsList.replaceChildren();
 
@@ -1081,67 +1091,29 @@ document.addEventListener('DOMContentLoaded', () => {
         postCard.className = 'post-card';
         postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
 
-        const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
-        const likesArray = post.likes_users || [];
-        const isLiked = likesArray.includes(currentEmail);
-        const likeCount = likesArray.length;
-
-        let htmlContent = `
-          <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <img src="${post.avatar_url || post.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />
-            <div>
-              <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
-              <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
-            </div>
-          </div>
-          <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
-
-          <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
-            <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
-              ${(isLiked || likeCount > 0) ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
-            </button>
-            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
-              💬 回复
-            </button>
-          </div>
-
-          <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
-        `;
-
-        // 筛选并渲染该主贴的回复
-        const currentReplies = replies.filter(r => r.parent_id === post.id);
-        currentReplies.forEach(reply => {
-          htmlContent += `
-            <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                <img src="${reply.avatar_url || reply.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
-                <span style="font-weight:bold; color:#ffe066;">${reply.nickname || '热心网友'}</span>
-                <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
-              </div>
-              <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
-            </div>
-          `;
+        const likedUserIds = likesByPostId.get(post.id) || [];
+        const isLiked = Boolean(currentUser && likedUserIds.includes(currentUser.id));
+        const make = (tag, style, text) => { const node = document.createElement(tag); if (style) node.style.cssText = style; if (text !== undefined) node.textContent = String(text); return node; };
+        const avatar = (value, size) => { const image = make('img', `width:${size}px; height:${size}px; border-radius:50%; object-fit:cover;`); image.alt = '头像'; window.SecurityUtils.setImageSource(image, value, 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'); return image; };
+        const header = make('div', 'display:flex; align-items:center; gap:8px; margin-bottom:8px;'); header.className = 'post-header';
+        const author = make('div'); author.append(make('div', 'font-weight:bold; font-size:0.9rem;', post.nickname || '神秘漫友'), make('div', 'font-size:0.7rem; color:rgba(255,255,255,0.4);', new Date(post.created_at).toLocaleString()));
+        header.append(avatar(post.avatar_url || post.avatar, 32), author);
+        const body = make('div', 'font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;', post.content); body.className = 'post-body';
+        const actions = make('div', 'display:flex; gap:16px; font-size:0.8rem;'); actions.className = 'post-actions';
+        const likeBtn = make('button', `background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;`, `${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likedUserIds.length})`); likeBtn.className = 'like-action-btn';
+        const replyBtn = make('button', 'background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;', '💬 回复'); actions.append(likeBtn, replyBtn);
+        const repliesContainer = make('div', 'margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;');
+        replies.filter(reply => reply.parent_id === post.id).forEach(reply => {
+          const item = make('div', 'background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;'); item.className = 'reply-item';
+          const replyHeader = make('div', 'display:flex; align-items:center; gap:6px; margin-bottom:4px;'); replyHeader.append(avatar(reply.avatar_url || reply.avatar, 20), make('span', 'font-weight:bold; color:#ffe066;', reply.nickname || '热心网友'), make('span', 'font-size:0.7rem; color:rgba(255,255,255,0.3);', new Date(reply.created_at).toLocaleTimeString()));
+          item.append(replyHeader, make('div', 'color:rgba(255,255,255,0.85);', reply.content)); repliesContainer.appendChild(item);
         });
-
-        htmlContent += `
-          </div>
-          <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
-            <input type="text" id="reply-input-${post.id}" placeholder="写下你的精彩回复..." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;" />
-            <button onclick="submitReply('${post.id}')" style="background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">发送</button>
-          </div>
-        `;
-
-        postCard.innerHTML = htmlContent;
-        postsList.appendChild(postCard);
-
-        const likeBtn = postCard.querySelector('.like-action-btn');
-        if (likeBtn) {
-          likeBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            await window.toggleLike(post.id, likesArray);
-          });
-        }
+        const replyBox = make('div', 'display:none; margin-top:12px; gap:8px;'); const input = make('input', 'flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;'); input.type = 'text'; input.placeholder = '写下你的精彩回复...';
+        const submit = make('button', 'background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;', '发送'); replyBox.append(input, submit);
+        likeBtn.addEventListener('click', async event => { event.preventDefault(); event.stopPropagation(); await window.toggleLike(post.id, isLiked); });
+        replyBtn.addEventListener('click', () => { replyBox.style.display = replyBox.style.display === 'none' ? 'flex' : 'none'; if (replyBox.style.display === 'flex') input.focus(); });
+        submit.addEventListener('click', () => window.submitReply(post.id, input));
+        postCard.append(header, body, actions, repliesContainer, replyBox); postsList.appendChild(postCard);
       });
 
       // 渲染分页栏
@@ -1182,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
   // ==========================================
-  window.toggleLike = async function(postId, currentLikes) {
+  window.toggleLike = async function(postId, isLiked) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
 
@@ -1191,18 +1163,10 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    let updatedLikes = Array.isArray(currentLikes) ? [...currentLikes] : [];
-    if (updatedLikes.includes(user.email)) {
-      updatedLikes = updatedLikes.filter(email => email !== user.email);
-    } else {
-      updatedLikes.push(user.email);
-    }
-
     try {
-      const { error } = await window.supabaseClient
-        .from('posts')
-        .update({ likes_users: updatedLikes })
-        .eq('id', postId);
+      const { error } = await (isLiked
+        ? window.supabaseClient.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
+        : window.supabaseClient.from('post_likes').insert({ post_id: postId, user_id: user.id }));
 
       if (error) {
         console.error("数据库拒绝了点赞更新:", error);
@@ -1216,21 +1180,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  window.showReplyBox = function(postId) {
-    const box = document.getElementById(`reply-box-${postId}`);
-    if (box) {
-      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
-      if (box.style.display === 'flex') {
-        document.getElementById(`reply-input-${postId}`).focus();
-      }
-    }
-  };
-
-
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  window.submitReply = async function(postId) {
+  window.submitReply = async function(postId, inputElem) {
     if (!window.supabaseClient) return;
-    const inputElem = document.getElementById(`reply-input-${postId}`);
     if (!inputElem) return;
     const content = inputElem.value.trim();
     if (!content) { alert('回复内容不能为空喵！'); return; }
