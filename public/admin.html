@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>内容管理后台 —— 终极自适应控制台</title>
+  <script src="assets/js/site-config.js"></script>
+  <link rel="canonical" href="https://www.nobistudio.com/admin.html">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -228,7 +230,7 @@
     <div class="container">
         <div class="header-box">
             <h1>内容管理后台 —— 终极自适应控制台</h1>
-            <a href="javascript:history.back();" class="back-home-btn">← 返回站点主页</a>
+            <a href="index.html" class="back-home-btn">← 返回站点主页</a>
         </div>
 
         <div class="upload-card">
@@ -269,7 +271,7 @@
     let selectedFilesCache = []; 
 
     async function loadCloudflareConfig() {
-        const apiUri = "https://api.nobistudio.com/";
+        const apiUri = `${window.SiteConfig.apiOrigin}/`;
         try {
             const res = await fetch(apiUri);
             if (!res.ok) throw new Error(`Cloudflare 节点鉴权响应异常: ${res.status}`);
@@ -421,7 +423,7 @@
                 alert('🚨 权限拦截：首页 Banner 大图轮播区域目前仅限图片，请重新选择图片格式素材！');
                 selectedFilesCache = [];
                 fileInput.value = '';
-                dropZone.querySelector('.dropzone-text').innerHTML = '点击批量选择相册大图文件进行缓冲覆盖';
+                dropZone.querySelector('.dropzone-text').textContent = '点击批量选择相册大图文件进行缓冲覆盖';
                 return;
             }
 
@@ -508,7 +510,7 @@
     async function refreshLiveDashboard(supabaseUrl) {
         const wrapper = document.getElementById('sections-wrapper');
         if (!wrapper) return;
-        wrapper.innerHTML = '';
+        wrapper.replaceChildren();
 
         let managementData = [];
         try {
@@ -626,7 +628,7 @@
 
         const files = Array.from(input.files);
         if(files.length === 0) {
-            lbl.innerHTML = `📁 选取主封面(仅限图片，禁止视频) (未选新文件)`;
+            lbl.textContent = '📁 选取主封面(仅限图片，禁止视频) (未选新文件)';
             return;
         }
 
@@ -634,7 +636,7 @@
         if(hasVideo) {
             alert('🚨 权限拦截：主封面区域不允许使用视频作为展示封面，请选择纯图片格式素材！');
             input.value = '';
-            lbl.innerHTML = `📁 选取主封面(仅限图片，禁止视频) (未选新文件)`;
+            lbl.textContent = '📁 选取主封面(仅限图片，禁止视频) (未选新文件)';
             return;
         }
 

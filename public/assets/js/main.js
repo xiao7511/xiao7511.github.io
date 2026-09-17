@@ -1,13 +1,13 @@
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.sysConfig = null;
-window.supabaseClient = null; 
+window.supabaseClient = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   // 🎯 【必须加在最顶端第一行】检查是否是刚才后退回来触发的全新刷新
   if (sessionStorage.getItem('just_backed_from_admin') === 'true') {
       console.log("✨ 成功通过物理重载复苏主页！正在擦除信号并强制清除缓存...");
       sessionStorage.removeItem('just_backed_from_admin'); // 立即销毁标记，防止以后F5刷新被误伤
-      
+
       // 💡 黑科技：往全局 url 配置里塞一个时间戳参数，强制后续所有 Supabase 图片查询都带上最新时间戳破除缓存
       window.forceCacheBuster = `?t=${new Date().getTime()}`;
   }
@@ -41,8 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editAvatarFileInput = document.getElementById('edit-avatar-file');
   const editAvatarHint = document.getElementById('edit-avatar-hint');
 
-  //const REDIRECT_URL = 'https://xiao7511.github.io/index.html';
-  const REDIRECT_URL = 'https://www.nobistudio.com/index.html';
+  const REDIRECT_URL = `${window.SiteConfig.siteOrigin}/index.html`;
   let selectedAvatar = avatarOptions[0]?.dataset.avatar || '';
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function startCarousel() {
     if (prefersReducedMotion || carouselSlides.length <= 1) return;
     stopCarousel();
-    carouselTimer = setInterval(nextSlide, 5000); 
+    carouselTimer = setInterval(nextSlide, 5000);
   }
 
   function stopCarousel() {
@@ -85,19 +84,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     heroSection.addEventListener('touchstart', (e) => {
       touchStartX = e.changedTouches[0].screenX;
-      stopCarousel(); 
+      stopCarousel();
     }, { passive: true });
 
     heroSection.addEventListener('touchend', (e) => {
       touchEndX = e.changedTouches[0].screenX;
       const swipeDistance = touchEndX - touchStartX;
-      
+
       if (swipeDistance > 50) {
-        prevSlide(); 
+        prevSlide();
       } else if (swipeDistance < -50) {
-        nextSlide(); 
+        nextSlide();
       }
-      startCarousel(); 
+      startCarousel();
     }, { passive: true });
   }
 
@@ -155,10 +154,10 @@ document.addEventListener('DOMContentLoaded', () => {
     startCarousel();
 
     try {
-      const apiUri = "https://api.nobistudio.com/";
+      const apiUri = `${window.SiteConfig.apiOrigin}/`;
       const res = await fetch(apiUri);
       if (!res.ok) throw new Error(`Cloudflare 边缘节点异常: ${res.status}`);
-      
+
       const config = await res.json();
       if (!config.SUPABASE_URL || !config.ANON_KEY) {
         throw new Error("云端载入的通信凭证不完整。");
@@ -168,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
         auth: { persistSession: true, autoRefreshToken: true }
       });
-      
+
       console.log("✅ Supabase 安全客户端已成功注入底座！");
 
       // 🎯 核心修复 1：无论登录与否，立即采用 Promise.all 并发拉取全部图片、四大区域以及论坛列表！
@@ -276,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function openModal(mode) {
     if (!modal) return;
     modal.removeAttribute('hidden');
-    modal.style.setProperty('display', 'grid', 'important'); 
+    modal.style.setProperty('display', 'grid', 'important');
     switchMode(mode);
   }
 
@@ -351,12 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isLogged) {
         // ✨ 体验优化：已登录状态点击不再直接强制退出，而是拉起模态框切到“修改头像面板”
         openModal('profile');
-        
+
         // 顺便动态在头像面板底部加一个“退出登录”的安全微型纽带，防止用户找不到退出的地方
         if (!document.getElementById('logout-link-btn')) {
           const logoutBtnHtml = `<div style="text-align:center; margin-top:20px;"><button id="logout-link-btn" type="button" style="background:none; border:none; color:rgba(255,255,255,0.4); text-decoration:underline; font-size:0.8rem; cursor:pointer;">🔮 退出当前账号</button></div>`;
           userProfileForm.insertAdjacentHTML('beforeend', logoutBtnHtml);
-          
+
           document.getElementById('logout-link-btn').addEventListener('click', async () => {
              if (confirm('确定要退出登录吗？')) {
                  runPhysicalLogout();
@@ -404,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isLogged) {
           if (confirm('确定要退出登录吗？')) {
             console.log("启动终极物理熔断退出流...");
-            
+
             try {
               for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
@@ -422,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('user_nickname');
             localStorage.removeItem('user_avatar');
             sessionStorage.clear();
-            
+
             try {
               if (window.supabaseClient && window.supabaseClient.auth) {
                 await Promise.race([
@@ -464,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         avatarOptions.forEach(b => b.classList.remove('is-selected'));
         btn.classList.add('is-selected');
         selectedAvatar = btn.dataset.avatar;
-        
+
         // ✨ 新增：如果选择了预设头像，清空已选的本地文件
         if (avatarFileInput) avatarFileInput.value = '';
         if (avatarFileHint) avatarFileHint.textContent = '';
@@ -511,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
-        
+
         if (error) {
           alert(`登录失败: ${error.message}`);
           submitBtn.disabled = false;
@@ -578,9 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 修改后（打印完整错误对象到控制台）
         console.error("注册详细错误：", error);
         //alert(`注册或验证失败: ${err.message || JSON.stringify(error)}`);
-        
+
         if (error) throw error;
-        
+
         if (data.user) {
           // 预设一个基础头像地址（如果用户没选本地文件，则沿用 DiceBear 默认值）
           let finalAvatarUrl = selectedAvatar;
@@ -590,14 +589,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = avatarFileInput.files[0];
             const fileExt = file.name.split('.').pop().toLowerCase();
             // 用用户真实的唯一 ID 命名，确保一个用户永远只有一张最新的头像，避免污染存储空间
-            const filePath = `${data.user.id}.${fileExt}`; 
+            const filePath = `${data.user.id}.${fileExt}`;
 
             submitBtn.textContent = '⏱️ 正在上传自定义头像...';
-            
+
             // 上传至 Supabase 存储空间里的 'avatars' 存储桶
             const { error: uploadError } = await window.supabaseClient.storage
               .from('avatars')
-              .upload(filePath, file, { 
+              .upload(filePath, file, {
                 upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
               })
               .then(res => console.log('上传结果:', res))
@@ -612,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: publicUrlData } = window.supabaseClient.storage
               .from('avatars')
               .getPublicUrl(filePath);
-              
+
             // 拼接最新的公共 URL 路径，并加上防缓存时间戳
             finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
           }
@@ -630,10 +629,10 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(`资料卡绑定失败: ${profileError.message} (请检查 profiles 表的 RLS 策略)`);
           }
         }
-        
+
         alert('注册成功！请检查邮箱激活邮件喵~');
         closeModal();
-        
+
         // 注册完毕后刷新或重载，让新用户的状态对齐
         if (typeof initApp === 'function') {
           initApp();
@@ -740,9 +739,9 @@ document.addEventListener('DOMContentLoaded', () => {
           .from('profiles')
           .update({ avatar_url: finalAvatarUrl })
           .eq('id', user.id);
-        
+
         const profileError = updateRes ? updateRes.error : null;
-        
+
         if (profileError) {
           throw new Error(`更新头像失败: ${profileError.message}`);
         }
@@ -774,15 +773,15 @@ document.addEventListener('DOMContentLoaded', () => {
           .from('profiles')
           .update({ avatar_url: finalAvatarUrl })
           .eq('id', user.id);
-        
+
         const profileError = updateRes ? updateRes.error : null;
-        
+
         // 合并并精简重复的错误校验
         if (profileError) {
           throw new Error(`更新头像/关联资料表失败: ${profileError.message}`);
         }
 
-                
+
         // 本地同步更新缓存
         localStorage.setItem('user_avatar', finalAvatarUrl);
         // 如果您页面上还有全局的 profile 变量，也一并更新：
@@ -793,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('🎉 头像修改成功！论坛各模块已同步刷新。');
         editAvatarFileInput.value = '';
         if (editAvatarHint) editAvatarHint.textContent = '';
-        
+
         if (typeof closeModal === 'function') closeModal();
         window.location.reload();
 
@@ -811,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   // 注意：你代码里似乎 resetForm 和 forgotPasswordForm 都在指代发送邮件，这里我将其统一。
   // 如果你的发送邮件表单 id 是 resetForm，请自行对齐。
-  const emailForm = forgotPasswordForm || resetForm; 
+  const emailForm = forgotPasswordForm || resetForm;
 
   if (emailForm && document.getElementById('forgot-email')) {
     emailForm.addEventListener('submit', async (e) => {
@@ -835,7 +834,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 调用 Supabase 官方发送重置邮件
         const { error } = await window.supabaseClient.auth.resetPasswordForEmail(email, {
           // 用户点击链接后跳回当前页面，URL会带上#access_token，自动触发下面的模块三
-          redirectTo: window.location.origin + window.location.pathname 
+          redirectTo: window.location.origin + window.location.pathname
         });
 
         if (error) throw error;
@@ -859,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. 🔄 核心状态监听：捕获邮件链接，控制表单显隐
     window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
-      
+
       // 🎯 1. 它是最高优先级！一旦发现是重置信号，立刻拦截
       if (event === 'PASSWORD_RECOVERY' || window.location.hash.includes('type=recovery')) {
         console.log('🚨 侦测到重置密码流，拦截普通登录主页逻辑');
@@ -887,7 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const authModal = document.getElementById('auth-modal');
           if (authModal) authModal.style.display = 'flex';
         }
-        
+
         return; // 🛑 关键：直接返回，不再往下执行普通的“已登录主页”加载逻辑
       }
 
@@ -967,7 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       const user = session ? session.user : null;
       if (!user) { alert('请先登录后再发帖。'); return; }
-      
+
       const { data: profile } = await window.supabaseClient
         .from('profiles')
         .select('*')
@@ -1001,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       const user = session ? session.user : null;
       if (!user) { alert('请先登录后再发帖。'); return; }
-      
+
       // 获取最新 profiles 数据
       const { data: profile } = await window.supabaseClient
         .from('profiles')
@@ -1032,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. 渲染主贴、回复与分页
   async function fetchPosts() {
     if (!postsList) return;
-    
+
     try {
       const startIndex = (currentForumPage - 1) * pageSize;
       const endIndex = startIndex + pageSize - 1;
@@ -1056,24 +1055,34 @@ document.addEventListener('DOMContentLoaded', () => {
         throw error;
       }
 
-      // 获取对应主贴的回复（修正了之前写错的 created_id 字段）
+      // 当前页的回复与点赞均使用批量查询，避免 N+1 请求。
       const mainPostIds = (mainPosts || []).map(p => p.id);
       let replies = [];
+      let likeRows = [];
+      let currentUser = null;
       if (mainPostIds.length > 0) {
-        const { data: replyData, error: replyError } = await window.supabaseClient
-          .from('posts')
-          .select('*')
-          .in('parent_id', mainPostIds)
-          .order('created_at', { ascending: true }); // 按回复时间正序
-        
-        if (replyError) console.error("查询回复报错:", replyError);
-        replies = replyData || [];
+        const [replyResult, likeResult, sessionResult] = await Promise.all([
+          window.supabaseClient.from('posts').select('*').in('parent_id', mainPostIds).order('created_at', { ascending: true }),
+          window.supabaseClient.from('post_likes').select('post_id,user_id').in('post_id', mainPostIds),
+          window.supabaseClient.auth.getSession()
+        ]);
+        if (replyResult.error) console.error("查询回复报错:", replyResult.error);
+        if (likeResult.error) throw likeResult.error;
+        replies = replyResult.data || [];
+        likeRows = likeResult.data || [];
+        currentUser = sessionResult.data?.session?.user || null;
       }
 
-      postsList.innerHTML = '';
-      
+      const likesByPostId = new Map();
+      likeRows.forEach(({ post_id, user_id }) => {
+        if (!likesByPostId.has(post_id)) likesByPostId.set(post_id, []);
+        likesByPostId.get(post_id).push(user_id);
+      });
+
+      postsList.replaceChildren();
+
       if (!mainPosts || mainPosts.length === 0) {
-        postsList.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.4); padding:20px;">暂无社区动态，快来发表第一条内容吧~</div>';
+        window.SecurityUtils.setMessage(postsList, '暂无社区动态，快来发表第一条内容吧~', 'text-align:center;color:rgba(255,255,255,.4);padding:20px;');
         return;
       }
 
@@ -1082,67 +1091,29 @@ document.addEventListener('DOMContentLoaded', () => {
         postCard.className = 'post-card';
         postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
 
-        const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
-        const likesArray = post.likes_users || [];
-        const isLiked = likesArray.includes(currentEmail);
-        const likeCount = likesArray.length;
-
-        let htmlContent = `
-          <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <img src="${post.avatar_url || post.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%; object-fit:cover;" />
-            <div>
-              <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
-              <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
-            </div>
-          </div>
-          <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
-          
-          <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
-            <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
-              ${(isLiked || likeCount > 0) ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
-            </button>
-            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
-              💬 回复
-            </button>
-          </div>
-
-          <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
-        `;
-
-        // 筛选并渲染该主贴的回复
-        const currentReplies = replies.filter(r => r.parent_id === post.id);
-        currentReplies.forEach(reply => {
-          htmlContent += `
-            <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                <img src="${reply.avatar_url || reply.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:20px; height:20px; border-radius:50%; object-fit:cover;" />
-                <span style="font-weight:bold; color:#ffe066;">${reply.nickname || '热心网友'}</span>
-                <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
-              </div>
-              <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
-            </div>
-          `;
+        const likedUserIds = likesByPostId.get(post.id) || [];
+        const isLiked = Boolean(currentUser && likedUserIds.includes(currentUser.id));
+        const make = (tag, style, text) => { const node = document.createElement(tag); if (style) node.style.cssText = style; if (text !== undefined) node.textContent = String(text); return node; };
+        const avatar = (value, size) => { const image = make('img', `width:${size}px; height:${size}px; border-radius:50%; object-fit:cover;`); image.alt = '头像'; window.SecurityUtils.setImageSource(image, value, 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'); return image; };
+        const header = make('div', 'display:flex; align-items:center; gap:8px; margin-bottom:8px;'); header.className = 'post-header';
+        const author = make('div'); author.append(make('div', 'font-weight:bold; font-size:0.9rem;', post.nickname || '神秘漫友'), make('div', 'font-size:0.7rem; color:rgba(255,255,255,0.4);', new Date(post.created_at).toLocaleString()));
+        header.append(avatar(post.avatar_url || post.avatar, 32), author);
+        const body = make('div', 'font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;', post.content); body.className = 'post-body';
+        const actions = make('div', 'display:flex; gap:16px; font-size:0.8rem;'); actions.className = 'post-actions';
+        const likeBtn = make('button', `background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;`, `${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likedUserIds.length})`); likeBtn.className = 'like-action-btn';
+        const replyBtn = make('button', 'background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;', '💬 回复'); actions.append(likeBtn, replyBtn);
+        const repliesContainer = make('div', 'margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;');
+        replies.filter(reply => reply.parent_id === post.id).forEach(reply => {
+          const item = make('div', 'background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;'); item.className = 'reply-item';
+          const replyHeader = make('div', 'display:flex; align-items:center; gap:6px; margin-bottom:4px;'); replyHeader.append(avatar(reply.avatar_url || reply.avatar, 20), make('span', 'font-weight:bold; color:#ffe066;', reply.nickname || '热心网友'), make('span', 'font-size:0.7rem; color:rgba(255,255,255,0.3);', new Date(reply.created_at).toLocaleTimeString()));
+          item.append(replyHeader, make('div', 'color:rgba(255,255,255,0.85);', reply.content)); repliesContainer.appendChild(item);
         });
-
-        htmlContent += `
-          </div>
-          <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
-            <input type="text" id="reply-input-${post.id}" placeholder="写下你的精彩回复..." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;" />
-            <button onclick="submitReply('${post.id}')" style="background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">发送</button>
-          </div>
-        `;
-
-        postCard.innerHTML = htmlContent;
-        postsList.appendChild(postCard);
-
-        const likeBtn = postCard.querySelector('.like-action-btn');
-        if (likeBtn) {
-          likeBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation(); 
-            await window.toggleLike(post.id, likesArray);
-          });
-        }
+        const replyBox = make('div', 'display:none; margin-top:12px; gap:8px;'); const input = make('input', 'flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;'); input.type = 'text'; input.placeholder = '写下你的精彩回复...';
+        const submit = make('button', 'background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;', '发送'); replyBox.append(input, submit);
+        likeBtn.addEventListener('click', async event => { event.preventDefault(); event.stopPropagation(); await window.toggleLike(post.id, isLiked); });
+        replyBtn.addEventListener('click', () => { replyBox.style.display = replyBox.style.display === 'none' ? 'flex' : 'none'; if (replyBox.style.display === 'flex') input.focus(); });
+        submit.addEventListener('click', () => window.submitReply(post.id, input));
+        postCard.append(header, body, actions, repliesContainer, replyBox); postsList.appendChild(postCard);
       });
 
       // 渲染分页栏
@@ -1151,7 +1122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const paginationDiv = document.createElement('div');
         paginationDiv.className = 'forum-pagination';
         paginationDiv.style = "display:flex; justify-content:center; align-items:center; gap:12px; margin-top:20px; padding:10px;";
-        
+
         paginationDiv.innerHTML = `
           <button id="prev-page-btn" ${currentForumPage === 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer;">上一页</button>
           <span style="font-size:0.85rem; color:rgba(255,255,255,0.8);">第 ${currentForumPage} / ${totalPages} 页 (共 ${totalCount} 条)</span>
@@ -1183,94 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
   // ==========================================
-  /*async function fetchPosts() {
-    if (!postsList) return;
-    
-    try {
-      const { data: allPosts, error } = await window.supabaseClient
-        .from('posts')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      postsList.innerHTML = '';
-      
-      const mainPosts = allPosts.filter(p => !p.parent_id);
-      const replies = allPosts.filter(p => p.parent_id);
-
-      mainPosts.forEach(post => {
-        const postCard = document.createElement('div');
-        postCard.className = 'post-card';
-        postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
-
-        const currentEmail = window.supabaseClient.auth.currentUser?.email || '';
-        const likesArray = post.likes_users || [];
-        const isLiked = likesArray.includes(currentEmail);
-        const likeCount = likesArray.length;
-
-        let htmlContent = `
-          <div class="post-header" style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <img src="${post.avatar_url || 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'}" style="width:32px; height:32px; border-radius:50%;" />
-            <div>
-              <div style="font-weight:bold; font-size:0.9rem;">${post.nickname || '神秘漫友'}</div>
-              <div style="font-size:0.7rem; color:rgba(255,255,255,0.4);">${new Date(post.created_at).toLocaleString()}</div>
-            </div>
-          </div>
-          <div class="post-body" style="font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;">${post.content}</div>
-          
-          <div class="post-actions" style="display:flex; gap:16px; font-size:0.8rem;">
-            <button class="like-action-btn" data-post-id="${post.id}" style="background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;">
-              ${(isLiked || likeCount > 0) ? '❤️ 已赞' : '🤍 点赞'} (${likeCount})
-            </button>
-            <button onclick="showReplyBox('${post.id}')" style="background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;">
-              💬 回复
-            </button>
-          </div>
-
-          <div id="replies-container-${post.id}" style="margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;">
-        `;
-
-        const currentReplies = replies.filter(r => r.parent_id === post.id);
-        currentReplies.forEach(reply => {
-          htmlContent += `
-            <div class="reply-item" style="background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;">
-              <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                <img src="${reply.avatar_url}" style="width:20px; height:20px; border-radius:50%;" />
-                <span style="font-weight:bold; color:#ffe066;">${reply.nickname}</span>
-                <span style="font-size:0.7rem; color:rgba(255,255,255,0.3);">${new Date(reply.created_at).toLocaleTimeString()}</span>
-              </div>
-              <div style="color:rgba(255,255,255,0.85);">${reply.content}</div>
-            </div>
-          `;
-        });
-
-        htmlContent += `
-          </div>
-          <div id="reply-box-${post.id}" style="display:none; margin-top:12px; gap:8px;">
-            <input type="text" id="reply-input-${post.id}" placeholder="写下你的精彩回复..." style="flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;" />
-            <button onclick="submitReply('${post.id}')" style="background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;">发送</button>
-          </div>
-        `;
-
-        postCard.innerHTML = htmlContent;
-        postsList.appendChild(postCard);
-
-        const likeBtn = postCard.querySelector('.like-action-btn');
-        if (likeBtn) {
-          likeBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            e.stopPropagation(); 
-            await window.toggleLike(post.id, likesArray);
-          });
-        }
-      });
-    } catch (err) {
-      console.error("加载论坛卡死:", err);
-    }
-  }*/
-
-  window.toggleLike = async function(postId, currentLikes) {
+  window.toggleLike = async function(postId, isLiked) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
 
@@ -1279,46 +1163,26 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    let updatedLikes = Array.isArray(currentLikes) ? [...currentLikes] : [];
-    if (updatedLikes.includes(user.email)) {
-      updatedLikes = updatedLikes.filter(email => email !== user.email);
-    } else {
-      updatedLikes.push(user.email);
-    }
-
     try {
-      const { error } = await window.supabaseClient
-        .from('posts')
-        .update({ likes_users: updatedLikes })
-        .eq('id', postId);
+      const { error } = await (isLiked
+        ? window.supabaseClient.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
+        : window.supabaseClient.from('post_likes').insert({ post_id: postId, user_id: user.id }));
 
       if (error) {
         console.error("数据库拒绝了点赞更新:", error);
         alert(`点赞失败，数据库返回: ${error.message} (代码: ${error.code})`);
         return;
       }
-      
-      await fetchPosts(); 
+
+      await fetchPosts();
     } catch(err) {
       console.error("网络或流阻断:", err);
     }
   };
 
-  window.showReplyBox = function(postId) {
-    const box = document.getElementById(`reply-box-${postId}`);
-    if (box) {
-      box.style.display = box.style.display === 'none' ? 'flex' : 'none';
-      if (box.style.display === 'flex') {
-        document.getElementById(`reply-input-${postId}`).focus();
-      }
-    }
-  };
-
-
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  window.submitReply = async function(postId) {
+  window.submitReply = async function(postId, inputElem) {
     if (!window.supabaseClient) return;
-    const inputElem = document.getElementById(`reply-input-${postId}`);
     if (!inputElem) return;
     const content = inputElem.value.trim();
     if (!content) { alert('回复内容不能为空喵！'); return; }
@@ -1355,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     inputElem.value = '';
     await fetchPosts(); // 刷新列表以展示最新回复
   };
-  
+
  /* window.submitReply = async function(postId) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session?.user;
@@ -1381,12 +1245,12 @@ document.addEventListener('DOMContentLoaded', () => {
           content: input.value.trim(),
           nickname: nickname,
           avatar_url: avatarUrl,
-          parent_id: postId 
+          parent_id: postId
         }]);
 
       if (error) throw error;
       input.value = '';
-      await fetchPosts(); 
+      await fetchPosts();
     } catch (err) {
       alert("回复失败: " + err.message);
     }
@@ -1428,13 +1292,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🌟 3. 增强型用户 UI 状态更新与完全非阻塞异步鉴权函数
   function updateUserUI(user) {
     if (!userButton) return;
-    
+
     // 获取后台控制入口按钮元素（兼容代码中出现的两种 ID 命名）
     let adminButton = document.getElementById('admin-entrance-wrapper') || document.getElementById('admin-btn');
-    
+
     if (user) {
       // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
-      userButton.innerHTML = `<span class="user-status-dot"></span> 欢迎回来, ${user.email.split('@')[0]}`;
+      userButton.replaceChildren(window.SecurityUtils.element('span', { className: 'user-status-dot' }), document.createTextNode(` 欢迎回来, ${user.email.split('@')[0]}`));
       userButton.style.background = 'rgba(255, 255, 255, 0.15)';
 
       // ✨ 修改：登录成功后，让“修改头像面板”浮现、让“忘记密码”隐藏
@@ -1444,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // (2) 🚀 瞬间无缝唤醒论坛：全物理接触隐藏，彻底防止论坛处于断开或僵尸挂起状态
       if (postArea) {
         postArea.removeAttribute('hidden');
-        postArea.style.display = 'block'; 
+        postArea.style.display = 'block';
       }
       if (publishBtn) publishBtn.removeAttribute('disabled');
 
@@ -1454,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.warn("⚠️ 实例尚在复苏，略过本次静默验权。");
           return;
         }
-        
+
         try {
           console.log("🔍 正在后台静默校验管理员身份凭证...");
           const { data, error } = await window.supabaseClient
@@ -1465,11 +1329,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (!error && data && data.is_admin) {
             console.log("👑 认证成功：当前账号具备最高管理权限，正在呈现控制台入口...");
-            
+
             // 补写安全通信锁双向 Cookie
             document.cookie = "is_admin=true; path=/; max-age=86400; SameSite=Lax";
             document.cookie = "admin_access=true; path=/; max-age=86400; SameSite=Strict";
-            
+
             // 展现控制台按钮入口
             if (adminButton) {
               adminButton.removeAttribute('hidden');
@@ -1490,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (authCatch) {
           console.warn("静默验权通道暂时繁忙，已安全降级跳过:", authCatch);
         }
-      }, 200); 
+      }, 200);
 
     } else {
       // (4) 用户未登录或退出登录时，全面物理还原界面并封锁论坛发布功能
@@ -1518,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 负责退出登录或未登录时的界面复原
   function clearUserUI() {
      if (userButton) {
-        userButton.innerHTML = '✨ 登录 / 注册专区';
+        userButton.textContent = '✨ 登录 / 注册专区';
         userButton.style.background = '';
      }
      if (postArea) {
@@ -1530,12 +1394,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.renderAdminBannerList = function(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
-    if (!container) return; 
+    if (!container) return;
 
-    container.innerHTML = ''; 
+    container.replaceChildren();
 
     if (!imageUrlsArray || imageUrlsArray.length === 0) {
-      container.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:12px;">队列为空</p>';
+      window.SecurityUtils.setMessage(container, '队列为空', 'color:var(--text-muted);text-align:center;padding:12px;');
       return;
     }
 
@@ -1593,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', () => {
           configs.forEach(cfg => {
               const sectionId = cfg.section;
               let imageUrls = [];
-              
+
               try {
                   imageUrls = typeof cfg.url === 'string' ? JSON.parse(cfg.url) : cfg.url;
               } catch (e) {
@@ -1605,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               switch (sectionId) {
                   case 'section_banner':
-                      const bannerContainer = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper'); 
+                      const bannerContainer = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper');
                       if (bannerContainer) {
                           bannerContainer.innerHTML = imageUrls.map(url => `
                               <div class="swiper-slide">
@@ -1678,7 +1542,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const animeContainer = document.getElementById('anime-container');
           if (animeContainer) {
-              animeContainer.innerHTML = '';
+              animeContainer.replaceChildren();
               const animeSlots = managementData
                   .filter(item => item.category === 'anime')
                   .sort((a, b) => a.slot_index - b.slot_index);
@@ -1690,11 +1554,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   card.onclick = () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
-                  
-                  const finalCover = slot.cover_url 
+
+                  const finalCover = slot.cover_url
                       ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
                       : 'placeholder.png';
-                  
+
                   card.innerHTML = `
                       <img src="${finalCover}" loading="lazy" decoding="async"/>
                       <div class="card__body">
@@ -1708,7 +1572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const mangaContainer = document.getElementById('manga-container');
           if (mangaContainer) {
-              mangaContainer.innerHTML = '';
+              mangaContainer.replaceChildren();
               const mangaSlots = managementData
                   .filter(item => item.category === 'manga')
                   .sort((a, b) => a.slot_index - b.slot_index);
@@ -1720,11 +1584,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   card.onclick = () => {
                       window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
                   };
-                  
-                  const finalCover = slot.cover_url 
+
+                  const finalCover = slot.cover_url
                       ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
                       : 'placeholder.png';
-                  
+
                   card.innerHTML = `
                       <img src="${finalCover}" loading="lazy" decoding="async"/>
                       <div class="card__body">
@@ -1763,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
         authModal.style.setProperty('display', 'grid', 'important');
         if (loginForm) loginForm.removeAttribute('hidden');
         if (regForm) regForm.setAttribute('hidden', '');
-        
+
         const tabLogin = document.getElementById('tab-login');
         const tabReg = document.getElementById('tab-reg');
         if (tabLogin) tabLogin.classList.add('is-active');
@@ -1784,7 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // =================================================================
 window.addEventListener('pageshow', (event) => {
     const isBackAction = event.persisted || (window.performance && window.performance.navigation && window.performance.navigation.type === 2);
-    
+
     if (isBackAction) {
         console.log("🔄 捕获到从后台返回的行为。为了防止旧网络套接字被浏览器冻结死锁，准备强刷整页...");
         sessionStorage.setItem('just_backed_from_admin', 'true');
