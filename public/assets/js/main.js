@@ -1,5 +1,8 @@
+import { initializeSupabase } from './src/api/supabase.js';
+import { togglePostLike } from './src/community/likes.js';
+import { groupLikesByPostId } from './src/community/posts.js';
+
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
-window.sysConfig = null;
 window.supabaseClient = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -120,9 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!error && data && data.url) {
           liveUrls = JSON.parse(data.url);
-          if (typeof window.renderAdminBannerList === 'function') {
-            window.renderAdminBannerList(liveUrls);
-          }
+          renderAdminBannerList(liveUrls);
         }
       }
 
@@ -164,9 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 创建客户端2026.7.10修改
-      window.supabaseClient = supabase.createClient(config.SUPABASE_URL, config.ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true }
-      });
+      window.supabaseClient = await initializeSupabase(config);
 
       console.log("✅ Supabase 安全客户端已成功注入底座！");
 
@@ -1073,11 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser = sessionResult.data?.session?.user || null;
       }
 
-      const likesByPostId = new Map();
-      likeRows.forEach(({ post_id, user_id }) => {
-        if (!likesByPostId.has(post_id)) likesByPostId.set(post_id, []);
-        likesByPostId.get(post_id).push(user_id);
-      });
+      const likesByPostId = groupLikesByPostId(likeRows);
 
       postsList.replaceChildren();
 
@@ -1110,9 +1105,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const replyBox = make('div', 'display:none; margin-top:12px; gap:8px;'); const input = make('input', 'flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;'); input.type = 'text'; input.placeholder = '写下你的精彩回复...';
         const submit = make('button', 'background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;', '发送'); replyBox.append(input, submit);
-        likeBtn.addEventListener('click', async event => { event.preventDefault(); event.stopPropagation(); await window.toggleLike(post.id, isLiked); });
+        likeBtn.addEventListener('click', async event => { event.preventDefault(); event.stopPropagation(); await toggleLike(post.id, isLiked); });
         replyBtn.addEventListener('click', () => { replyBox.style.display = replyBox.style.display === 'none' ? 'flex' : 'none'; if (replyBox.style.display === 'flex') input.focus(); });
-        submit.addEventListener('click', () => window.submitReply(post.id, input));
+        submit.addEventListener('click', () => submitReply(post.id, input));
         postCard.append(header, body, actions, repliesContainer, replyBox); postsList.appendChild(postCard);
       });
 
@@ -1154,34 +1149,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
   // ==========================================
-  window.toggleLike = async function(postId, isLiked) {
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    const user = session?.user;
-
-    if (!user) {
-      alert("请先登录再参与社区点赞互动哦！");
-      return;
-    }
-
+  async function toggleLike(postId, isLiked) {
     try {
-      const { error } = await (isLiked
-        ? window.supabaseClient.from('post_likes').delete().eq('post_id', postId).eq('user_id', user.id)
-        : window.supabaseClient.from('post_likes').insert({ post_id: postId, user_id: user.id }));
-
-      if (error) {
-        console.error("数据库拒绝了点赞更新:", error);
-        alert(`点赞失败，数据库返回: ${error.message} (代码: ${error.code})`);
+      const result = await togglePostLike(window.supabaseClient, { postId, isLiked });
+      if (!result.authenticated) {
+        alert("请先登录再参与社区点赞互动哦！");
         return;
       }
-
       await fetchPosts();
     } catch(err) {
-      console.error("网络或流阻断:", err);
+      console.error("点赞操作失败:", err);
+      alert(`点赞失败，数据库返回: ${err.message} (代码: ${err.code || 'unknown'})`);
     }
-  };
+  }
 
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  window.submitReply = async function(postId, inputElem) {
+  async function submitReply(postId, inputElem) {
     if (!window.supabaseClient) return;
     if (!inputElem) return;
     const content = inputElem.value.trim();
@@ -1218,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inputElem.value = '';
     await fetchPosts(); // 刷新列表以展示最新回复
-  };
+  }
 
  /* window.submitReply = async function(postId) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
@@ -1392,7 +1375,7 @@ document.addEventListener('DOMContentLoaded', () => {
      if (publishBtn) publishBtn.setAttribute('disabled', 'true');
   }
 
-  window.renderAdminBannerList = function(imageUrlsArray) {
+  function renderAdminBannerList(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
     if (!container) return;
 
@@ -1422,12 +1405,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetIndex = parseInt(btn.dataset.index);
         if (confirm(`确定要删除第 ${targetIndex + 1} 张图片吗？`)) {
           imageUrlsArray.splice(targetIndex, 1);
-          window.renderAdminBannerList(imageUrlsArray);
+          renderAdminBannerList(imageUrlsArray);
           alert('图片已从当前配置列表移除，点击保存配置后将永久同步至数据库！');
         }
       });
     });
-  };
+  }
 
   // ==========================================
   // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
