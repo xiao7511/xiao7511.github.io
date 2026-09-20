@@ -1,77 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>漫画连载 - DorisY</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DorisY 动漫世界漫画连载，浏览最新章节和精选作品。">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://nobistudio.com/manga.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#081521">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <title>漫画连载 - DorisY 动漫世界</title>
   <script src="assets/js/site-config.js"></script>
-  <link rel="canonical" href="https://www.nobistudio.com/manga.html">
-    <style>
-        * {margin:0; padding:0; box-sizing:border-box;}
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #121024; color: #fff; padding-top: 90px; padding-bottom: 40px;}
-
-        /* 导航栏 */
-        .header { position: fixed; top:0; width:100%; height:70px; background: #0b091a; display: flex; align-items:center; justify-content:space-between; padding: 0 5%; z-index:1000; border-bottom: 1px solid rgba(255,110,199,0.15);}
-        .logo-link { color: #FF6EC7; text-decoration: none; font-weight: bold; font-size: 18px; }
-        .nav {display:flex; gap:20px;}
-        .nav-item {color: #a4b0be; text-decoration: none; font-size: 14px; font-weight: 500;}
-        .nav-item:hover { color: #FF6EC7; }
-
-        /* 漫画列表布局 */
-        .manga-section { padding: 0 5%; max-width: 900px; margin: 0 auto; }
-        .manga-list { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
-
-        .manga-item {
-            display: flex; background: rgba(255,255,255,0.04); border-radius: 12px;
-            overflow: hidden; height: 180px; transition: 0.3s;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .manga-item:hover { transform: translateY(-2px); border-color: #FF6EC7; box-shadow: 0 4px 15px rgba(255,110,199,0.2); }
-
-        /* 封面锁定，物理智能裁剪撑满 */
-        .manga-cover-box { width: 130px; height: 100%; flex-shrink: 0; overflow: hidden; }
-        .manga-cover { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
-
-        .manga-detail { flex: 1; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .manga-title { font-size: 1.2rem; color: #fff; margin-bottom: 4px; font-weight: bold;}
-        .manga-update { font-size: 0.85rem; color: #a4b0be; }
-
-        .read-btn {
-            align-self: flex-start; padding: 8px 24px;
-            background: linear-gradient(135deg, #FF6EC7 0%, #ff4757 100%);
-            border: none; color: #fff; font-weight: bold; font-size: 0.85rem;
-            border-radius: 50px; cursor: pointer; box-shadow: 0 3px 8px rgba(255,110,199,0.3);
-            transition: opacity 0.2s;
-        }
-        .read-btn:hover { opacity: 0.9; }
-
-        @media(max-width: 600px) {
-            .manga-item { height: 140px; }
-            .manga-cover-box { width: 100px; }
-            .manga-detail { padding: 12px; }
-            .manga-title { font-size: 1rem; }
-        }
-    </style>
 </head>
 <body>
-    <div class="header">
-        <a class="logo-link" href="index.html">DorisY动漫</a>
-        <div class="nav">
-            <a href="index.html" class="nav-item">首页</a>
-            <a href="recommend.html" class="nav-item">动漫推荐</a>
-            <a href="manga.html" class="nav-item" style="color:#FF6EC7">漫画连载</a>
-            <a href="community.html" class="nav-item">社区</a>
-        </div>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <header class="site-header">
+    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">DorisY 动漫世界</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单"><span class="nav-toggle__icon" aria-hidden="true"></span></button>
+    <nav id="site-nav" class="nav" aria-label="主导航">
+      <a href="index.html" class="nav__link">首页</a>
+      <a href="recommend.html" class="nav__link">动漫推荐</a>
+      <a href="manga.html" class="nav__link is-active" aria-current="page">漫画连载</a>
+      <a href="community.html" class="nav__link">社区</a>
+    </nav>
+  </header>
+  <main id="main-content" class="manga-section">
+    <div class="section__head"><h1>最新连载更新</h1><p>追踪喜爱的故事，不错过每一次更新。</p></div>
+    <div class="manga-list" id="dynamic-manga-container" aria-live="polite" aria-busy="true">
+      <div class="skeleton skeleton--manga" aria-hidden="true"></div>
+      <div class="skeleton skeleton--manga" aria-hidden="true"></div>
+      <div class="skeleton skeleton--manga" aria-hidden="true"></div>
+      <span class="sr-only" role="status">正在加载漫画连载</span>
     </div>
-
-    <div class="manga-section">
-        <h2>📖 最新连载更新</h2>
-
-        <div class="manga-list" id="dynamic-manga-container">
-            <div style="text-align: center; color: #a4b0be; padding: 40px;">⚡ 正在建立安全连接，同步连载数据...</div>
-        </div>
-    </div>
+  </main>
+  <footer class="site-footer">© <span data-current-year>2026</span> DorisY 动漫世界 · nobistudio.com</footer>
   <script src="assets/js/security.js" defer></script>
-  <script type="module" src="assets/js/src/pages/manga.js"></script>
+  <script type="module" src="assets/js/src/pages/manga.js?v=20260920"></script>
 </body>
 </html>

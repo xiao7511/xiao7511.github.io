@@ -145,7 +145,7 @@
     }, { passive: false, capture: true });
 
     const style = document.createElement('style');
-    style.textContent = `img { -webkit-touch-callout: none !important; user-select: none !important; }`;
+    style.textContent = `img { -webkit-touch-callout: none; user-select: none; }`;
     document.head.appendChild(style);
 
     // ==========================================
@@ -243,11 +243,7 @@
                 let count = parseInt(localStorage.getItem(`${imgKey}_cnt`)) || Math.floor(Math.random() * 20) + 5;
 
                 likeBtn.textContent = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
-                Object.assign(likeBtn.style, {
-                    position: 'absolute', bottom: '10px', right: '10px',
-                    background: 'rgba(255, 255, 255, 0.9)', border: 'none',
-                    padding: '4px 10px', borderRadius: '15px', cursor: 'pointer', zIndex: '99'
-                });
+                likeBtn.className = 'image-like-button';
 
                 likeBtn.addEventListener('click', function(ev) {
                     ev.stopPropagation(); ev.preventDefault();
@@ -256,7 +252,7 @@
                     count = isLiked ? count + 1 : count - 1;
                     localStorage.setItem(`${imgKey}_cnt`, count);
                     likeBtn.textContent = `❤️ ${isLiked ? '已赞' : '点赞'} (${count})`;
-                    likeBtn.style.color = isLiked ? 'red' : '#333';
+                    likeBtn.classList.toggle('is-liked', isLiked);
                 });
                 wrapper.appendChild(likeBtn);
             });

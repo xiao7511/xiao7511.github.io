@@ -6,204 +6,176 @@
   <meta name="description" content="DorisY 动漫世界：精选动漫推荐、漫画连载与漫友社区，快速浏览优质二次元内容。">
   <meta name="keywords" content="动漫,漫画,二次元,动漫推荐,漫友社区,DorisY">
   <meta name="robots" content="index,follow">
-  <meta name="theme-color" content="#FF6EC7">
-  <link rel="canonical" href="https://www.nobistudio.com/">
+  <link rel="canonical" href="https://nobistudio.com/">
   <meta property="og:type" content="website">
   <meta property="og:title" content="DorisY 动漫世界">
   <meta property="og:description" content="精选动漫推荐、漫画连载与漫友社区。">
-  <meta property="og:url" content="https://www.nobistudio.com/">
+  <meta property="og:url" content="https://nobistudio.com/">
   <meta property="og:image" content="images/IMG_4822.jpeg">
   <meta name="twitter:card" content="summary_large_image">
-  <title>DorisY动漫世界</title>
+  <title>DorisY 动漫世界</title>
   <script src="assets/js/site-config.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#081521">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preconnect" href="https://api.dicebear.com">
   <link rel="stylesheet" href="assets/css/main.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
   <script src="assets/js/security.js" defer></script>
-  <script type="module" src="assets/js/main.js?v=202609180001"></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"DorisY 动漫世界","url":"https://nobistudio.com/","description":"精选动漫、漫画连载与漫友社区。","inLanguage":"zh-CN"}</script>
+  <script type="module" src="assets/js/main.js?v=20260920"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
   <header class="site-header">
-    <a class="logo" href="index.html" aria-label="返回首页">DorisY动漫世界</a>
-    <nav class="nav" aria-label="主导航">
-      <a href="index.html" class="nav__link is-active">首页</a>
-      <a href="recommend.html" class="nav__link">动漫推荐</a>
-      <a href="manga.html" class="nav__link">漫画连载</a>
+    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">
+      <span class="logo__name"><strong>NOBI</strong> STUDIO</span>
+      <span class="logo__tagline">动漫连接热爱</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单">
+      <span class="nav-toggle__icon" aria-hidden="true"></span>
+    </button>
+    <nav id="site-nav" class="nav" aria-label="主导航">
+      <a href="index.html" class="nav__link is-active" aria-current="page">首页</a>
+      <a href="recommend.html" class="nav__link">动漫库</a>
+      <a href="manga.html" class="nav__link">漫画库</a>
       <a href="community.html" class="nav__link">社区</a>
-      <button id="user-btn" class="nav__button" type="button">登录/注册</button>
-      <div id="admin-entrance-wrapper" style="display: none;">
-          <a href="admin.html" class="admin-entrance-btn">
-              <svg class="admin-icon" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
-              控制台
-          </a>
-      </div>
     </nav>
+    <form class="site-search" action="recommend.html" role="search">
+      <label class="sr-only" for="site-search-input">搜索动漫、角色或作品</label>
+      <input id="site-search-input" name="q" type="search" placeholder="搜索动漫、角色或作品…">
+      <button type="submit" aria-label="搜索">⌕</button>
+    </form>
+    <button id="user-btn" class="nav__button user-button" type="button" aria-label="登录或注册">登录</button>
+    <div id="admin-entrance-wrapper" hidden><a href="admin.html" class="admin-entrance-btn">控制台</a></div>
   </header>
 
-  <main>
-    <section class="hero" aria-label="首页横幅">
+  <main id="main-content">
+    <section class="hero" aria-roledescription="轮播图" aria-label="精选动漫">
       <div class="hero__slides">
         <div class="hero__slide is-active">
           <img src="images/IMG_4822.jpeg" alt="动漫横幅 1" fetchpriority="high" decoding="async">
         </div>
         <div class="hero__slide">
-          <img src="images/IMG_4873.png" alt="动漫横幅 2" loading="lazy" decoding="async">
+          <img src="images/IMG_4873.webp" srcset="images/IMG_4873-480.webp 480w, images/IMG_4873-960.webp 960w, images/IMG_4873.webp 1600w" sizes="100vw" alt="动漫横幅 2" loading="lazy" decoding="async">
         </div>
         <div class="hero__slide">
-          <img src="images/IMG_4886.png" alt="动漫横幅 3" loading="lazy" decoding="async">
+          <img src="images/IMG_4886.webp" srcset="images/IMG_4886-480.webp 480w, images/IMG_4886-960.webp 960w, images/IMG_4886.webp 1600w" sizes="100vw" alt="动漫横幅 3" loading="lazy" decoding="async">
         </div>
       </div>
       <div class="hero__content">
-        <p class="eyebrow">二次元内容聚合站</p>
-        <h1>发现你喜欢的动漫、漫画和同好</h1>
-        <p class="hero__text">精选推荐、连载更新、社区互动，一页看完。</p>
+        <p class="eyebrow">本周编辑精选</p>
+        <h1>动漫，<br>让世界更温柔</h1>
+        <p class="hero__text">在光影交错的故事里，找到属于你的那份感动。</p>
+        <div class="hero__actions">
+          <a class="hero__button hero__button--primary" href="recommend.html">▶&nbsp; 立即探索</a>
+          <a class="hero__button" href="#recommend-title">♡&nbsp; 浏览收藏</a>
+        </div>
       </div>
+      <div class="hero__pagination" aria-hidden="true"><span class="is-active"></span><span></span><span></span><b>01 / 03</b></div>
     </section>
 
     <section class="section" aria-labelledby="recommend-title">
-      <div class="section__head">
-        <h2 id="recommend-title">热门动漫推荐</h2>
-        <p>精选四个热门方向，适合快速浏览。</p>
+      <div class="section__head section__head--row">
+        <div><h2 id="recommend-title"><span aria-hidden="true">🔥</span> 本季热门</h2><p>大家都在看的精彩作品</p></div>
+        <a class="section__more" href="recommend.html">查看全部 <span aria-hidden="true">›</span></a>
       </div>
-
       <div class="cards" id="anime-container">
-        <article class="card">
-          <img src="images/IMG_4893.png" alt="魔法少女" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h3 class="card__title">魔法少女</h3>
-            <p class="card__tag">魔法 / 冒险</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="images/IMG_4896.png" alt="校园恋爱" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h3 class="card__title">校园恋爱</h3>
-            <p class="card__tag">恋爱 / 校园</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="images/IMG_4907.png" alt="战斗冒险" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h3 class="card__title">战斗冒险</h3>
-            <p class="card__tag">热血 / 冒险</p>
-          </div>
-        </article>
-        <article class="card">
-          <img src="images/IMG_5606.jpeg" alt="异世界" loading="lazy" decoding="async">
-          <div class="card__body">
-            <h3 class="card__title">异世界</h3>
-            <p class="card__tag">幻想 / 冒险</p>
-          </div>
-        </article>
+        <a class="card" href="detail.html?category=anime&amp;slot=0"><img src="images/IMG_4893.webp" srcset="images/IMG_4893-480.webp 480w, images/IMG_4893-960.webp 960w, images/IMG_4893.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="魔法少女作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">魔法少女</h3><p class="card__tag">魔法 / 冒险</p></div></a>
+        <a class="card" href="detail.html?category=anime&amp;slot=1"><img src="images/IMG_4896.webp" srcset="images/IMG_4896-480.webp 480w, images/IMG_4896-960.webp 960w, images/IMG_4896.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="校园恋爱作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">校园恋爱</h3><p class="card__tag">恋爱 / 校园</p></div></a>
+        <a class="card" href="detail.html?category=anime&amp;slot=2"><img src="images/IMG_4907.webp" srcset="images/IMG_4907-480.webp 480w, images/IMG_4907-960.webp 960w, images/IMG_4907.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="战斗冒险作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">战斗冒险</h3><p class="card__tag">热血 / 冒险</p></div></a>
+        <a class="card" href="detail.html?category=anime&amp;slot=3"><img src="images/IMG_5606.jpeg" alt="异世界作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">异世界</h3><p class="card__tag">幻想 / 冒险</p></div></a>
+        <a class="card" href="detail.html?category=anime&amp;slot=4"><img src="images/IMG_5607.jpeg" alt="治愈日常作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">治愈日常</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 9.2</strong></p></div></a>
       </div>
     </section>
 
-    <section class="section section--community" aria-labelledby="community-title">
-      <div class="section__head">
-        <h2 id="community-title">动漫社区热帖</h2>
-        <p>登录后即可发帖，帖子列表会实时同步。</p>
+    <section class="section" aria-labelledby="manga-title">
+      <div class="section__head section__head--row">
+        <div><h2 id="manga-title"><span aria-hidden="true">♛</span> 新番推荐</h2><p>不容错过的最新内容</p></div>
+        <a class="section__more" href="manga.html">查看全部 <span aria-hidden="true">›</span></a>
       </div>
-
-      <div id="post-area" class="post-box" hidden>
-        <label class="sr-only" for="post-content">发帖内容</label>
-        <textarea id="post-content" placeholder="分享你的二次元见闻..." maxlength="500"></textarea>
-        <div class="actions">
-          <button id="publish-btn" class="primary-btn" type="button">发布动态</button>
-        </div>
-      </div>
-
-      <div id="posts-list" class="posts" aria-live="polite">
-        <p class="loading-state">正在同步异世界信号...</p>
+      <div class="cards" id="manga-container">
+        <a class="card" href="detail.html?category=manga&amp;slot=0"><img src="images/IMG_5608.jpeg" alt="星夜幻想作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">星夜幻想</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 8.9</strong></p></div></a>
+        <a class="card" href="detail.html?category=manga&amp;slot=1"><img src="images/IMG_4893.webp" srcset="images/IMG_4893-480.webp 480w, images/IMG_4893-960.webp 960w, images/IMG_4893.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="都市异闻作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">都市异闻</h3><p class="card__tag">TV&nbsp;&nbsp; 2025 <strong>★ 8.7</strong></p></div></a>
+        <a class="card" href="detail.html?category=manga&amp;slot=2"><img src="images/IMG_4896.webp" srcset="images/IMG_4896-480.webp 480w, images/IMG_4896-960.webp 960w, images/IMG_4896.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="魔法学院作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">魔法学院</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 9.0</strong></p></div></a>
+        <a class="card" href="detail.html?category=manga&amp;slot=3"><img src="images/IMG_4907.webp" srcset="images/IMG_4907-480.webp 480w, images/IMG_4907-960.webp 960w, images/IMG_4907.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="青春物语作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">青春物语</h3><p class="card__tag">Movie&nbsp;&nbsp; 2025 <strong>★ 8.8</strong></p></div></a>
+        <a class="card" href="detail.html?category=manga&amp;slot=4"><img src="images/IMG_5606.jpeg" alt="异世界生活作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">异世界生活</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 8.6</strong></p></div></a>
       </div>
     </section>
+
+    <aside class="discovery" aria-label="发现更多作品">
+      <div><strong>有些故事，<br>看过之后，世界都会不一样。</strong></div>
+      <a href="recommend.html">发现更多<br><span>值得喜欢的作品&nbsp; →</span></a>
+    </aside>
   </main>
 
   <footer class="site-footer">
-    © 2026 动漫世界 | 动漫素材来源于独立创作 | 联系方式：xiao.ye751111@outlook.com
+    <div class="site-footer__inner">
+      <div class="footer-brand"><strong><span>NOBI</span> STUDIO</strong><small>动漫连接热爱，也连接你我</small></div>
+      <nav class="footer-nav" aria-label="页脚导航"><a href="index.html">关于我们</a><a href="mailto:xiao.ye751111@outlook.com">联系我们</a><a href="community.html">漫友社区</a><a href="#main-content">隐私政策</a></nav>
+      <p class="footer-quote">“愿你在动漫的世界里，永远保持热爱。”</p>
+    </div>
+    <p class="copyright">© <span data-current-year>2026</span> NOBI STUDIO. All rights reserved.</p>
   </footer>
 
   <div id="auth-modal" class="modal" hidden>
-    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-      <button id="modal-close" class="modal__close" type="button" aria-label="关闭">×</button>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title" tabindex="-1">
+      <button id="modal-close" class="modal__close" type="button" aria-label="关闭登录与注册对话框">×</button>
       <h2 id="auth-title" class="modal__title">登录 / 注册</h2>
-
       <div class="tabs" role="tablist" aria-label="登录注册切换">
         <button class="tab is-active" id="tab-login" type="button" role="tab">登录</button>
         <button class="tab" id="tab-reg" type="button" role="tab">注册</button>
       </div>
-
       <form id="login-form" class="form">
-        <input type="email" id="login-email" placeholder="邮箱" required autocomplete="email">
-        <input type="password" id="login-password" placeholder="密码" required autocomplete="current-password">
-        <p class="form__hint form__hint--right">
-          <button id="forgot-password-btn" class="link-btn" type="button">忘记密码？</button>
-        </p>
+        <input type="email" id="login-email" placeholder="邮箱" aria-label="邮箱" required autocomplete="email">
+        <input type="password" id="login-password" placeholder="密码" aria-label="密码" required autocomplete="current-password">
+        <p class="form__hint form__hint--right"><button id="forgot-password-btn" class="link-btn" type="button">忘记密码？</button></p>
         <button class="primary-btn" type="submit">进入异世界</button>
       </form>
-
       <form id="reset-password-form" class="form" hidden>
-        <p class="form__hint" style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 12px; font-size: 0.85rem;">
-          🌟 请输入注册邮箱，我们将向你发送密码重置链接。
-        </p>
-        <input type="email" id="forgot-email" placeholder="注册电子邮箱" required autocomplete="email" style="margin-bottom: 15px;">
+        <p class="form__hint form__hint--center">🌟 请输入注册邮箱，我们将向你发送密码重置链接。</p>
+        <input type="email" id="forgot-email" class="form__field--spaced-lg" placeholder="注册电子邮箱" aria-label="注册电子邮箱" required autocomplete="email">
         <button class="primary-btn" type="submit" id="forgot-submit-btn">发送重置邮件</button>
       </form>
-
       <form id="recovery-password-form" class="form" hidden>
-        <p class="form__hint" style="color: rgba(255,255,255,0.7); text-align: center; margin-bottom: 12px; font-size: 0.85rem;">
-          🔒 请设置您的新密码并再次输入确认。
-        </p>
-        <input type="password" id="recovery-password" placeholder="请输入新密码（至少6位）" required autocomplete="new-password" style="margin-bottom: 10px;">
-        <input type="password" id="recovery-confirm-password" placeholder="请再次输入新密码" required autocomplete="new-password" style="margin-bottom: 15px;">
-        
+        <p class="form__hint form__hint--center">🔒 请设置您的新密码并再次输入确认。</p>
+        <input type="password" id="recovery-password" class="form__field--spaced" placeholder="请输入新密码（至少6位）" aria-label="新密码" required autocomplete="new-password">
+        <input type="password" id="recovery-confirm-password" class="form__field--spaced-lg" placeholder="请再次输入新密码" aria-label="确认新密码" required autocomplete="new-password">
         <button class="primary-btn" type="submit" id="recovery-submit-btn">确认修改密码</button>
       </form>
-
       <form id="user-profile-form" class="form" hidden>
-        <div class="avatar-selector" style="margin-bottom: 15px; text-align: center;">
-          <p style="color: #FF6EC7; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold;">🌟 更换我的个性头像</p>
-          <div class="custom-avatar-upload">
-            <label for="edit-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 14px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.8rem; background: rgba(255,110,199,0.05);">
-              📷 选择本地头像图片 (PNG/JPG)
-            </label>
-            <input type="file" id="edit-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
-            <div id="edit-avatar-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 6px; min-height: 16px;"></div>
+        <div class="avatar-selector avatar-selector--profile">
+          <p>🌟 更换我的个性头像</p>
+          <div class="custom-avatar-upload avatar-upload">
+            <label for="edit-avatar-file" class="avatar-upload__label upload-label">📷 选择本地头像图片 (PNG/JPG)</label>
+            <input type="file" id="edit-avatar-file" class="avatar-upload__input file-input" accept="image/png, image/jpeg, image/jpg">
+            <div id="edit-avatar-hint" class="avatar-upload__hint upload-hint" aria-live="polite"></div>
           </div>
         </div>
         <button class="primary-btn" type="submit" id="update-avatar-submit-btn">确认更新头像</button>
       </form>
-
       <form id="reg-form" class="form" hidden>
         <div class="avatar-selector">
           <p>选择你的萌系头像</p>
           <div class="avatar-options">
-            <button type="button" class="avatar-option is-selected" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Neko">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" alt="Neko 头像" loading="lazy" decoding="async">
-            </button>
-            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Miku">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" alt="Miku 头像" loading="lazy" decoding="async">
-            </button>
-            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="Zoro 头像" loading="lazy" decoding="async">
-            </button>
+            <button type="button" class="avatar-option is-selected" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" aria-label="选择 Neko 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" alt="" loading="lazy" decoding="async"></button>
+            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" aria-label="选择 Miku 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" alt="" loading="lazy" decoding="async"></button>
+            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" aria-label="选择 Zoro 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="" loading="lazy" decoding="async"></button>
           </div>
-          <!-- ✨ 新增：自定义头像上传区域 -->
-          <div class="custom-avatar-upload" style="margin-top: 12px; text-align: center;">
-            <label for="reg-avatar-file" class="link-btn" style="cursor: pointer; display: inline-block; padding: 6px 12px; border: 1px dashed rgba(255,110,199,0.5); border-radius: 6px; color: #FF6EC7; font-size: 0.85rem;">
-              📷 上传自定义头像 (PNG/JPG)
-            </label>
-            <input type="file" id="reg-avatar-file" accept="image/png, image/jpeg, image/jpg" style="display: none;">
-            <div id="avatar-file-hint" style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px;"></div>
+          <div class="custom-avatar-upload avatar-upload">
+            <label for="reg-avatar-file" class="avatar-upload__label upload-label">📷 上传自定义头像 (PNG/JPG)</label>
+            <input type="file" id="reg-avatar-file" class="avatar-upload__input file-input" accept="image/png, image/jpeg, image/jpg">
+            <div id="avatar-file-hint" class="avatar-upload__hint upload-hint" aria-live="polite"></div>
           </div>
         </div>
-        <input type="text" id="reg-nickname" placeholder="动漫昵称" required autocomplete="nickname">
-        <input type="email" id="reg-email" placeholder="邮箱" required autocomplete="email">
-        <input type="password" id="reg-password" placeholder="密码 (至少6位)" required autocomplete="new-password">
+        <input type="text" id="reg-nickname" placeholder="动漫昵称" aria-label="动漫昵称" required autocomplete="nickname">
+        <input type="email" id="reg-email" placeholder="邮箱" aria-label="注册邮箱" required autocomplete="email">
+        <input type="password" id="reg-password" placeholder="密码（至少6位）" aria-label="注册密码" required autocomplete="new-password">
         <button class="primary-btn" type="submit">创建角色</button>
       </form>
     </div>
   </div>
-<script src="assets/js/upgrade-patch.js?v=20260615"></script>
+  <script src="assets/js/upgrade-patch.js?v=20260920"></script>
 </body>
 </html>

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     data.forEach((item) => {
       const image = element('img', { attributes: { alt: item.title || '作品封面', loading: 'lazy', decoding: 'async' }, style: 'width:100%;height:100%;object-fit:cover;display:block;' });
-      setImageSource(image, item.cover_url, 'images/IMG_4893.png');
+      setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       const imageBox = element('div', { style: 'width:100%;height:280px;overflow:hidden;' }, [image]);
       const body = element('div', { className: 'card__body', style: 'padding:16px;flex-grow:1;' }, [
         element('h2', { className: 'card__title', text: item.title || '未命名作品' }),

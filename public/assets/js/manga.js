@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const params = new URLSearchParams({ category: String(item.category || ''), slot: String(item.slot_index ?? '') });
       const open = () => window.location.assign(`detail.html?${params.toString()}`);
       const image = element('img', { className: 'manga-cover', attributes: { alt: item.title || '漫画封面', loading: 'lazy', decoding: 'async' } });
-      setImageSource(image, item.cover_url, 'images/IMG_4893.png');
+      setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       const cover = element('div', { className: 'manga-cover-box', style: 'cursor:pointer;' }, [image]);
       cover.addEventListener('click', open);
       const title = element('div', { className: 'manga-title', text: item.title || '未命名连载', style: 'cursor:pointer;' });

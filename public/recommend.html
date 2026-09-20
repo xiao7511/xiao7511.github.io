@@ -3,42 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="动漫推荐页，浏览热门题材、精选作品与个性化推荐。">
+  <meta name="description" content="DorisY 动漫世界推荐页，浏览热门题材与精选作品。">
   <meta name="robots" content="index,follow">
-  <link rel="canonical" href="https://www.nobistudio.com/recommend.html">
-  <title>动漫推荐 - DorisY</title>
+  <link rel="canonical" href="https://nobistudio.com/recommend.html">
+  <title>动漫推荐 - DorisY 动漫世界</title>
   <script src="assets/js/site-config.js"></script>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#081521">
   <link rel="stylesheet" href="assets/css/main.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
   <header class="site-header">
-    <a class="logo" href="index.html">DorisY动漫</a>
-    <nav class="nav" aria-label="主导航">
+    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">DorisY 动漫世界</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单"><span class="nav-toggle__icon" aria-hidden="true"></span></button>
+    <nav id="site-nav" class="nav" aria-label="主导航">
       <a href="index.html" class="nav__link">首页</a>
-      <a href="recommend.html" class="nav__link is-active">动漫推荐</a>
+      <a href="recommend.html" class="nav__link is-active" aria-current="page">动漫推荐</a>
       <a href="manga.html" class="nav__link">漫画连载</a>
       <a href="community.html" class="nav__link">社区</a>
     </nav>
   </header>
-
-  <main class="main-content">
+  <main id="main-content" class="main-content">
     <section class="section" aria-labelledby="page-title">
-      <div class="section__head">
-        <h1 id="page-title">发现精彩动漫</h1>
-        <p>通过边缘云盾网关实时同步后台推荐的优质作品。</p>
-      </div>
-
-      <div class="cards" id="dynamic-recommend-container">
-        <div style="text-align: center; color: #a4b0be; padding: 40px; grid-column: 1/-1;">⚡ 正在通过加密通道加载动漫推荐...</div>
+      <div class="section__head"><h1 id="page-title">发现精彩动漫</h1><p>浏览精选动漫作品与热门题材。</p></div>
+      <div class="cards" id="dynamic-recommend-container" aria-live="polite" aria-busy="true">
+        <div class="skeleton skeleton--card" aria-hidden="true"></div>
+        <div class="skeleton skeleton--card" aria-hidden="true"></div>
+        <div class="skeleton skeleton--card" aria-hidden="true"></div>
+        <div class="skeleton skeleton--card" aria-hidden="true"></div>
+        <span class="sr-only" role="status">正在加载动漫推荐</span>
       </div>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <p>&copy; 2025 DorisY动漫世界. Powered by Cloudflare Workers.</p>
-  </footer>
+  <footer class="site-footer">© <span data-current-year>2026</span> DorisY 动漫世界 · nobistudio.com</footer>
   <script src="assets/js/security.js" defer></script>
-  <script type="module" src="assets/js/src/pages/recommend.js"></script>
+  <script type="module" src="assets/js/src/pages/recommend.js?v=20260920"></script>
 </body>
 </html>

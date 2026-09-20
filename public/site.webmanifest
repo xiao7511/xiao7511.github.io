@@ -1,0 +1,10 @@
+{
+  "name": "DorisY 动漫世界",
+  "short_name": "DorisY",
+  "description": "精选动漫、漫画连载与漫友社区。",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#100d20",
+  "theme_color": "#100d20",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

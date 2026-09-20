@@ -1,6 +1,9 @@
 import { initializeSupabase } from './src/api/supabase.js';
 import { togglePostLike } from './src/community/likes.js';
 import { groupLikesByPostId } from './src/community/posts.js';
+import { element, setContentState, setImageSource, setLoadingState } from './src/components/dom.js';
+import { initSiteHeader, updateCopyrightYear } from './src/components/header.js';
+import { createModalController } from './src/components/modal.js';
 
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.supabaseClient = null;
@@ -12,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.removeItem('just_backed_from_admin'); // 立即销毁标记，防止以后F5刷新被误伤
 
       // 💡 黑科技：往全局 url 配置里塞一个时间戳参数，强制后续所有 Supabase 图片查询都带上最新时间戳破除缓存
-      window.forceCacheBuster = `?t=${new Date().getTime()}`;
+      window.forceCacheBuster = '?v=20260920';
   }
 
   // 获取所有基础 DOM 元素
@@ -31,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const postContent = document.getElementById('post-content');
   const postsList = document.getElementById('posts-list');
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
+  initSiteHeader();
+  updateCopyrightYear();
+  const modalController = createModalController(modal);
 
   // 寻找 const avatarOptions = Array.from(document.querySelectorAll('.avatar-option')); 在下方添加： 20260614
   const avatarFileInput = document.getElementById('reg-avatar-file');
@@ -107,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const fallbackImages = {
       section_banner: [
         'images/IMG_4822.jpeg',
-        'images/IMG_4873.png',
-        'images/IMG_4886.png'
+        'images/IMG_4873.webp',
+        'images/IMG_4886.webp'
       ]
     };
 
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 🎯 核心修复：提取全局的时间戳参数，如果没有，默认生成一个普通的，确保每次返回都是最新的
-      const buster = window.forceCacheBuster || `?t=${new Date().getTime()}`;
+      const buster = window.forceCacheBuster || '?v=20260920';
 
       carouselSlides.forEach((slide, index) => {
         const imgElement = slide.querySelector('img');
@@ -136,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (liveUrls && liveUrls[index]) {
             // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
             const rawUrl = liveUrls[index];
-            imgElement.src = rawUrl.includes('?') ? `${rawUrl}&_cb=${new Date().getTime()}` : rawUrl + buster;
+            imgElement.src = rawUrl.includes('?') ? `${rawUrl}&v=20260920` : rawUrl + buster;
           } else {
             imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
           }
@@ -228,12 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!adminBtn) return;
 
     if (!session || !session.user) {
-        adminBtn.style.setProperty('display', 'none', 'important');
+        adminBtn.hidden = true;
         return;
     }
 
     if (typeof window.supabaseClient.from !== 'function') {
-        adminBtn.style.setProperty('display', 'none', 'important');
+        adminBtn.hidden = true;
         return;
     }
 
@@ -246,19 +252,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) {
             console.error("Supabase 鉴权发生底层错误:", error.message);
-            adminBtn.style.setProperty('display', 'none', 'important');
+            adminBtn.hidden = true;
             return;
         }
 
         if (userData && userData.is_admin === true) {
-            adminBtn.style.setProperty('display', 'block', 'important');
+            adminBtn.hidden = false;
             console.log(`👑 管理员权限核验通过: [${session.user.email}]`);
         } else {
-            adminBtn.style.setProperty('display', 'none', 'important');
+            adminBtn.hidden = true;
         }
     } catch (err) {
         console.error('审查管理员权限时发生异常:', err);
-        adminBtn.style.setProperty('display', 'none', 'important');
+        adminBtn.hidden = true;
     }
   }
 
@@ -273,16 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function openModal(mode) {
     if (!modal) return;
-    modal.removeAttribute('hidden');
-    modal.style.setProperty('display', 'grid', 'important');
     switchMode(mode);
+    modalController.open({ trigger: document.activeElement });
   }
 
   function closeModal() {
-    if (modal) {
-      modal.setAttribute('hidden', '');
-      modal.style.setProperty('display', 'none', 'important');
-    }
+    modalController.close();
   }
 
   /*function switchMode(mode) {
@@ -352,10 +354,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 顺便动态在头像面板底部加一个“退出登录”的安全微型纽带，防止用户找不到退出的地方
         if (!document.getElementById('logout-link-btn')) {
-          const logoutBtnHtml = `<div style="text-align:center; margin-top:20px;"><button id="logout-link-btn" type="button" style="background:none; border:none; color:rgba(255,255,255,0.4); text-decoration:underline; font-size:0.8rem; cursor:pointer;">🔮 退出当前账号</button></div>`;
-          userProfileForm.insertAdjacentHTML('beforeend', logoutBtnHtml);
+          const logoutButton = element('button', {
+            className: 'link-btn link-btn--muted',
+            text: '🔮 退出当前账号',
+            attributes: { id: 'logout-link-btn', type: 'button' }
+          });
+          userProfileForm.append(element('div', { className: 'profile-actions' }, [logoutButton]));
 
-          document.getElementById('logout-link-btn').addEventListener('click', async () => {
+          logoutButton.addEventListener('click', async () => {
              if (confirm('确定要退出登录吗？')) {
                  runPhysicalLogout();
              }
@@ -612,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
               .getPublicUrl(filePath);
 
             // 拼接最新的公共 URL 路径，并加上防缓存时间戳
-            finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+            finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
           }
 
           submitBtn.textContent = '⏱️ 正在写入账户资料卡...';
@@ -726,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .getPublicUrl(filePath);
 
         // 拼接强刷时间戳
-        const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+        const finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
 
         // 写入 profiles 关系表
         //const { error: profileError } = await window.supabaseClient
@@ -765,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .getPublicUrl(filePath);
 
         // 拼接强刷时间戳
-        const finalAvatarUrl = `${publicUrlData.publicUrl}?t=${new Date().getTime()}`;
+        const finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
 
         // 2. 写入 profiles 关系表（增加容错处理，防止因返回 undefined 导致页面崩溃）
         const updateRes = await window.supabaseClient
@@ -864,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 强行隐藏普通的已登录界面（防止它干扰用户）
         const mainDashboard = document.getElementById('dashboard'); // 替换为你已登录主界面的ID
-        if (mainDashboard) mainDashboard.style.display = 'none';
+        if (mainDashboard) mainDashboard.hidden = true;
 
         // 隐藏弹窗内没用的表单
         const loginForm = document.getElementById('login-form');
@@ -1031,6 +1037,8 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchPosts() {
     if (!postsList) return;
 
+    setLoadingState(postsList, { count: 3, variant: 'post', label: '正在加载社区动态' });
+
     try {
       const startIndex = (currentForumPage - 1) * pageSize;
       const endIndex = startIndex + pageSize - 1;
@@ -1074,76 +1082,175 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const likesByPostId = groupLikesByPostId(likeRows);
 
+      postsList.removeAttribute('aria-busy');
       postsList.replaceChildren();
 
       if (!mainPosts || mainPosts.length === 0) {
-        window.SecurityUtils.setMessage(postsList, '暂无社区动态，快来发表第一条内容吧~', 'text-align:center;color:rgba(255,255,255,.4);padding:20px;');
+        setContentState(postsList, { message: '还没有社区动态，登录后发布第一条内容吧。' });
         return;
       }
-
-      mainPosts.forEach(post => {
-        const postCard = document.createElement('div');
-        postCard.className = 'post-card';
-        postCard.style = "background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; margin-bottom:16px;";
-
+      mainPosts.forEach((post) => {
+        const postCard = element('article', { className: 'post-card' });
         const likedUserIds = likesByPostId.get(post.id) || [];
         const isLiked = Boolean(currentUser && likedUserIds.includes(currentUser.id));
-        const make = (tag, style, text) => { const node = document.createElement(tag); if (style) node.style.cssText = style; if (text !== undefined) node.textContent = String(text); return node; };
-        const avatar = (value, size) => { const image = make('img', `width:${size}px; height:${size}px; border-radius:50%; object-fit:cover;`); image.alt = '头像'; window.SecurityUtils.setImageSource(image, value, 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko'); return image; };
-        const header = make('div', 'display:flex; align-items:center; gap:8px; margin-bottom:8px;'); header.className = 'post-header';
-        const author = make('div'); author.append(make('div', 'font-weight:bold; font-size:0.9rem;', post.nickname || '神秘漫友'), make('div', 'font-size:0.7rem; color:rgba(255,255,255,0.4);', new Date(post.created_at).toLocaleString()));
-        header.append(avatar(post.avatar_url || post.avatar, 32), author);
-        const body = make('div', 'font-size:0.95rem; margin-bottom:12px; white-space: pre-wrap;', post.content); body.className = 'post-body';
-        const actions = make('div', 'display:flex; gap:16px; font-size:0.8rem;'); actions.className = 'post-actions';
-        const likeBtn = make('button', `background:none; border:none; color:${isLiked ? '#ff4757' : 'rgba(255,255,255,0.6)'}; cursor:pointer; font-weight:bold; outline:none;`, `${isLiked ? '❤️ 已赞' : '🤍 点赞'} (${likedUserIds.length})`); likeBtn.className = 'like-action-btn';
-        const replyBtn = make('button', 'background:none; border:none; color:#00f5ff; cursor:pointer; font-weight:bold; outline:none;', '💬 回复'); actions.append(likeBtn, replyBtn);
-        const repliesContainer = make('div', 'margin-top:12px; padding-left:12px; border-left:2px solid rgba(0,245,255,0.2); gap:8px; display:flex; flex-direction:column;');
-        replies.filter(reply => reply.parent_id === post.id).forEach(reply => {
-          const item = make('div', 'background: rgba(0,0,0,0.2); padding:8px 12px; border-radius:6px; font-size:0.85rem;'); item.className = 'reply-item';
-          const replyHeader = make('div', 'display:flex; align-items:center; gap:6px; margin-bottom:4px;'); replyHeader.append(avatar(reply.avatar_url || reply.avatar, 20), make('span', 'font-weight:bold; color:#ffe066;', reply.nickname || '热心网友'), make('span', 'font-size:0.7rem; color:rgba(255,255,255,0.3);', new Date(reply.created_at).toLocaleTimeString()));
-          item.append(replyHeader, make('div', 'color:rgba(255,255,255,0.85);', reply.content)); repliesContainer.appendChild(item);
+        const createAvatar = (value, className, label) => {
+          const image = element('img', {
+            className: `post-avatar ${className}`,
+            attributes: { alt: label, loading: 'lazy', decoding: 'async' }
+          });
+          setImageSource(image, value, 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko');
+          return image;
+        };
+
+        const header = element('div', { className: 'post-header' });
+        header.append(
+          createAvatar(post.avatar_url || post.avatar, 'post-avatar--small', `${post.nickname || '社区用户'}的头像`),
+          element('div', {}, [
+            element('div', { className: 'post-author', text: post.nickname || '神秘漫友' }),
+            element('time', {
+              className: 'post-time',
+              text: new Date(post.created_at).toLocaleString(),
+              attributes: { datetime: post.created_at }
+            })
+          ])
+        );
+
+        const actions = element('div', { className: 'post-actions' });
+        const likeButton = element('button', {
+          className: `post-action like-action-btn${isLiked ? ' is-liked' : ''}`,
+          text: `${isLiked ? '❤️ 已赞' : '🤍 点赞'}（${likedUserIds.length}）`,
+          attributes: { type: 'button', 'aria-pressed': String(isLiked) }
         });
-        const replyBox = make('div', 'display:none; margin-top:12px; gap:8px;'); const input = make('input', 'flex:1; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:0.85rem; outline:none;'); input.type = 'text'; input.placeholder = '写下你的精彩回复...';
-        const submit = make('button', 'background:linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); color:#fff; border:none; padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-weight:600;', '发送'); replyBox.append(input, submit);
-        likeBtn.addEventListener('click', async event => { event.preventDefault(); event.stopPropagation(); await toggleLike(post.id, isLiked); });
-        replyBtn.addEventListener('click', () => { replyBox.style.display = replyBox.style.display === 'none' ? 'flex' : 'none'; if (replyBox.style.display === 'flex') input.focus(); });
-        submit.addEventListener('click', () => submitReply(post.id, input));
-        postCard.append(header, body, actions, repliesContainer, replyBox); postsList.appendChild(postCard);
-      });
-
-      // 渲染分页栏
-      const totalPages = Math.ceil((totalCount || 0) / pageSize);
-      if (totalPages > 1) {
-        const paginationDiv = document.createElement('div');
-        paginationDiv.className = 'forum-pagination';
-        paginationDiv.style = "display:flex; justify-content:center; align-items:center; gap:12px; margin-top:20px; padding:10px;";
-
-        paginationDiv.innerHTML = `
-          <button id="prev-page-btn" ${currentForumPage === 1 ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer;">上一页</button>
-          <span style="font-size:0.85rem; color:rgba(255,255,255,0.8);">第 ${currentForumPage} / ${totalPages} 页 (共 ${totalCount} 条)</span>
-          <button id="next-page-btn" ${currentForumPage >= totalPages ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:6px 14px; border-radius:6px; cursor:pointer;">下一页</button>
-        `;
-        postsList.appendChild(paginationDiv);
-
-        document.getElementById('prev-page-btn')?.addEventListener('click', () => {
-          if (currentForumPage > 1) {
-            currentForumPage--;
-            fetchPosts();
-            postsList.scrollIntoView({ behavior: 'smooth' });
+        const replyButton = element('button', {
+          className: 'post-action reply-action-btn',
+          text: '💬 回复',
+          attributes: {
+            type: 'button',
+            'aria-expanded': 'false',
+            'aria-controls': `reply-box-${post.id}`
           }
         });
+        actions.append(likeButton, replyButton);
 
-        document.getElementById('next-page-btn')?.addEventListener('click', () => {
-          if (currentForumPage < totalPages) {
-            currentForumPage++;
+        const repliesContainer = element('div', { className: 'replies' });
+        replies
+          .filter((reply) => reply.parent_id === post.id)
+          .forEach((reply) => {
+            const replyHeader = element('div', { className: 'reply-header' }, [
+              createAvatar(
+                reply.avatar_url || reply.avatar,
+                'post-avatar--tiny',
+                `${reply.nickname || '社区用户'}的头像`
+              ),
+              element('span', { className: 'reply-author', text: reply.nickname || '热心网友' }),
+              element('time', {
+                className: 'reply-time',
+                text: new Date(reply.created_at).toLocaleTimeString(),
+                attributes: { datetime: reply.created_at }
+              })
+            ]);
+            repliesContainer.append(
+              element('div', { className: 'reply-item' }, [
+                replyHeader,
+                element('div', { className: 'reply-content', text: reply.content })
+              ])
+            );
+          });
+
+        const replyInput = element('input', {
+          className: 'reply-input',
+          attributes: {
+            type: 'text',
+            placeholder: '写下你的精彩回复...',
+            'aria-label': `回复${post.nickname || '该用户'}`
+          }
+        });
+        const submitReplyButton = element('button', {
+          className: 'reply-submit',
+          text: '发送',
+          attributes: { type: 'button' }
+        });
+        const replyBox = element(
+          'div',
+          {
+            className: 'reply-box',
+            attributes: { id: `reply-box-${post.id}`, hidden: '' }
+          },
+          [replyInput, submitReplyButton]
+        );
+
+        likeButton.addEventListener('click', async () => {
+          await toggleLike(post.id, isLiked);
+        });
+        replyButton.addEventListener('click', () => {
+          const willOpen = replyBox.hidden;
+          replyBox.hidden = !willOpen;
+          replyButton.setAttribute('aria-expanded', String(willOpen));
+          if (willOpen) replyInput.focus();
+        });
+        submitReplyButton.addEventListener('click', () => submitReply(post.id, replyInput));
+
+        postCard.append(
+          header,
+          element('div', { className: 'post-body', text: post.content }),
+          actions,
+          repliesContainer,
+          replyBox
+        );
+        postsList.append(postCard);
+      });
+
+      const totalPages = Math.ceil((totalCount || 0) / pageSize);
+      if (totalPages > 1) {
+        const previousButton = element('button', {
+          text: '上一页',
+          attributes: { type: 'button', disabled: currentForumPage === 1 ? '' : null }
+        });
+        if (currentForumPage !== 1) previousButton.removeAttribute('disabled');
+
+        const nextButton = element('button', {
+          text: '下一页',
+          attributes: { type: 'button', disabled: currentForumPage >= totalPages ? '' : null }
+        });
+        if (currentForumPage < totalPages) nextButton.removeAttribute('disabled');
+
+        const pagination = element('nav', { className: 'forum-pagination', attributes: { 'aria-label': '社区分页' } }, [
+          previousButton,
+          element('span', {
+            text: `第 ${currentForumPage} / ${totalPages} 页（共 ${totalCount} 条）`,
+            attributes: { 'aria-live': 'polite' }
+          }),
+          nextButton
+        ]);
+        postsList.append(pagination);
+
+        previousButton.addEventListener('click', () => {
+          if (currentForumPage > 1) {
+            currentForumPage -= 1;
             fetchPosts();
-            postsList.scrollIntoView({ behavior: 'smooth' });
+            postsList.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+          }
+        });
+        nextButton.addEventListener('click', () => {
+          if (currentForumPage < totalPages) {
+            currentForumPage += 1;
+            fetchPosts();
+            postsList.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
           }
         });
       }
-
     } catch (err) {
       console.error("fetchPosts 渲染异常:", err);
+      setContentState(postsList, {
+        message: '社区动态加载失败，请检查网络后重试。',
+        kind: 'error',
+        onRetry: fetchPosts
+      });
+      setContentState(postsList, {
+        message: '社区动态加载失败，请检查网络后重试。',
+        kind: 'error',
+        onRetry: fetchPosts
+      });
     }
   }
   // ==========================================
@@ -1282,11 +1389,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) {
       // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
       userButton.replaceChildren(window.SecurityUtils.element('span', { className: 'user-status-dot' }), document.createTextNode(` 欢迎回来, ${user.email.split('@')[0]}`));
-      userButton.style.background = 'rgba(255, 255, 255, 0.15)';
+      userButton.classList.add('is-authenticated');
+      const accountName = user.email.split('@')[0];
+      userButton.setAttribute('aria-label', `已登录：${accountName}，打开账户设置`);
+      userButton.title = `已登录：${accountName}`;
 
       // ✨ 修改：登录成功后，让“修改头像面板”浮现、让“忘记密码”隐藏
-      if (userProfileForm) userProfileForm.style.display = 'block';
-      if (forgotPasswordForm) forgotPasswordForm.style.display = 'none';
+      if (userProfileForm) userProfileForm.hidden = false;
+      if (forgotPasswordForm) forgotPasswordForm.hidden = true;
 
       // (2) 🚀 瞬间无缝唤醒论坛：全物理接触隐藏，彻底防止论坛处于断开或僵尸挂起状态
       if (postArea) {
@@ -1320,13 +1430,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // 展现控制台按钮入口
             if (adminButton) {
               adminButton.removeAttribute('hidden');
-              adminButton.style.setProperty('display', 'block', 'important');
+              adminButton.hidden = false;
             } else {
               // 如果 DOM 中没有预设，则动态自动在用户区右侧补上
               if (!document.getElementById('admin-btn-dynamic')) {
-                const adminBtnHtml = `<a href="admin.html" id="admin-btn-dynamic" class="nav-btn admin-special-btn" style="margin-left: 10px; background: #ff4757; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-weight: bold;">⚙️ 管理后台</a>`;
-                userButton.insertAdjacentHTML('afterend', adminBtnHtml);
-              }
+                const adminLink = element('a', {
+                  className: 'admin-entrance-btn admin-special-btn',
+                  text: '⚙️ 管理后台',
+                  attributes: { id: 'admin-btn-dynamic', href: 'admin.html' }
+                });
+                userButton.after(adminLink);              }
             }
           } else {
             // 如果查出来不是管理员，安全清理所有的残留锁
@@ -1344,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clearUserUI();
 
       // ✨ 修改：未登录时，物理隐藏头像修改面板
-      if (userProfileForm) userProfileForm.style.display = 'none';
+      if (userProfileForm) userProfileForm.hidden = true;
 
       document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
       document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -1355,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function removeAdminButton() {
       if (adminButton) {
         adminButton.setAttribute('hidden', 'true');
-        adminButton.style.setProperty('display', 'none', 'important');
+        adminButton.hidden = true;
       }
       const dynamicBtn = document.getElementById('admin-btn-dynamic');
       if (dynamicBtn) dynamicBtn.remove();
@@ -1366,7 +1479,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearUserUI() {
      if (userButton) {
         userButton.textContent = '✨ 登录 / 注册专区';
-        userButton.style.background = '';
+        userButton.classList.remove('is-authenticated');
+        userButton.setAttribute('aria-label', '登录或注册');
+        userButton.title = '登录或注册';
      }
      if (postArea) {
         postArea.setAttribute('hidden', '');
@@ -1378,33 +1493,35 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderAdminBannerList(imageUrlsArray) {
     const container = document.getElementById('admin-banner-manager-list');
     if (!container) return;
-
     container.replaceChildren();
 
     if (!imageUrlsArray || imageUrlsArray.length === 0) {
-      window.SecurityUtils.setMessage(container, '队列为空', 'color:var(--text-muted);text-align:center;padding:12px;');
+      setContentState(container, { message: '队列为空' });
       return;
     }
 
     imageUrlsArray.forEach((url, index) => {
-      const itemDiv = document.createElement('div');
-      itemDiv.className = 'admin-image-item';
-      itemDiv.innerHTML = `
-        <div class="admin-preview-wrapper">
-          <img src="${url}" alt="预览">
-          <button type="button" class="admin-image-delete-btn" data-index="${index}">✕</button>
-        </div>
-        <input type="text" class="admin-banner-input" value="${url}" style="flex:1; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); color:white; padding:6px; border-radius:6px; font-size:0.8rem;" data-index="${index}">
-      `;
-      container.appendChild(itemDiv);
-    });
+      const image = element('img', { attributes: { alt: `轮播图预览 ${index + 1}` } });
+      setImageSource(image, url);
+      const deleteButton = element('button', {
+        className: 'admin-image-delete-btn',
+        text: '✕',
+        attributes: { type: 'button', 'data-index': index, 'aria-label': `删除第 ${index + 1} 张轮播图` }
+      });
+      const input = element('input', {
+        className: 'admin-banner-input',
+        attributes: { type: 'text', value: url, 'data-index': index, 'aria-label': `第 ${index + 1} 张轮播图地址` }
+      });
+      const item = element('div', { className: 'admin-image-item' }, [
+        element('div', { className: 'admin-preview-wrapper' }, [image, deleteButton]),
+        input
+      ]);
+      container.append(item);
 
-    container.querySelectorAll('.admin-image-delete-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const targetIndex = parseInt(btn.dataset.index);
-        if (confirm(`确定要删除第 ${targetIndex + 1} 张图片吗？`)) {
-          imageUrlsArray.splice(targetIndex, 1);
+      deleteButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (confirm(`确定要删除第 ${index + 1} 张图片吗？`)) {
+          imageUrlsArray.splice(index, 1);
           renderAdminBannerList(imageUrlsArray);
           alert('图片已从当前配置列表移除，点击保存配置后将永久同步至数据库！');
         }
@@ -1416,206 +1533,179 @@ document.addEventListener('DOMContentLoaded', () => {
   // 📺 前台核心：从 site_config 表读取部署数据并无缝对齐四大区域
   // ==========================================
   async function loadDeployedSections() {
-      console.log("⚡ 正在从 site_config 路由表拉取最新版面部署数据...");
-      try {
-          if (!window.supabaseClient) {
-              console.warn("Supabase 客户端未初始化，延迟加载版面...");
-              return;
-          }
+    if (!window.supabaseClient) return;
 
-          const { data: configs, error } = await window.supabaseClient
-              .from('site_config')
-              .select('section, url');
+    try {
+      const { data: configs, error } = await window.supabaseClient.from('site_config').select('section, url');
+      if (error) throw error;
 
-          if (error) {
-              console.error("拉取前台版面配置失败:", error);
-              return;
-          }
+      (configs || []).forEach((config) => {
+        let imageUrls = [];
+        try {
+          imageUrls = typeof config.url === 'string' ? JSON.parse(config.url) : config.url;
+        } catch (parseError) {
+          console.error(`解析区域 ${config.section} 的图片列表失败:`, parseError);
+          return;
+        }
+        if (!Array.isArray(imageUrls) || !imageUrls.length) return;
 
-          if (!configs || configs.length === 0) {
-              console.log("💡 暂无任何版面部署记录，保持前台默认静态占位。");
-              return;
-          }
+        if (config.section === 'section_banner') {
+          const container = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper');
+          if (!container) return;
+          container.replaceChildren(
+            ...imageUrls.map((url, index) => {
+              const image = element('img', {
+                className: 'dynamic-banner-image',
+                attributes: { alt: `首页轮播图 ${index + 1}`, loading: index ? 'lazy' : 'eager', decoding: 'async' }
+              });
+              setImageSource(image, url, 'images/IMG_4822.jpeg');
+              return element('div', { className: 'swiper-slide' }, [image]);
+            })
+          );
+          return;
+        }
 
-          configs.forEach(cfg => {
-              const sectionId = cfg.section;
-              let imageUrls = [];
+        if (config.section === 'section_anime') {
+          const container = document.getElementById('anime-section-grid') || document.querySelector('.anime-grid');
+          if (!container) return;
+          container.replaceChildren(
+            ...imageUrls.map((url, index) => {
+              const image = element('img', {
+                className: 'dynamic-section-image',
+                attributes: { alt: `动漫推荐 ${index + 1}`, loading: 'lazy', decoding: 'async' }
+              });
+              setImageSource(image, url, 'images/IMG_4893.webp');
+              return element('a', { className: 'anime-card card--link dynamic-anime-card', attributes: { href: 'recommend.html' } }, [
+                image,
+                element('div', { className: 'dynamic-anime-title', text: `动漫热播推荐 ${index + 1}` })
+              ]);
+            })
+          );
+          return;
+        }
 
-              try {
-                  imageUrls = typeof cfg.url === 'string' ? JSON.parse(cfg.url) : cfg.url;
-              } catch (e) {
-                  console.error(`解析区域 [${sectionId}] 的 URL 数组失败:`, e);
-                  return;
-              }
+        if (config.section === 'section_community') {
+          const container = document.getElementById('community-section-images') || document.querySelector('.community-banners');
+          if (!container) return;
+          container.replaceChildren(
+            ...imageUrls.map((url, index) => {
+              const image = element('img', {
+                className: 'dynamic-section-image dynamic-community-image',
+                attributes: { alt: `社区精选图 ${index + 1}`, loading: 'lazy', decoding: 'async' }
+              });
+              setImageSource(image, url, 'images/IMG_4893.webp');
+              return element('div', { className: 'community-banner-item' }, [image]);
+            })
+          );
+          return;
+        }
 
-              if (!Array.isArray(imageUrls) || imageUrls.length === 0) return;
-
-              switch (sectionId) {
-                  case 'section_banner':
-                      const bannerContainer = document.getElementById('banner-slider') || document.querySelector('.swiper-wrapper');
-                      if (bannerContainer) {
-                          bannerContainer.innerHTML = imageUrls.map(url => `
-                              <div class="swiper-slide">
-                                  <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" />
-                              </div>
-                          `).join('');
-                      }
-                      break;
-
-                  case 'section_anime':
-                      const animeContainer = document.getElementById('anime-section-grid') || document.querySelector('.anime-grid');
-                      if (animeContainer) {
-                          animeContainer.innerHTML = imageUrls.map((url, idx) => `
-                              <div class="anime-card" style="border-radius:8px; overflow:hidden;">
-                                  <img src="${url}" style="width:100%; display:block;" />
-                                  <div class="anime-title" style="padding:8px; font-size:0.85rem; text-align:center;">动漫热播推荐 ${idx + 1}</div>
-                              </div>
-                          `).join('');
-                      }
-                      break;
-
-                  case 'section_community':
-                      const commContainer = document.getElementById('community-section-images') || document.querySelector('.community-banners');
-                      if (commContainer) {
-                          commContainer.innerHTML = imageUrls.map(url => `
-                              <div class="community-banner-item">
-                                  <img src="${url}" style="width:100%; border-radius:6px;" />
-                              </div>
-                          `).join('');
-                      }
-                      break;
-
-                  case 'section_recommend':
-                      const recommendContainer = document.getElementById('recommend-section-cards') || document.querySelector('.recommend-grid');
-                      if (recommendContainer) {
-                          recommendContainer.innerHTML = imageUrls.map((url, idx) => `
-                              <div class="recommend-card-item">
-                                  <img src="${url}" style="width:100%; border-radius:10px; border:1px solid rgba(255,255,255,0.1);" />
-                              </div>
-                          `).join('');
-                      }
-                      break;
-
-                  default:
-                      console.warn(`未知的版面标识符: ${sectionId}`);
-              }
-          });
-
-          console.log("🎉 前台四大板块已全部无缝查表对齐并动态刷新完成！");
-
-          if (window.mySwiperInstance && typeof window.mySwiperInstance.update === 'function') {
-              window.mySwiperInstance.update();
-          }
-
-      } catch (globalErr) {
-          console.error("前台同步对齐发生严重阻断:", globalErr);
-      }
+        if (config.section === 'section_recommend') {
+          const container = document.getElementById('recommend-section-cards') || document.querySelector('.recommend-grid');
+          if (!container) return;
+          container.replaceChildren(
+            ...imageUrls.map((url, index) => {
+              const image = element('img', {
+                className: 'dynamic-section-image dynamic-recommend-image',
+                attributes: { alt: `精选推荐 ${index + 1}`, loading: 'lazy', decoding: 'async' }
+              });
+              setImageSource(image, url, 'images/IMG_4893.webp');
+              return element('a', { className: 'recommend-card-item card--link', attributes: { href: 'recommend.html' } }, [
+                image
+              ]);
+            })
+          );
+        }
+      });
+    } catch (error) {
+      console.error('前台版面配置加载失败:', error);
+    }
   }
 
   async function loadHomeContent() {
-      try {
-          if (!window.supabaseClient) return;
-          const { data: managementData, error } = await window.supabaseClient
-              .from('content_management')
-              .select('*');
-
-          if (error || !managementData) return;
-
-          const buster = window.forceCacheBuster || `?t=${new Date().getTime()}`;
-
-          const animeContainer = document.getElementById('anime-container');
-          if (animeContainer) {
-              animeContainer.replaceChildren();
-              const animeSlots = managementData
-                  .filter(item => item.category === 'anime')
-                  .sort((a, b) => a.slot_index - b.slot_index);
-
-              animeSlots.forEach(slot => {
-                  const card = document.createElement('article');
-                  card.className = 'card';
-                  card.style.cursor = 'pointer';
-                  card.onclick = () => {
-                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
-                  };
-
-                  const finalCover = slot.cover_url
-                      ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
-                      : 'placeholder.png';
-
-                  card.innerHTML = `
-                      <img src="${finalCover}" loading="lazy" decoding="async"/>
-                      <div class="card__body">
-                        <h3 class="card__title">${slot.title}</h3>
-                        <p class="card__tag">${slot.subtitle}</p>
-                      </div>
-                  `;
-                  animeContainer.appendChild(card);
-              });
-          }
-
-          const mangaContainer = document.getElementById('manga-container');
-          if (mangaContainer) {
-              mangaContainer.replaceChildren();
-              const mangaSlots = managementData
-                  .filter(item => item.category === 'manga')
-                  .sort((a, b) => a.slot_index - b.slot_index);
-
-              mangaSlots.forEach(slot => {
-                  const card = document.createElement('article');
-                  card.className = 'card';
-                  card.style.cursor = 'pointer';
-                  card.onclick = () => {
-                      window.location.href = `detail.html?category=${slot.category}&slot=${slot.slot_index}`;
-                  };
-
-                  const finalCover = slot.cover_url
-                      ? (slot.cover_url.includes('?') ? `${slot.cover_url}&_cb=${new Date().getTime()}` : slot.cover_url + buster)
-                      : 'placeholder.png';
-
-                  card.innerHTML = `
-                      <img src="${finalCover}" loading="lazy" decoding="async"/>
-                      <div class="card__body">
-                        <h3 class="card__title">${slot.title}</h3>
-                        <p class="card__tag">${slot.subtitle}</p>
-                      </div>
-                  `;
-                  mangaContainer.appendChild(card);
-              });
-          }
-
-      } catch (err) {
-          console.error("主页动态数据加载失败:", err);
+    const renderCategory = (container, slots, emptyMessage) => {
+      if (!container) return;
+      container.replaceChildren();
+      if (!slots.length) {
+        setContentState(container, { message: emptyMessage });
+        return;
       }
-  }
 
-  // ✨ 拦截器加固
-  const globalTriggerModal = (e) => {
-    const targetBtn = e.target.closest('#user-btn');
-    if (!targetBtn) return;
+      slots.forEach((slot) => {
+        const params = new URLSearchParams({
+          category: String(slot.category || ''),
+          slot: String(slot.slot_index ?? '')
+        });
+        const image = element('img', {
+          attributes: {
+            alt: slot.title ? `${slot.title}封面` : '作品封面',
+            loading: 'lazy',
+            decoding: 'async'
+          }
+        });
+        setImageSource(image, slot.cover_url, 'images/IMG_4893.webp');
+        container.append(
+          element(
+            'a',
+            {
+              className: 'card',
+              attributes: {
+                href: `detail.html?${params}`,
+                'aria-label': `查看${slot.title || '未命名作品'}详情`
+              }
+            },
+            [
+              image,
+              element('div', { className: 'card__body' }, [
+                element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
+                element('p', { className: 'card__tag', text: slot.subtitle || '更多详情' })
+              ])
+            ]
+          )
+        );
+      });
+    };
 
-    if (targetBtn.textContent.includes('欢迎回来')) {
-      return;
+    const animeContainer = document.getElementById('anime-container');
+    const mangaContainer = document.getElementById('manga-container');
+    if (animeContainer) setLoadingState(animeContainer, { count: 5, variant: 'card', label: '正在加载热门动漫' });
+    if (mangaContainer) setLoadingState(mangaContainer, { count: 5, variant: 'card', label: '正在加载漫画连载' });
+
+    try {
+      if (!window.supabaseClient) throw new Error('内容服务尚未初始化');
+      const { data: managementData, error } = await window.supabaseClient.from('content_management').select('*');
+      if (error) throw error;
+
+      const records = Array.isArray(managementData) ? managementData : [];
+      renderCategory(
+        animeContainer,
+        records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index),
+        '暂时没有动漫推荐，稍后再来看看吧。'
+      );
+      renderCategory(
+        mangaContainer,
+        records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index),
+        '暂时没有漫画连载，稍后再来看看吧。'
+      );
+    } catch (error) {
+      console.error('主页动态数据加载失败:', error);
+      [animeContainer, mangaContainer].filter(Boolean).forEach((container) => {
+        setContentState(container, {
+          message: '内容加载失败，请检查网络后重试。',
+          kind: 'error',
+          onRetry: loadHomeContent
+        });
+      });
     }
-
-    if (targetBtn.textContent.includes('登录') || targetBtn.textContent.includes('注册专区')) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const authModal = document.getElementById('auth-modal');
-      const loginForm = document.getElementById('login-form');
-      const regForm = document.getElementById('reg-form');
-
-      if (authModal) {
-        authModal.removeAttribute('hidden');
-        authModal.style.setProperty('display', 'grid', 'important');
-        if (loginForm) loginForm.removeAttribute('hidden');
-        if (regForm) regForm.setAttribute('hidden', '');
-
-        const tabLogin = document.getElementById('tab-login');
-        const tabReg = document.getElementById('tab-reg');
-        if (tabLogin) tabLogin.classList.add('is-active');
-        if (tabReg) tabReg.classList.remove('is-active');
-      }
+  }
+  // ✨ 拦截器加固
+  const globalTriggerModal = (event) => {
+    const targetButton = event.target.closest('#user-btn');
+    if (!targetButton || targetButton.textContent.includes('欢迎回来')) return;
+    if (targetButton.textContent.includes('登录') || targetButton.textContent.includes('注册专区')) {
+      event.preventDefault();
+      event.stopPropagation();
+      openModal('login');
     }
   };
 

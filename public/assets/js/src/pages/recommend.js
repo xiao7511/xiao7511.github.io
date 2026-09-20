@@ -1,52 +1,59 @@
 import { fetchApiJson } from '../api/content.js';
-import { element, setImageSource, setMessage } from '../components/dom.js';
+import { element, setContentState, setImageSource, setLoadingState } from '../components/dom.js';
+import { initSiteHeader, updateCopyrightYear } from '../components/header.js';
 
 export async function initRecommendPage() {
+  initSiteHeader();
+  updateCopyrightYear();
   const container = document.getElementById('dynamic-recommend-container');
   if (!container) return;
+  setLoadingState(container, { count: 4, variant: 'card', label: '正在加载动漫推荐' });
+
   try {
     const data = await fetchApiJson('api/recommend');
+    container.setAttribute('aria-busy', 'false');
     container.replaceChildren();
-    if (!Array.isArray(data) || !data.length)
-      return setMessage(
-        container,
-        '💡 后台暂未发布任何动漫推荐内容。',
-        'text-align:center;color:#a4b0be;grid-column:1/-1;'
-      );
+    if (!Array.isArray(data) || !data.length) {
+      setContentState(container, { message: '暂时没有动漫推荐，稍后再来看看吧。' });
+      return;
+    }
+
     data.forEach((item) => {
-      const image = element('img', {
-        attributes: { alt: item.title || '作品封面', loading: 'lazy', decoding: 'async' },
-        style: 'width:100%;height:100%;object-fit:cover;display:block;'
+      const params = new URLSearchParams({
+        category: String(item.category || ''),
+        slot: String(item.slot_index ?? '')
       });
-      setImageSource(image, item.cover_url, 'images/IMG_4893.png');
-      const card = element(
-        'article',
-        { className: 'card', style: 'cursor:pointer;display:flex;flex-direction:column;height:100%;overflow:hidden;' },
-        [
-          element('div', { style: 'width:100%;height:280px;overflow:hidden;' }, [image]),
-          element('div', { className: 'card__body', style: 'padding:16px;flex-grow:1;' }, [
-            element('h2', { className: 'card__title', text: item.title || '未命名作品' }),
-            element('p', {
-              className: 'card__tag',
-              text: (Array.isArray(item.theme_tags) ? item.theme_tags.join(' / ') : '') || item.subtitle || '精品推荐'
-            })
-          ])
-        ]
-      );
-      card.addEventListener('click', () =>
-        location.assign(
-          `detail.html?${new URLSearchParams({ category: String(item.category || ''), slot: String(item.slot_index ?? '') })}`
+      const image = element('img', {
+        attributes: { alt: item.title ? `${item.title}封面` : '作品封面', loading: 'lazy', decoding: 'async' }
+      });
+      setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
+      container.append(
+        element(
+          'a',
+          {
+            className: 'card',
+            attributes: { href: `detail.html?${params}`, 'aria-label': `查看《${item.title || '未命名作品'}》详情` }
+          },
+          [
+            image,
+            element('div', { className: 'card__body' }, [
+              element('h2', { className: 'card__title', text: item.title || '未命名作品' }),
+              element('p', {
+                className: 'card__tag',
+                text: (Array.isArray(item.theme_tags) ? item.theme_tags.join(' / ') : '') || item.subtitle || '精品推荐'
+              })
+            ])
+          ]
         )
       );
-      container.append(card);
     });
   } catch (error) {
     console.error('加载动漫推荐失败:', error);
-    setMessage(
-      container,
-      '❌ 安全隔离通道数据请求失败，请检查 Worker 配置。',
-      'text-align:center;color:#ff4757;grid-column:1/-1;'
-    );
+    setContentState(container, {
+      message: '动漫推荐加载失败，请检查网络后重试。',
+      kind: 'error',
+      onRetry: initRecommendPage
+    });
   }
 }
 

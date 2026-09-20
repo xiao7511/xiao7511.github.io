@@ -1,51 +1,58 @@
 import { fetchApiJson } from '../api/content.js';
-import { element, setImageSource, setMessage } from '../components/dom.js';
+import { element, setContentState, setImageSource, setLoadingState } from '../components/dom.js';
+import { initSiteHeader, updateCopyrightYear } from '../components/header.js';
 
 export async function initMangaPage() {
+  initSiteHeader();
+  updateCopyrightYear();
   const container = document.getElementById('dynamic-manga-container');
   if (!container) return;
+  setLoadingState(container, { count: 3, variant: 'manga', label: '正在加载漫画连载' });
+
   try {
     const data = await fetchApiJson('api/manga');
+    container.setAttribute('aria-busy', 'false');
     container.replaceChildren();
-    if (!Array.isArray(data) || !data.length)
-      return setMessage(
-        container,
-        '💡 后台暂未上架任何漫画连载内容。',
-        'text-align:center;color:#a4b0be;padding:20px;'
-      );
+    if (!Array.isArray(data) || !data.length) {
+      setContentState(container, { message: '暂时没有漫画连载，稍后再来看看吧。' });
+      return;
+    }
+
     data.forEach((item) => {
-      const open = () =>
-        location.assign(
-          `detail.html?${new URLSearchParams({ category: String(item.category || ''), slot: String(item.slot_index ?? '') })}`
-        );
+      const params = new URLSearchParams({
+        category: String(item.category || ''),
+        slot: String(item.slot_index ?? '')
+      });
+      const href = `detail.html?${params}`;
       const image = element('img', {
         className: 'manga-cover',
-        attributes: { alt: item.title || '漫画封面', loading: 'lazy', decoding: 'async' }
+        attributes: { alt: item.title ? `${item.title}封面` : '漫画封面', loading: 'lazy', decoding: 'async' }
       });
-      setImageSource(image, item.cover_url, 'images/IMG_4893.png');
-      const cover = element('div', { className: 'manga-cover-box', style: 'cursor:pointer;' }, [image]);
-      cover.addEventListener('click', open);
-      const title = element('div', {
-        className: 'manga-title',
-        text: item.title || '未命名连载',
-        style: 'cursor:pointer;'
-      });
-      title.addEventListener('click', open);
-      const button = element('button', { className: 'read-btn', text: '开始阅读' });
-      button.addEventListener('click', open);
+      setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       container.append(
-        element('div', { className: 'manga-item' }, [
-          cover,
-          element('div', { className: 'manga-detail' }, [
-            element('div', {}, [title, element('div', { className: 'manga-update', text: item.subtitle || '连载中' })]),
-            button
-          ])
-        ])
+        element(
+          'a',
+          { className: 'manga-item', attributes: { href, 'aria-label': `阅读《${item.title || '未命名连载'}》` } },
+          [
+            element('div', { className: 'manga-cover-box' }, [image]),
+            element('div', { className: 'manga-detail' }, [
+              element('div', {}, [
+                element('h2', { className: 'manga-title', text: item.title || '未命名连载' }),
+                element('p', { className: 'manga-update', text: item.subtitle || '连载中' })
+              ]),
+              element('span', { className: 'read-btn', text: '开始阅读' })
+            ])
+          ]
+        )
       );
     });
   } catch (error) {
     console.error('加载漫画连载失败:', error);
-    setMessage(container, '❌ 数据流同步失败，请检查边缘网关状态。', 'text-align:center;color:#ff4757;padding:20px;');
+    setContentState(container, {
+      message: '漫画连载加载失败，请检查网络后重试。',
+      kind: 'error',
+      onRetry: initMangaPage
+    });
   }
 }
 
