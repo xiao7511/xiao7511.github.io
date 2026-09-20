@@ -8,6 +8,14 @@
     'nobistudio.com'
   ]);
 
+  for (const origin of [window.SiteConfig?.siteOrigin, window.SiteConfig?.apiOrigin]) {
+    try {
+      if (origin) TRUSTED_IMAGE_HOSTS.add(new URL(origin).hostname);
+    } catch (_) {
+      // Invalid runtime origins are ignored and will never be trusted as image sources.
+    }
+  }
+
   function isTrustedImageHost(hostname) {
     return TRUSTED_IMAGE_HOSTS.has(hostname) || hostname.endsWith('.supabase.co');
   }
@@ -24,9 +32,20 @@
   }
 
   function setImageSource(image, value, fallback = '') {
-    const safeUrl = safeImageUrl(value, fallback);
-    if (safeUrl) image.src = safeUrl;
-    else image.removeAttribute('src');
+    const fallbackUrl = safeImageUrl(fallback);
+    const safeUrl = safeImageUrl(value, fallbackUrl);
+    image.onerror = null;
+    if (safeUrl) {
+      if (fallbackUrl && safeUrl !== fallbackUrl) {
+        image.onerror = () => {
+          image.onerror = null;
+          image.src = fallbackUrl;
+        };
+      }
+      image.src = safeUrl;
+    } else {
+      image.removeAttribute('src');
+    }
     return Boolean(safeUrl);
   }
 

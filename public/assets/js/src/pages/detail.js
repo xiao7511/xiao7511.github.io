@@ -51,7 +51,9 @@ export async function initDetailPage() {
       const image = element('img', {
         attributes: { loading: 'lazy', decoding: 'async', alt: `${data.title || '详情图片'} ${index + 1}` }
       });
-      if (setImageSource(image, url)) stream.append(element('div', { className: 'gallery-item' }, [image]));
+      if (setImageSource(image, url, 'images/IMG_4893.webp')) {
+        stream.append(element('div', { className: 'gallery-item' }, [image]));
+      }
     });
 
     if (!stream.children.length) setContentState(stream, { message: '该作品已发布封面，详情图片仍在准备中。' });

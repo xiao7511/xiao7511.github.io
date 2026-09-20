@@ -1,5 +1,13 @@
 const TRUSTED_IMAGE_HOSTS = new Set([location.hostname, 'api.dicebear.com', 'www.nobistudio.com', 'nobistudio.com']);
 
+for (const origin of [window.SiteConfig?.siteOrigin, window.SiteConfig?.apiOrigin]) {
+  try {
+    if (origin) TRUSTED_IMAGE_HOSTS.add(new URL(origin).hostname);
+  } catch (_) {
+    // Invalid runtime origins are ignored and will never be trusted as image sources.
+  }
+}
+
 export function safeImageUrl(value, fallback = '') {
   try {
     const url = new URL(String(value || ''), location.href);
@@ -22,9 +30,20 @@ export function element(tag, options = {}, children = []) {
 }
 
 export function setImageSource(image, value, fallback = '') {
-  const source = safeImageUrl(value, fallback);
-  if (source) image.src = source;
-  else image.removeAttribute('src');
+  const fallbackSource = safeImageUrl(fallback);
+  const source = safeImageUrl(value, fallbackSource);
+  image.onerror = null;
+  if (source) {
+    if (fallbackSource && source !== fallbackSource) {
+      image.onerror = () => {
+        image.onerror = null;
+        image.src = fallbackSource;
+      };
+    }
+    image.src = source;
+  } else {
+    image.removeAttribute('src');
+  }
   return Boolean(source);
 }
 

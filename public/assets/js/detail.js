@@ -28,7 +28,9 @@ async function loadDetailWorkflow() {
     const urls = Array.isArray(data.detail_urls) ? data.detail_urls : [];
     urls.forEach((url) => {
       const img = window.SecurityUtils.element('img', { attributes: { loading: 'lazy', decoding: 'async', alt: data.title || '详情图片' } });
-      if (window.SecurityUtils.setImageSource(img, url)) stream.append(window.SecurityUtils.element('div', { className: 'gallery-item' }, [img]));
+      if (window.SecurityUtils.setImageSource(img, url, 'images/IMG_4893.webp')) {
+        stream.append(window.SecurityUtils.element('div', { className: 'gallery-item' }, [img]));
+      }
     });
     if (!stream.children.length) window.SecurityUtils.setMessage(stream, '💡 后台仅上传了封面，尚未上传详情页多图内容。', 'text-align:center;color:var(--text-muted);padding:20px;font-size:.85rem;');
   } catch (error) {

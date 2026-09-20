@@ -13,6 +13,23 @@
         return `${window.SiteConfig.apiOrigin}/`;
     };
 
+    const setManagedImageSource = (image, url) => {
+        if (!image || !url) return;
+        const fallback = image.dataset.fallbackSrc || image.getAttribute('src') || 'images/IMG_4893.webp';
+        image.dataset.fallbackSrc = fallback;
+        image.removeAttribute('srcset');
+        image.removeAttribute('sizes');
+        if (window.SecurityUtils?.setImageSource) {
+            window.SecurityUtils.setImageSource(image, url, fallback);
+            return;
+        }
+        image.onerror = () => {
+            image.onerror = null;
+            image.src = fallback;
+        };
+        image.src = url;
+    };
+
     // ==========================================
     // 🌟 核心引擎：将云端 content_management 数据精准投递到首页卡片
     // ==========================================
@@ -51,7 +68,7 @@
                     bannerList.forEach(item => {
                         const idx = item.slot_index;
                         if (slideImages[idx] && item.cover_url && item.cover_url.trim() !== "") {
-                            slideImages[idx].src = item.cover_url;
+                            setManagedImageSource(slideImages[idx], item.cover_url);
                             slideImages[idx].setAttribute('data-slot', idx);
                         }
                     });
@@ -70,7 +87,7 @@
                         if (card && item.cover_url && item.cover_url.trim() !== "") {
                             // 1. 替换封面图片
                             const imgEl = card.querySelector('.anime-card__img, img');
-                            if (imgEl) imgEl.src = item.cover_url;
+                            if (imgEl) setManagedImageSource(imgEl, item.cover_url);
 
                             // 2. 替换主标题
                             const titleEl = card.querySelector('.anime-card__title, h3');
@@ -104,7 +121,7 @@
                         if (card && item.cover_url && item.cover_url.trim() !== "") {
                             // 1. 替换漫画封面
                             const imgEl = card.querySelector('.manga-card__img, img');
-                            if (imgEl) imgEl.src = item.cover_url;
+                            if (imgEl) setManagedImageSource(imgEl, item.cover_url);
 
                             // 2. 替换漫画名称
                             const titleEl = card.querySelector('.manga-card__title, h3');

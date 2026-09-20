@@ -623,7 +623,7 @@
             for (let i = 0; i < deployedUrls.length; i++) {
               const storageUrl = deployedUrls[i];
 
-              await window.supabaseClient.from('content_management').upsert(
+              const { error: contentError } = await window.supabaseClient.from('content_management').upsert(
                 {
                   category: 'banner',
                   slot_index: i,
@@ -636,13 +636,15 @@
                 },
                 { onConflict: 'category,slot_index' }
               );
+              if (contentError) throw contentError;
             }
 
             // 广播 site_config 保持首页渲染正常
             const cacheBustedUrls = deployedUrls.map((url) => `${url}?t=${new Date().getTime()}`);
-            await window.supabaseClient
+            const { error: configError } = await window.supabaseClient
               .from('site_config')
               .upsert([{ section: 'section_banner', url: JSON.stringify(cacheBustedUrls) }]);
+            if (configError) throw configError;
 
             showStatus('🎉 首页轮播大图全集联动注册成功！点击任意一张均能看全集多图！', 'success');
             selectedFilesCache = [];
@@ -663,7 +665,7 @@
         if (isVideo) {
           return `<video src="${url}" controls preload="metadata" muted playsinline></video>`;
         } else {
-          return `<img src="${url}" alt="内容预览" />`;
+          return `<img src="${url}" alt="内容预览" onerror="this.onerror=null;this.src='images/IMG_4893.webp'" />`;
         }
       }
 
@@ -857,12 +859,13 @@
 
             coverUrl = `${supabaseUrl}/storage/v1/object/public/images/${cName}`;
           } else {
-            const { data } = await window.supabaseClient
+            const { data, error: coverReadError } = await window.supabaseClient
               .from('content_management')
               .select('cover_url')
               .eq('category', category)
               .eq('slot_index', slotIndex)
-              .single();
+              .maybeSingle();
+            if (coverReadError) throw coverReadError;
             if (data) coverUrl = data.cover_url;
           }
 
@@ -887,12 +890,13 @@
               detailUrls.push(dUrl);
             }
           } else {
-            const { data } = await window.supabaseClient
+            const { data, error: detailReadError } = await window.supabaseClient
               .from('content_management')
               .select('detail_urls')
               .eq('category', category)
               .eq('slot_index', slotIndex)
-              .single();
+              .maybeSingle();
+            if (detailReadError) throw detailReadError;
             if (data && data.detail_urls) detailUrls = data.detail_urls;
           }
 

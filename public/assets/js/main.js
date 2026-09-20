@@ -122,13 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
       let liveUrls = [];
       if (window.supabaseClient) {
         const { data, error } = await window.supabaseClient
-          .from('site_config')
-          .select('section, url')
-          .eq('section', 'section_banner')
-          .maybeSingle();
+          .from('content_management')
+          .select('slot_index, cover_url')
+          .eq('category', 'banner')
+          .order('slot_index', { ascending: true });
 
-        if (!error && data && data.url) {
-          liveUrls = JSON.parse(data.url);
+        if (!error && Array.isArray(data)) {
+          data.forEach((item) => {
+            if (Number.isInteger(item.slot_index) && item.cover_url) liveUrls[item.slot_index] = item.cover_url;
+          });
           renderAdminBannerList(liveUrls);
         }
       }
@@ -142,9 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
           if (liveUrls && liveUrls[index]) {
             // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
             const rawUrl = liveUrls[index];
-            imgElement.src = rawUrl.includes('?') ? `${rawUrl}&v=20260920` : rawUrl + buster;
+            const source = rawUrl.includes('?') ? `${rawUrl}&v=20260920` : rawUrl + buster;
+            imgElement.removeAttribute('srcset');
+            imgElement.removeAttribute('sizes');
+            setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg');
           } else {
-            imgElement.src = fallbackImages.section_banner[index] || imgElement.src;
+            setImageSource(imgElement, fallbackImages.section_banner[index] || imgElement.src);
           }
         }
       });
@@ -181,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await Promise.all([
           syncLiveImagesFromDB(),   // 刷新轮播图
           loadHomeContent(),         // 刷新动态推荐板块
-          loadDeployedSections(),   // 📺 读取部署数据并无缝对齐四大区域逻辑功能（确保不损坏原有功能）
           fetchPosts()              // 🚀 唤醒并并行加载论坛帖子列表
         ]);
         console.log("📊 站点基础版面、多媒体图层与论坛数据流并行同步完成！");
@@ -219,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn("未能通过云端拉取配置，启动本地安全后备：", e);
       syncLiveImagesFromDB();
       loadHomeContent();
-      loadDeployedSections();
       fetchPosts();
     }
   }
