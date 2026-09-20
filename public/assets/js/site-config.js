@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   window.SiteConfig = Object.freeze({
-    siteOrigin: 'https://www.nobistudio.com',
+    siteOrigin: 'https://nobistudio.com',
     apiOrigin: 'https://api.nobistudio.com'
   });
 }());

@@ -3,93 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="动漫社区，登录后发布动态、浏览同好帖子并参与互动。">
+  <meta name="description" content="DorisY 动漫世界漫友社区，登录后发布动态、浏览帖子并参与互动。">
   <meta name="robots" content="index,follow">
-  <link rel="canonical" href="https://www.nobistudio.com/community.html">
-  <title>漫友社区 - DorisY</title>
+  <link rel="canonical" href="https://nobistudio.com/community.html">
+  <title>漫友社区 - DorisY 动漫世界</title>
   <script src="assets/js/site-config.js"></script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#081521">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="assets/css/main.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
   <script src="assets/js/security.js" defer></script>
-  <script type="module" src="assets/js/main.js?v=202609180001"></script>
+  <script type="module" src="assets/js/main.js?v=20260920"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
   <header class="site-header">
-    <a class="logo" href="index.html">DorisY社区</a>
-    <nav class="nav" aria-label="主导航">
+    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">DorisY 动漫世界</a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单"><span class="nav-toggle__icon" aria-hidden="true"></span></button>
+    <nav id="site-nav" class="nav" aria-label="主导航">
       <a href="index.html" class="nav__link">首页</a>
       <a href="recommend.html" class="nav__link">动漫推荐</a>
       <a href="manga.html" class="nav__link">漫画连载</a>
-      <a href="community.html" class="nav__link is-active">社区</a>
+      <a href="community.html" class="nav__link is-active" aria-current="page">社区</a>
       <button id="user-btn" class="nav__button" type="button">登录/注册</button>
     </nav>
   </header>
-
-  <main class="section section--community">
-    <div class="section__head">
-      <h1>漫友社区</h1>
-      <p>登录后可以发帖，帖子会按时间倒序显示。</p>
-    </div>
-
+  <main id="main-content" class="section section--community">
+    <div class="section__head"><h1>漫友社区</h1><p>登录后可以发帖，帖子会按时间倒序显示。</p></div>
     <div id="post-area" class="post-box" hidden>
       <label class="sr-only" for="post-content">发帖内容</label>
       <textarea id="post-content" placeholder="此刻在想什么动漫？" maxlength="500"></textarea>
-      <div class="actions">
-        <button id="publish-btn" class="primary-btn" type="button">发布动态</button>
-      </div>
+      <div class="actions"><button id="publish-btn" class="primary-btn" type="button">发布动态</button></div>
     </div>
-
-    <div id="posts-list" class="posts" aria-live="polite">
-      <p class="loading-state">正在同步异世界信号...</p>
+    <div id="posts-list" class="posts" aria-live="polite" aria-busy="true">
+      <div class="skeleton skeleton--post" aria-hidden="true"></div>
+      <div class="skeleton skeleton--post" aria-hidden="true"></div>
+      <div class="skeleton skeleton--post" aria-hidden="true"></div>
+      <span class="sr-only" role="status">正在加载社区动态</span>
     </div>
   </main>
-
-  <footer class="site-footer">© 2026 DorisY Community</footer>
-
+  <footer class="site-footer">© <span data-current-year>2026</span> DorisY 动漫世界 · nobistudio.com</footer>
   <div id="auth-modal" class="modal" hidden>
-    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-      <button id="modal-close" class="modal__close" type="button" aria-label="关闭">×</button>
+    <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title" tabindex="-1">
+      <button id="modal-close" class="modal__close" type="button" aria-label="关闭登录与注册对话框">×</button>
       <h2 id="auth-title" class="modal__title">登录 / 注册</h2>
-
-      <div class="tabs" role="tablist" aria-label="登录注册切换">
-        <button class="tab is-active" id="tab-login" type="button" role="tab">登录</button>
-        <button class="tab" id="tab-reg" type="button" role="tab">注册</button>
-      </div>
-
+      <div class="tabs" role="tablist" aria-label="登录注册切换"><button class="tab is-active" id="tab-login" type="button" role="tab">登录</button><button class="tab" id="tab-reg" type="button" role="tab">注册</button></div>
       <form id="login-form" class="form">
-        <input type="email" id="login-email" placeholder="邮箱" required autocomplete="email">
-        <input type="password" id="login-password" placeholder="密码" required autocomplete="current-password">
-        <p class="form__hint form__hint--right">
-          <button id="forgot-password-btn" class="link-btn" type="button">忘记密码？</button>
-        </p>
+        <input type="email" id="login-email" placeholder="邮箱" aria-label="邮箱" required autocomplete="email">
+        <input type="password" id="login-password" placeholder="密码" aria-label="密码" required autocomplete="current-password">
+        <p class="form__hint form__hint--right"><button id="forgot-password-btn" class="link-btn" type="button">忘记密码？</button></p>
         <button class="primary-btn" type="submit">进入异世界</button>
       </form>
-
       <form id="reset-password-form" class="form" hidden>
-        <p class="form__hint">设置你的新密码</p>
-        <input type="password" id="new-password" placeholder="输入新密码 (至少6位)" required autocomplete="new-password">
+        <p class="form__hint form__hint--center">设置你的新密码</p>
+        <input type="password" id="new-password" placeholder="输入新密码（至少 6 位）" aria-label="新密码" required autocomplete="new-password">
         <button class="primary-btn" type="submit">确认修改</button>
       </form>
-
       <form id="reg-form" class="form" hidden>
-        <div class="avatar-selector">
-          <p>选择你的萌系头像</p>
-          <div class="avatar-options">
-            <button type="button" class="avatar-option is-selected" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Neko">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" alt="Neko 头像" loading="lazy" decoding="async">
-            </button>
-            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Miku">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" alt="Miku 头像" loading="lazy" decoding="async">
-            </button>
-            <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro">
-              <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="Zoro 头像" loading="lazy" decoding="async">
-            </button>
-          </div>
-        </div>
-        <input type="text" id="reg-nickname" placeholder="动漫昵称" required autocomplete="nickname">
-        <input type="email" id="reg-email" placeholder="邮箱" required autocomplete="email">
-        <input type="password" id="reg-password" placeholder="密码 (至少6位)" required autocomplete="new-password">
+        <div class="avatar-selector"><p>选择你的萌系头像</p><div class="avatar-options">
+          <button type="button" class="avatar-option is-selected" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" aria-label="选择 Neko 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Neko" alt="" loading="lazy" decoding="async"></button>
+          <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" aria-label="选择 Miku 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Miku" alt="" loading="lazy" decoding="async"></button>
+          <button type="button" class="avatar-option" data-avatar="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" aria-label="选择 Zoro 头像"><img src="https://api.dicebear.com/7.x/bottts/svg?seed=Zoro" alt="" loading="lazy" decoding="async"></button>
+        </div></div>
+        <input type="text" id="reg-nickname" placeholder="动漫昵称" aria-label="动漫昵称" required autocomplete="nickname">
+        <input type="email" id="reg-email" placeholder="邮箱" aria-label="注册邮箱" required autocomplete="email">
+        <input type="password" id="reg-password" placeholder="密码（至少 6 位）" aria-label="注册密码" required autocomplete="new-password">
         <button class="primary-btn" type="submit">创建角色</button>
       </form>
     </div>

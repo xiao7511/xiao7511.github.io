@@ -1,64 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>主题详情 - DorisY画廊</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="查看 DorisY 动漫世界精选主题详情和图片。">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://nobistudio.com/detail.html">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#081521">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <title>主题详情 - DorisY 动漫世界</title>
   <script src="assets/js/site-config.js"></script>
-  <link rel="canonical" href="https://www.nobistudio.com/detail.html">
-    <style>
-        :root {
-            --bg-color: #0f0c20;
-            --panel-bg: rgba(25, 20, 45, 0.7);
-            --accent-neon: #00f5ff;
-            --text-main: #f1f2f6;
-            --text-muted: #a4b0be;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f0c20 0%, #15102a 100%);
-            color: var(--text-main); margin: 0; padding: 16px; min-height: 100vh; box-sizing: border-box;
-        }
-        .detail-container { width: 100%; max-width: 800px; margin: 0 auto; }
-        .top-nav { display: flex; align-items: center; margin-bottom: 24px; padding-top: 8px; }
-        .back-btn {
-            background: rgba(255, 255, 255, 0.08); color: #fff; text-decoration: none; padding: 8px 16px;
-            border-radius: 50px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.2s;
-        }
-        .back-btn:hover { background: var(--accent-neon); color: #000; }
-        .meta-panel {
-            background: var(--panel-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border-radius: 16px; padding: 20px; border: 1px solid rgba(138, 43, 226, 0.2); margin-bottom: 24px;
-        }
-        h1 { font-size: 1.5rem; margin: 0 0 8px 0; font-weight: 800; color: #fff; }
-        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px 0; }
-        .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; }
-        .tag-item {
-            font-size: 0.75rem; background: rgba(0, 245, 255, 0.12); color: var(--accent-neon);
-            padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(0, 245, 255, 0.2);
-        }
-        .gallery-stream { display: flex; flex-direction: column; gap: 16px; width: 100%; }
-        .gallery-item { width: 100%; background: rgba(0, 0, 0, 0.3); border-radius: 12px; overflow: hidden; display: flex; justify-content: center; }
-        .gallery-item img { width: 100%; height: auto; display: block; object-fit: contain; }
-        .loading-status { text-align: center; padding: 40px; color: var(--text-muted); font-size: 0.95rem; }
-    </style>
 </head>
-<body>
-    <div class="detail-container">
-        <div class="top-nav"><a href="index.html" id="detail-back" class="back-btn">← 返回前页</a></div>
-        
-        <div class="meta-panel" id="meta-panel" style="display: none;">
-            <h1 id="detail-title">加载中...</h1>
-            <div class="subtitle" id="detail-sub"></div>
-            <div class="tags-wrapper" id="detail-tags"></div>
-        </div>
-
-        <div id="status-tips" class="loading-status">⚡ 正在调取边缘云仓详情多图...</div>
-        <div class="gallery-stream" id="gallery-stream"></div>
-    </div>
-
-<script src="assets/js/security.js" defer></script>
-<script type="module" src="assets/js/src/pages/detail.js"></script>
-<script src="assets/js/upgrade-patch.js?v=20260615"></script>
+<body class="detail-page">
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <main id="main-content" class="detail-container">
+    <nav class="top-nav" aria-label="面包屑"><a href="index.html" id="detail-back" class="back-btn">← 返回前页</a></nav>
+    <section class="meta-panel" id="meta-panel" aria-labelledby="detail-title" hidden>
+      <h1 id="detail-title">加载中…</h1>
+      <p class="subtitle" id="detail-sub"></p>
+      <div class="tags-wrapper" id="detail-tags" aria-label="主题标签"></div>
+    </section>
+    <div id="status-tips" class="state" role="status" aria-live="polite"><div class="skeleton skeleton--manga" aria-hidden="true"></div><p>正在加载主题内容…</p></div>
+    <div class="gallery-stream" id="gallery-stream" aria-live="polite" aria-busy="true"></div>
+  </main>
+  <footer class="site-footer">© <span data-current-year>2026</span> DorisY 动漫世界 · nobistudio.com</footer>
+  <script src="assets/js/security.js" defer></script>
+  <script type="module" src="assets/js/src/pages/detail.js?v=20260920"></script>
+  <script src="assets/js/upgrade-patch.js?v=20260920"></script>
 </body>
 </html>

@@ -31,3 +31,44 @@ export function setImageSource(image, value, fallback = '') {
 export function setMessage(container, message, style = '') {
   container.replaceChildren(element('div', { text: message, style }));
 }
+
+export function createSkeletonList(count = 4, variant = 'card') {
+  return Array.from({ length: count }, () =>
+    element('div', { className: `skeleton skeleton--${variant}`, attributes: { 'aria-hidden': 'true' } })
+  );
+}
+
+export function setLoadingState(container, { count = 4, variant = 'card', label = '正在加载内容' } = {}) {
+  if (!container) return;
+  container.setAttribute('aria-busy', 'true');
+  container.replaceChildren(
+    ...createSkeletonList(count, variant),
+    element('span', { className: 'sr-only', text: label })
+  );
+}
+
+export function setContentState(container, { message, kind = 'empty', retryLabel = '重试', onRetry } = {}) {
+  if (!container) return;
+  container.setAttribute('aria-busy', 'false');
+  const children = [element('p', { text: message || '暂无内容' })];
+  if (typeof onRetry === 'function') {
+    const retry = element('button', { className: 'button button--secondary state__action', text: retryLabel });
+    retry.addEventListener('click', onRetry, { once: true });
+    children.push(retry);
+  }
+  container.replaceChildren(element('div', { className: `content-state content-state--${kind}` }, children));
+}
+
+export function setState(container, { title, message, retry } = {}) {
+  if (!container) return;
+  container.setAttribute('aria-busy', 'false');
+  const children = [];
+  if (title) children.push(element('h2', { className: 'state__title', text: title }));
+  if (message) children.push(element('p', { text: message }));
+  if (typeof retry === 'function') {
+    const button = element('button', { className: 'button button--secondary state__action', text: '重试' });
+    button.addEventListener('click', retry, { once: true });
+    children.push(button);
+  }
+  container.replaceChildren(element('div', { className: 'state' }, children));
+}
