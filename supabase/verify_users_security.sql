@@ -1,6 +1,39 @@
 -- Verification for 202609210000_secure_users_admin_privilege.sql.
 -- READ ONLY: run after the security migration and return every result set for review.
 
+-- Expected after the known production backfill:
+-- auth_users_count=5, public_users_count=5, matched_users=5,
+-- auth_without_public_user=0, public_without_auth_user=0.
+select
+  (select count(*) from auth.users) as auth_users_count,
+  (select count(*) from public.users) as public_users_count,
+  (
+    select count(*)
+    from auth.users as auth_user
+    join public.users as public_user on public_user.id = auth_user.id
+  ) as matched_users,
+  (
+    select count(*)
+    from auth.users as auth_user
+    left join public.users as public_user on public_user.id = auth_user.id
+    where public_user.id is null
+  ) as auth_without_public_user,
+  (
+    select count(*)
+    from public.users as public_user
+    left join auth.users as auth_user on auth_user.id = public_user.id
+    where auth_user.id is null
+  ) as public_without_auth_user;
+
+-- Manually reconcile these UUIDs with the approved administrator roster.
+-- The migration preserves existing rows and never derives administrator status
+-- from auth metadata, so an unexpected pre-existing administrator must be handled
+-- as a separate incident before the engagement migration is considered.
+select id as administrator_user_id
+from public.users
+where is_admin is true
+order by id;
+
 -- Expected: false for both roles and both effective UPDATE checks.
 select
   role_name,
@@ -80,18 +113,28 @@ where schemaname = 'public'
   and tablename = 'users'
 order by cmd, policyname;
 
--- Expected: authenticated=true and anon=false for set_user_admin EXECUTE.
+-- Expected effective EXECUTE matrix:
+-- handle_new_user: anon=false, authenticated=false
+-- is_admin: anon=false, authenticated=true
+-- set_user_admin: anon=false, authenticated=true
 select
+  functions.function_name,
   role_name,
   pg_catalog.has_function_privilege(
     role_name,
-    'public.set_user_admin(uuid,boolean)',
+    functions.function_signature,
     'EXECUTE'
-  ) as can_execute_set_user_admin
+  ) as can_execute
 from (values ('anon'), ('authenticated')) as roles(role_name)
-order by role_name;
+cross join (
+  values
+    ('handle_new_user', 'public.handle_new_user()'),
+    ('is_admin', 'public.is_admin()'),
+    ('set_user_admin', 'public.set_user_admin(uuid,boolean)')
+) as functions(function_name, function_signature)
+order by functions.function_name, role_name;
 
--- Expected: both functions are SECURITY DEFINER, owned by the trusted migration owner,
+-- Expected: all three functions are SECURITY DEFINER, owned by postgres,
 -- have a fixed search_path, and have no PUBLIC/anon EXECUTE grant.
 select
   procedure.proname as function_name,
@@ -103,11 +146,16 @@ select
 from pg_catalog.pg_proc as procedure
 join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
 where namespace.nspname = 'public'
-  and procedure.proname in ('is_admin', 'set_user_admin')
+  and procedure.proname in ('handle_new_user', 'is_admin', 'set_user_admin')
 order by procedure.proname, identity_arguments;
 
--- Registration audit: inspect how auth.users creates or synchronizes public.users rows.
--- Review trigger owner and definition before applying the security migration.
+-- Expected: handle_new_user inserts into schema-qualified game.profiles and public.users,
+-- and assigns false directly to public.users.is_admin. Review this definition verbatim.
+select pg_catalog.pg_get_functiondef('public.handle_new_user()'::regprocedure)
+  as handle_new_user_definition;
+
+-- Expected: exactly one enabled auth.users AFTER INSERT trigger named
+-- on_auth_user_created, calling public.handle_new_user().
 select
   source_namespace.nspname as source_schema,
   source_table.relname as source_table,
