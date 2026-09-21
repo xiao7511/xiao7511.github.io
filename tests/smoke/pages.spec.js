@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 const contentId = 'd9428888-122b-4f20-9f6c-25789ab0a123';
+const imageUrl = 'http://127.0.0.1:4173/storage/v1/object/public/images/IMG_4893.webp';
+const imageKey = 'images/IMG_4893.webp';
 const contentRecord = {
   id: contentId,
   category: 'anime',
@@ -8,8 +10,8 @@ const contentRecord = {
   title: '测试动漫',
   subtitle: '更新中',
   theme_tags: ['冒险'],
-  cover_url: 'http://127.0.0.1:4173/images/IMG_4893.webp',
-  detail_urls: ['http://127.0.0.1:4173/images/IMG_4893.webp']
+  cover_url: imageUrl,
+  detail_urls: [imageUrl]
 };
 
 async function mockRuntime(page, { posts = [], features = false } = {}) {
@@ -53,11 +55,13 @@ async function mockRuntime(page, { posts = [], features = false } = {}) {
             createClient() {
               return {
                 from: query,
-                rpc: async (name) => {
+                rpc: async (name, args) => {
                   if (name === 'get_image_like_summary') {
-                    return { data: [{ content_id: '${contentId}', image_kind: 'detail', image_index: 0, like_count: imageLiked ? 1 : 0, liked: imageLiked }], error: null };
+                    if (!args.p_image_keys.includes('${imageKey}')) return { data: [], error: null };
+                    return { data: [{ image_key: '${imageKey}', like_count: imageLiked ? 1 : 0, liked: imageLiked }], error: null };
                   }
                   if (name === 'toggle_image_like') {
+                    if (args.p_image_key !== '${imageKey}') return { data: null, error: { message: 'invalid image key' } };
                     imageLiked = !imageLiked;
                     return { data: [{ liked: imageLiked, like_count: imageLiked ? 1 : 0 }], error: null };
                   }
@@ -169,6 +173,8 @@ test('detail images open in the accessible preview', async ({ page }) => {
   await expect(page.locator('.image-like-button')).toContainText('点赞 0');
   await page.locator('.image-like-button').click();
   await expect(page.locator('.image-like-button')).toContainText('已点赞 1');
+  await page.locator('.image-like-button').click();
+  await expect(page.locator('.image-like-button')).toContainText('点赞 0');
 });
 
 for (const viewport of [

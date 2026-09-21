@@ -31,6 +31,7 @@ export async function initRecommendPage() {
           'data-content-id': item.id,
           'data-image-kind': 'cover',
           'data-image-index': '0',
+          'data-image-url': item.cover_url,
           'data-preview-image': ''
         }
       });

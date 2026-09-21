@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
               imgElement.dataset.contentId = record.id;
               imgElement.dataset.imageKind = 'banner';
               imgElement.dataset.imageIndex = '0';
+              imgElement.dataset.imageUrl = source;
               imgElement.dataset.previewImage = '';
             }
           } else {
@@ -1697,6 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'data-content-id': slot.id,
             'data-image-kind': 'cover',
             'data-image-index': '0',
+            'data-image-url': slot.cover_url,
             'data-preview-image': ''
           }
         });

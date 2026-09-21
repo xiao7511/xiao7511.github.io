@@ -56,6 +56,7 @@ export async function initDetailPage() {
           'data-content-id': data.id,
           'data-image-kind': 'detail',
           'data-image-index': String(index),
+          'data-image-url': url,
           'data-preview-image': ''
         }
       });

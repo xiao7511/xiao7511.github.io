@@ -1,7 +1,7 @@
 import { initializeSupabase } from './api/supabase.js';
 import { element, safeImageUrl, setImageSource } from './components/dom.js';
 import { initSiteHeader } from './components/header.js';
-import { imageTargetKey, isImageTarget, mapImageLikeSummaries } from './images/likes.js';
+import { getImageKey, imageTargetKey, isImageTarget, mapImageLikeSummaries } from './images/likes.js';
 
 const DEFAULT_AVATAR = 'images/nobi-avatar.svg';
 const SOCIAL_LABELS = {
@@ -123,7 +123,8 @@ function getImageTarget(image) {
   const contentId = image.dataset.contentId;
   const kind = image.dataset.imageKind;
   const index = Number(image.dataset.imageIndex || 0);
-  const target = { contentId, kind, index };
+  const imageKey = getImageKey(image.dataset.imageUrl || image.getAttribute('src'));
+  const target = { contentId, kind, index, imageKey };
   return isImageTarget(target) ? target : null;
 }
 
@@ -136,13 +137,13 @@ async function refreshLikeSummaries() {
   if (!features.imageLikes) return;
   const images = [...document.querySelectorAll('img[data-content-id][data-image-kind]')];
   const targets = images.map(getImageTarget).filter(Boolean);
-  const ids = [...new Set(targets.map((target) => target.contentId))].sort();
-  const signature = ids.join(',') + ':' + images.length;
-  if (!ids.length || signature === lastLikeTargetSignature) return;
+  const imageKeys = [...new Set(targets.map((target) => target.imageKey))].sort();
+  const signature = imageKeys.join(',') + ':' + images.length;
+  if (!imageKeys.length || signature === lastLikeTargetSignature) return;
   lastLikeTargetSignature = signature;
   try {
     const { data, error } = await client.rpc('get_image_like_summary', {
-      p_content_ids: ids,
+      p_image_keys: imageKeys,
       p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
     });
     if (error) throw error;
@@ -232,6 +233,7 @@ async function openLightbox(sourceImage) {
         p_content_id: target.contentId,
         p_image_kind: target.kind,
         p_image_index: target.index,
+        p_image_key: target.imageKey,
         p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
       });
       if (error) throw error;
