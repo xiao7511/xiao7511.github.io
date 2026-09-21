@@ -43,6 +43,13 @@ describe('image engagement helpers', () => {
     expect(summary.get(imageTargetKey(target))).toEqual({ count: 12, liked: true });
   });
 
+  test('lets callers treat a missing zero-like summary as zero and not liked', () => {
+    const summary = mapImageLikeSummaries([]);
+    const row = summary.get(imageTargetKey(target));
+    expect(row?.count || 0).toBe(0);
+    expect(row?.liked || false).toBe(false);
+  });
+
   test('accepts only empty or HTTP(S) social links', () => {
     expect(isValidSocialUrl('')).toBe(true);
     expect(isValidSocialUrl('https://weibo.com/nobi')).toBe(true);
