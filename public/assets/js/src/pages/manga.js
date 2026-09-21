@@ -26,7 +26,15 @@ export async function initMangaPage() {
       const href = `detail.html?${params}`;
       const image = element('img', {
         className: 'manga-cover',
-        attributes: { alt: item.title ? `${item.title}封面` : '漫画封面', loading: 'lazy', decoding: 'async' }
+        attributes: {
+          alt: item.title ? `${item.title}封面` : '漫画封面',
+          loading: 'lazy',
+          decoding: 'async',
+          'data-content-id': item.id,
+          'data-image-kind': 'cover',
+          'data-image-index': '0',
+          'data-preview-image': ''
+        }
       });
       setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       container.append(

@@ -24,7 +24,15 @@ export async function initRecommendPage() {
         slot: String(item.slot_index ?? '')
       });
       const image = element('img', {
-        attributes: { alt: item.title ? `${item.title}封面` : '作品封面', loading: 'lazy', decoding: 'async' }
+        attributes: {
+          alt: item.title ? `${item.title}封面` : '作品封面',
+          loading: 'lazy',
+          decoding: 'async',
+          'data-content-id': item.id,
+          'data-image-kind': 'cover',
+          'data-image-index': '0',
+          'data-preview-image': ''
+        }
       });
       setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       container.append(

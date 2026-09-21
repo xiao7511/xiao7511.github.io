@@ -49,7 +49,15 @@ export async function initDetailPage() {
     stream.replaceChildren();
     (Array.isArray(data.detail_urls) ? data.detail_urls : []).forEach((url, index) => {
       const image = element('img', {
-        attributes: { loading: 'lazy', decoding: 'async', alt: `${data.title || '详情图片'} ${index + 1}` }
+        attributes: {
+          loading: 'lazy',
+          decoding: 'async',
+          alt: `${data.title || '详情图片'} ${index + 1}`,
+          'data-content-id': data.id,
+          'data-image-kind': 'detail',
+          'data-image-index': String(index),
+          'data-preview-image': ''
+        }
       });
       if (setImageSource(image, url, 'images/IMG_4893.webp')) {
         stream.append(element('div', { className: 'gallery-item' }, [image]));

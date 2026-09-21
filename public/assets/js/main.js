@@ -32,6 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const postArea = document.getElementById('post-area');
   const publishBtn = document.getElementById('publish-btn');
   const postContent = document.getElementById('post-content');
+  const postTitle = document.getElementById('post-title');
+  const postCategory = document.getElementById('post-category');
+  const postCharacterCount = document.getElementById('post-character-count');
+  const postFeedback = document.getElementById('post-feedback');
+  const composeShortcut = document.getElementById('community-compose-shortcut');
   const postsList = document.getElementById('posts-list');
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
   initSiteHeader();
@@ -123,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.supabaseClient) {
         const { data, error } = await window.supabaseClient
           .from('content_management')
-          .select('slot_index, cover_url')
+          .select('id, slot_index, cover_url')
           .eq('category', 'banner')
           .order('slot_index', { ascending: true });
 
@@ -148,6 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
             imgElement.removeAttribute('srcset');
             imgElement.removeAttribute('sizes');
             setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg');
+            const record = data.find((item) => item.slot_index === index);
+            if (record?.id) {
+              imgElement.dataset.contentId = record.id;
+              imgElement.dataset.imageKind = 'banner';
+              imgElement.dataset.imageIndex = '0';
+              imgElement.dataset.previewImage = '';
+            }
           } else {
             setImageSource(imgElement, fallbackImages.section_banner[index] || imgElement.src);
           }
@@ -998,16 +1010,35 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentForumPage = 1;
   const pageSize = 5;
 
+  postContent?.addEventListener('input', () => {
+    if (postCharacterCount) postCharacterCount.textContent = `${postContent.value.length} / 500`;
+  });
+  composeShortcut?.addEventListener('click', () => {
+    if (postArea?.hidden) {
+      openModal('login');
+      return;
+    }
+    postTitle?.focus();
+    postArea.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+  });
+
   // 1. 发帖逻辑：确保获取最新个人头像与昵称
   if (publishBtn) {
     publishBtn.addEventListener('click', async () => {
       if (!window.supabaseClient) return;
       const content = postContent.value.trim();
-      if (!content) { alert('内容不能为空喵！'); return; }
+      if (!content) {
+        if (postFeedback) postFeedback.textContent = '请先写一点内容再发布。';
+        postContent.focus();
+        return;
+      }
 
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       const user = session ? session.user : null;
-      if (!user) { alert('请先登录后再发帖。'); return; }
+      if (!user) { openModal('login'); return; }
+      publishBtn.disabled = true;
+      publishBtn.textContent = '发布中…';
+      if (postFeedback) postFeedback.textContent = '正在发布话题…';
 
       // 获取最新 profiles 数据
       const { data: profile } = await window.supabaseClient
@@ -1022,6 +1053,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const { error } = await window.supabaseClient.from('posts').insert([
         {
           content,
+          title: postTitle?.value.trim() || null,
+          category: postCategory?.value || '交流',
           user_id: user.id,
           nickname: finalNickname,
           avatar_url: finalAvatar,
@@ -1029,8 +1062,18 @@ document.addEventListener('DOMContentLoaded', () => {
         },
       ]);
 
-      if (error) { alert(`发布失败: ${error.message}`); return; }
+      if (error) {
+        if (postFeedback) postFeedback.textContent = `发布失败：${error.message}`;
+        publishBtn.disabled = false;
+        publishBtn.textContent = '发布动态';
+        return;
+      }
       postContent.value = '';
+      if (postTitle) postTitle.value = '';
+      if (postCharacterCount) postCharacterCount.textContent = '0 / 500';
+      if (postFeedback) postFeedback.textContent = '发布成功。';
+      publishBtn.disabled = false;
+      publishBtn.textContent = '发布动态';
       currentForumPage = 1;
       await fetchPosts();
     });
@@ -1101,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             className: `post-avatar ${className}`,
             attributes: { alt: label, loading: 'lazy', decoding: 'async' }
           });
-          setImageSource(image, value, 'https://api.dicebear.com/7.x/bottts/svg?seed=Neko');
+          setImageSource(image, value, 'images/nobi-avatar.svg');
           return image;
         };
 
@@ -1117,7 +1160,9 @@ document.addEventListener('DOMContentLoaded', () => {
             })
           ])
         );
+        if (post.category) header.append(element('span', { className: 'post-category', text: post.category }));
 
+        const postReplies = replies.filter((reply) => reply.parent_id === post.id);
         const actions = element('div', { className: 'post-actions' });
         const likeButton = element('button', {
           className: `post-action like-action-btn${isLiked ? ' is-liked' : ''}`,
@@ -1126,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const replyButton = element('button', {
           className: 'post-action reply-action-btn',
-          text: '💬 回复',
+          text: `💬 回复（${postReplies.length}）`,
           attributes: {
             type: 'button',
             'aria-expanded': 'false',
@@ -1136,9 +1181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actions.append(likeButton, replyButton);
 
         const repliesContainer = element('div', { className: 'replies' });
-        replies
-          .filter((reply) => reply.parent_id === post.id)
-          .forEach((reply) => {
+        postReplies.forEach((reply) => {
             const replyHeader = element('div', { className: 'reply-header' }, [
               createAvatar(
                 reply.avatar_url || reply.avatar,
@@ -1193,13 +1236,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         submitReplyButton.addEventListener('click', () => submitReply(post.id, replyInput));
 
-        postCard.append(
-          header,
-          element('div', { className: 'post-body', text: post.content }),
-          actions,
-          repliesContainer,
-          replyBox
-        );
+        postCard.append(header);
+        if (post.title) postCard.append(element('h2', { className: 'post-title', text: post.title }));
+        postCard.append(element('div', { className: 'post-body', text: post.content }), actions, repliesContainer, replyBox);
         postsList.append(postCard);
       });
 
@@ -1244,11 +1283,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error("fetchPosts 渲染异常:", err);
-      setContentState(postsList, {
-        message: '社区动态加载失败，请检查网络后重试。',
-        kind: 'error',
-        onRetry: fetchPosts
-      });
       setContentState(postsList, {
         message: '社区动态加载失败，请检查网络后重试。',
         kind: 'error',
@@ -1391,11 +1425,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (user) {
       // (1) 瞬间渲染并点亮前端用户登录状态（零延迟响应）
-      userButton.replaceChildren(window.SecurityUtils.element('span', { className: 'user-status-dot' }), document.createTextNode(` 欢迎回来, ${user.email.split('@')[0]}`));
+      const fallbackAvatar = element('img', {
+        className: 'nav-avatar',
+        attributes: { alt: '', width: '30', height: '30', src: 'images/nobi-avatar.svg' }
+      });
+      const accountLabel = element('span', { className: 'account-control__label', text: `欢迎回来, ${user.email.split('@')[0]}` });
+      userButton.replaceChildren(fallbackAvatar, accountLabel);
       userButton.classList.add('is-authenticated');
       const accountName = user.email.split('@')[0];
       userButton.setAttribute('aria-label', `已登录：${accountName}，打开账户设置`);
       userButton.title = `已登录：${accountName}`;
+
+      window.supabaseClient
+        ?.from('profiles')
+        .select('nickname,avatar_url')
+        .eq('id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data || !userButton.classList.contains('is-authenticated')) return;
+          setImageSource(fallbackAvatar, data.avatar_url, 'images/nobi-avatar.svg');
+          accountLabel.textContent = `欢迎回来, ${data.nickname || accountName}`;
+        });
 
       // ✨ 修改：登录成功后，让“修改头像面板”浮现、让“忘记密码”隐藏
       if (userProfileForm) userProfileForm.hidden = false;
@@ -1481,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 负责退出登录或未登录时的界面复原
   function clearUserUI() {
      if (userButton) {
-        userButton.textContent = '✨ 登录 / 注册专区';
+        userButton.replaceChildren(element('span', { className: 'account-control__label', text: '登录' }));
         userButton.classList.remove('is-authenticated');
         userButton.setAttribute('aria-label', '登录或注册');
         userButton.title = '登录或注册';
@@ -1634,7 +1684,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      slots.forEach((slot) => {
+      slots.slice(0, 6).forEach((slot) => {
         const params = new URLSearchParams({
           category: String(slot.category || ''),
           slot: String(slot.slot_index ?? '')
@@ -1643,7 +1693,11 @@ document.addEventListener('DOMContentLoaded', () => {
           attributes: {
             alt: slot.title ? `${slot.title}封面` : '作品封面',
             loading: 'lazy',
-            decoding: 'async'
+            decoding: 'async',
+            'data-content-id': slot.id,
+            'data-image-kind': 'cover',
+            'data-image-index': '0',
+            'data-preview-image': ''
           }
         });
         setImageSource(image, slot.cover_url, 'images/IMG_4893.webp');
@@ -1671,8 +1725,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const animeContainer = document.getElementById('anime-container');
     const mangaContainer = document.getElementById('manga-container');
-    if (animeContainer) setLoadingState(animeContainer, { count: 5, variant: 'card', label: '正在加载热门动漫' });
-    if (mangaContainer) setLoadingState(mangaContainer, { count: 5, variant: 'card', label: '正在加载漫画连载' });
+    if (animeContainer) setLoadingState(animeContainer, { count: 6, variant: 'card', label: '正在加载热门动漫' });
+    if (mangaContainer) setLoadingState(mangaContainer, { count: 6, variant: 'card', label: '正在加载漫画连载' });
 
     try {
       if (!window.supabaseClient) throw new Error('内容服务尚未初始化');
@@ -1714,6 +1768,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('touchend', globalTriggerModal, { passive: false });
   document.addEventListener('click', globalTriggerModal);
+
+  if (new URLSearchParams(location.search).get('auth') === 'login') {
+    requestAnimationFrame(() => openModal('login'));
+  } else if (new URLSearchParams(location.search).get('account') === 'profile') {
+    requestAnimationFrame(() => openModal('profile'));
+  }
 
   // 💥 唤起总初始化启动入口 💥
   initApp();

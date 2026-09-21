@@ -50,4 +50,16 @@ describe('community likes modules', () => {
       ['user_id', 'verified-user']
     ]);
   });
+
+  test('treats a missing auth session as logged out instead of a like failure', async () => {
+    const client = {
+      auth: {
+        getUser: async () => ({
+          data: { user: null },
+          error: { name: 'AuthSessionMissingError', message: 'Auth session missing!' }
+        })
+      }
+    };
+    await expect(togglePostLike(client, { postId: 42, isLiked: false })).resolves.toEqual({ authenticated: false });
+  });
 });

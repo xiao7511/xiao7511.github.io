@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="DorisY 动漫世界漫友社区，登录后发布动态、浏览帖子并参与互动。">
+  <meta name="description" content="NOBI 动漫的漫友社区，登录后发布动态、浏览帖子并参与互动。">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://nobistudio.com/community.html">
-  <title>漫友社区 - DorisY 动漫世界</title>
+  <title>漫友社区 - NOBI 动漫</title>
   <script src="assets/js/site-config.js"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
@@ -16,35 +16,52 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
   <script src="assets/js/security.js" defer></script>
   <script type="module" src="assets/js/main.js?v=20260920"></script>
+  <script type="module" src="assets/js/src/site-v2.js?v=20260921"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
   <header class="site-header">
-    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">DorisY 动漫世界</a>
+    <a class="logo" href="index.html" aria-label="返回 NOBI 动漫首页"><span class="logo__name"><strong>NOBI</strong></span><span class="logo__tagline">动漫</span></a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单"><span class="nav-toggle__icon" aria-hidden="true"></span></button>
     <nav id="site-nav" class="nav" aria-label="主导航">
       <a href="index.html" class="nav__link">首页</a>
-      <a href="recommend.html" class="nav__link">动漫推荐</a>
-      <a href="manga.html" class="nav__link">漫画连载</a>
+      <a href="recommend.html" class="nav__link">动漫库</a>
+      <a href="manga.html" class="nav__link">漫画库</a>
       <a href="community.html" class="nav__link is-active" aria-current="page">社区</a>
-      <button id="user-btn" class="nav__button" type="button">登录/注册</button>
     </nav>
+    <button id="user-btn" class="nav__button account-control" type="button" aria-label="登录或注册"><span class="account-control__label">登录</span></button>
   </header>
   <main id="main-content" class="section section--community">
-    <div class="section__head"><h1>漫友社区</h1><p>登录后可以发帖，帖子会按时间倒序显示。</p></div>
-    <div id="post-area" class="post-box" hidden>
-      <label class="sr-only" for="post-content">发帖内容</label>
-      <textarea id="post-content" placeholder="此刻在想什么动漫？" maxlength="500"></textarea>
-      <div class="actions"><button id="publish-btn" class="primary-btn" type="button">发布动态</button></div>
+    <div class="community-hero">
+      <div><p class="eyebrow">NOBI COMMUNITY</p><h1>漫友社区</h1><p>分享新番感受、补番清单与那些让你念念不忘的瞬间。</p></div>
+      <button class="primary-btn" type="button" id="community-compose-shortcut">发布话题</button>
     </div>
-    <div id="posts-list" class="posts" aria-live="polite" aria-busy="true">
-      <div class="skeleton skeleton--post" aria-hidden="true"></div>
-      <div class="skeleton skeleton--post" aria-hidden="true"></div>
-      <div class="skeleton skeleton--post" aria-hidden="true"></div>
-      <span class="sr-only" role="status">正在加载社区动态</span>
+    <div class="community-layout">
+      <div class="community-main">
+        <div id="post-area" class="post-box" hidden>
+          <div class="composer-fields">
+            <div><label class="sr-only" for="post-title">话题标题</label><input id="post-title" type="text" maxlength="80" placeholder="为话题写一个清晰的标题（可选）"></div>
+            <div><label class="sr-only" for="post-category">话题分类</label><select id="post-category"><option value="交流">交流</option><option value="新番">新番</option><option value="漫画">漫画</option><option value="推荐">推荐</option></select></div>
+          </div>
+          <label class="sr-only" for="post-content">发帖内容</label>
+          <textarea id="post-content" placeholder="此刻在想什么动漫？" maxlength="500"></textarea>
+          <div class="composer-footer"><span id="post-character-count" class="composer-count">0 / 500</span><button id="publish-btn" class="primary-btn" type="button">发布动态</button></div>
+          <p id="post-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        </div>
+        <div id="posts-list" class="posts" aria-live="polite" aria-busy="true">
+          <div class="skeleton skeleton--post" aria-hidden="true"></div>
+          <div class="skeleton skeleton--post" aria-hidden="true"></div>
+          <div class="skeleton skeleton--post" aria-hidden="true"></div>
+          <span class="sr-only" role="status">正在加载社区动态</span>
+        </div>
+      </div>
+      <aside class="community-sidebar" aria-label="社区信息">
+        <section class="community-info-card"><h2>社区公约</h2><p>尊重不同喜好，友善讨论剧情；涉及剧透时请先提醒其他漫友。</p></section>
+        <section class="community-info-card"><h2>互动提示</h2><p>登录后可发帖、回复和点赞。帖子按最新发布时间展示。</p></section>
+      </aside>
     </div>
   </main>
-  <footer class="site-footer">© <span data-current-year>2026</span> DorisY 动漫世界 · nobistudio.com</footer>
+  <footer class="site-footer">© <span data-current-year>2026</span> NOBI 动漫 · nobistudio.com</footer>
   <div id="auth-modal" class="modal" hidden>
     <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="auth-title" tabindex="-1">
       <button id="modal-close" class="modal__close" type="button" aria-label="关闭登录与注册对话框">×</button>

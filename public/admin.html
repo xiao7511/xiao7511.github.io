@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>内容管理后台 —— 终极自适应控制台</title>
+    <title>NOBI 动漫管理后台</title>
     <script src="assets/js/site-config.js"></script>
     <link rel="canonical" href="https://nobistudio.com/admin.html" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script>
@@ -372,15 +372,41 @@
         cursor: pointer;
       }
     </style>
+    <link rel="stylesheet" href="assets/css/admin.css" />
   </head>
   <body>
-    <div class="container">
+    <div class="admin-shell">
+      <aside class="admin-sidebar" aria-label="后台导航">
+        <div class="admin-brand"><strong>NOBI</strong><span>动漫管理</span></div>
+        <nav class="admin-nav">
+          <a href="#dashboard-overview">统计概览</a>
+          <a href="#banner-management">Banner</a>
+          <a href="#content-management">内容管理</a>
+          <a href="#social-management">社交链接</a>
+        </nav>
+      </aside>
+      <div class="container">
       <div class="header-box">
-        <h1>内容管理后台 —— 终极自适应控制台</h1>
+        <h1>NOBI 动漫管理后台</h1>
         <a href="index.html" class="back-home-btn">← 返回站点主页</a>
       </div>
 
-      <div class="upload-card">
+      <section id="dashboard-overview" class="dashboard-section" aria-labelledby="dashboard-title">
+        <h2 id="dashboard-title">运营概览</h2>
+        <div class="admin-summary-grid">
+          <div class="admin-stat"><span>网站总访问量</span><strong id="stat-total-views">—</strong><small>PV</small></div>
+          <div class="admin-stat"><span>今日访问量</span><strong id="stat-today-views">—</strong><small>北京时间</small></div>
+          <div class="admin-stat"><span>论坛帖子</span><strong id="stat-total-posts">—</strong><small>主贴</small></div>
+          <div class="admin-stat"><span>帖子点赞</span><strong id="stat-post-likes">—</strong><small>累计</small></div>
+          <div class="admin-stat"><span>图片点赞</span><strong id="stat-image-likes">—</strong><small>累计</small></div>
+        </div>
+        <div id="admin-visit-trend" class="admin-trend" aria-label="最近 7 天访问趋势"></div>
+        <p id="admin-stats-status" class="admin-feedback" role="status">正在加载统计数据…</p>
+        <h2>热门图片</h2>
+        <ol id="popular-images-list" class="admin-popular-list"><li>暂无点赞数据</li></ol>
+      </section>
+
+      <div id="banner-management" class="upload-card">
         <h2><span>🔮</span> 首页 Banner 轮播大图批量部署通道</h2>
         <div class="field-group">
           <label class="field-label">目标更新版面</label>
@@ -399,9 +425,26 @@
         <div id="upload-status" class="status-info">正在安全连接控制中心...</div>
       </div>
 
-      <div class="preview-dashboard">
+      <div id="content-management" class="preview-dashboard">
         <h2><span>🖼️</span> 热门动漫推荐 / 漫画连载内容配置面板</h2>
+        <div class="admin-toolbar">
+          <label><span class="sr-only">搜索内容</span><input id="admin-content-search" type="search" placeholder="搜索标题或标签…" /></label>
+          <label><span class="sr-only">筛选分类</span><select id="admin-content-filter"><option value="">全部分类</option><option value="anime">动漫</option><option value="manga">漫画</option><option value="banner">Banner</option></select></label>
+        </div>
         <div id="sections-wrapper"></div>
+      </div>
+      <section id="social-management" class="dashboard-section" aria-labelledby="social-title">
+        <h2 id="social-title">社交媒体配置</h2>
+        <form id="social-config-form" novalidate>
+          <div class="social-config-grid">
+            <label for="social-xiaohongshu">小红书 URL<input id="social-xiaohongshu" type="url" inputmode="url" placeholder="https://www.xiaohongshu.com/…" /></label>
+            <label for="social-weibo">微博 URL<input id="social-weibo" type="url" inputmode="url" placeholder="https://weibo.com/…" /></label>
+            <label for="social-twitter">X / Twitter URL<input id="social-twitter" type="url" inputmode="url" placeholder="https://x.com/…" /></label>
+            <label for="social-instagram">Instagram URL<input id="social-instagram" type="url" inputmode="url" placeholder="https://www.instagram.com/…" /></label>
+          </div>
+          <div class="admin-form-actions"><span id="social-config-feedback" class="admin-feedback" role="status"></span><button class="action-btn" type="submit">保存社交链接</button></div>
+        </form>
+      </section>
       </div>
     </div>
 
@@ -451,6 +494,7 @@
           showStatus('✨ 通信链路已就绪。欢迎回来，管理员！', 'info');
           activateUploadListener(supabaseUrl);
           await refreshLiveDashboard(supabaseUrl);
+          window.dispatchEvent(new CustomEvent('nobi:admin-ready', { detail: { supabaseUrl } }));
         } catch (error) {
           console.error(error);
           if (!window.supabaseClient) {
@@ -477,7 +521,7 @@
         const { data: userPermission, error: dbError } = await window.supabaseClient
           .from('users')
           .select('is_admin')
-          .eq('email', session.user.email)
+          .eq('id', session.user.id)
           .maybeSingle();
 
         if (dbError || !userPermission || userPermission.is_admin !== true) {
@@ -658,15 +702,30 @@
 
       function generateMediaTag(url) {
         if (!url) return `<span class="media-placeholder">📷 暂无内容，请选取上传</span>`;
-        const pureUrl = url.split('?')[0].toLowerCase();
+        let safeUrl = '';
+        try {
+          const parsed = new URL(url, location.href);
+          const trusted = parsed.hostname === location.hostname || parsed.hostname.endsWith('.supabase.co') || parsed.hostname === 'api.nobistudio.com';
+          if ((parsed.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(parsed.hostname)) && trusted) safeUrl = parsed.href;
+        } catch (_) {}
+        if (!safeUrl) return `<span class="media-placeholder">图片地址无效</span>`;
+        const pureUrl = safeUrl.split('?')[0].toLowerCase();
         const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', 'video_slot', 'detail_video'];
-        const isVideo = videoExtensions.some((ext) => pureUrl.endsWith(ext) || url.toLowerCase().includes(ext));
+        const isVideo = videoExtensions.some((ext) => pureUrl.endsWith(ext) || safeUrl.toLowerCase().includes(ext));
 
         if (isVideo) {
-          return `<video src="${url}" controls preload="metadata" muted playsinline></video>`;
+          return `<video src="${safeUrl}" controls preload="metadata" muted playsinline></video>`;
         } else {
-          return `<img src="${url}" alt="内容预览" onerror="this.onerror=null;this.src='images/IMG_4893.webp'" />`;
+          return `<img src="${safeUrl}" alt="内容预览" />`;
         }
+      }
+
+      function escapeAttribute(value) {
+        return String(value ?? '')
+          .replaceAll('&', '&amp;')
+          .replaceAll('"', '&quot;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;');
       }
 
       async function refreshLiveDashboard(supabaseUrl) {
@@ -697,9 +756,9 @@
             id: 'anime',
             name: '📺 动漫推荐专区 (已深度优化大文件详情视频高速流秒开上传)',
             type: 'content',
-            maxCount: 4
+            maxCount: 6
           },
-          { id: 'manga', name: '📖 漫画连载专区 (详情页支持图片/视频多媒体混合发布)', type: 'content', maxCount: 4 }
+          { id: 'manga', name: '📖 漫画连载专区 (详情页支持图片/视频多媒体混合发布)', type: 'content', maxCount: 6 }
         ];
 
         for (const mod of modules) {
@@ -716,6 +775,8 @@
             for (let i = 0; i < mod.maxCount; i++) {
               const card = document.createElement('div');
               card.className = 'img-preview-card';
+              card.dataset.category = mod.id;
+              card.dataset.slot = String(i);
               const match = bannerList.find((b) => b.image_index === i);
               const cacheBuster = `?t=${new Date().getTime()}`;
 
@@ -737,6 +798,8 @@
             for (let i = 0; i < mod.maxCount; i++) {
               const card = document.createElement('div');
               card.className = 'img-preview-card';
+              card.dataset.category = mod.id;
+              card.dataset.slot = String(i);
 
               const record = managementData.find((d) => d.category === mod.id && d.slot_index === i) || {
                 title: '',
@@ -764,21 +827,21 @@
                         
                         <div class="upload-field">
                             <div id="cover-count-lbl-${mod.id}-${i}" class="upload-field__label">${uploadLabel} (未选新文件)</div>
-                            <input type="file" id="cover-file-${mod.id}-${i}" accept="${acceptCoverType}" onchange="handleCoverFileSelect('${mod.id}', ${i})" class="module-file-input" />
+                            <input type="file" id="cover-file-${mod.id}-${i}" accept="${acceptCoverType}" class="module-file-input" />
                         </div>
 
                         <div class="form-stack">
                             <div>
                                 <label>📌 主标题名称</label>
-                                <input type="text" id="title-${mod.id}-${i}" value="${record.title || ''}" placeholder="例如：火影忍者剧场版" />
+                                <input type="text" id="title-${mod.id}-${i}" value="${escapeAttribute(record.title)}" placeholder="例如：火影忍者剧场版" />
                             </div>
                             <div>
                                 <label>🎬 连载副标题 / 最新集数</label>
-                                <input type="text" id="sub-${mod.id}-${i}" value="${record.subtitle || ''}" placeholder="例如：更新至第 720 话" />
+                                <input type="text" id="sub-${mod.id}-${i}" value="${escapeAttribute(record.subtitle)}" placeholder="例如：更新至第 720 话" />
                             </div>
                             <div>
                                 <label>🏷️ 连载主题标签 (多个用英文逗号隔开)</label>
-                                <input type="text" id="tags-${mod.id}-${i}" value="${(record.theme_tags || []).join(',')}" placeholder="例如：热血,羁绊,冒险" />
+                                <input type="text" id="tags-${mod.id}-${i}" value="${escapeAttribute((record.theme_tags || []).join(','))}" placeholder="例如：热血,羁绊,冒险" />
                             </div>
                         </div>
 
@@ -787,10 +850,14 @@
                             <input type="file" id="files-detail-${mod.id}-${i}" multiple accept="${acceptDetailType}" class="module-file-input" />
                         </div>
 
-                        <button id="save-btn-${mod.id}-${i}" onclick="saveContentModule('${mod.id}', ${i}, '${supabaseUrl}')" class="save-module-btn">
+                        <button id="save-btn-${mod.id}-${i}" type="button" class="save-module-btn">
                             💾 保存该格配置并同步发布
                         </button>
+                        <button type="button" class="cancel-edit-btn" data-category="${mod.id}" data-slot="${i}">取消未保存修改</button>
+                        <button type="button" class="danger-btn delete-content-btn" data-category="${mod.id}" data-slot="${i}">删除该格内容</button>
                     `;
+              card.querySelector(`#cover-file-${mod.id}-${i}`).addEventListener('change', () => handleCoverFileSelect(mod.id, i));
+              card.querySelector(`#save-btn-${mod.id}-${i}`).addEventListener('click', () => saveContentModule(mod.id, i, supabaseUrl));
               grid.appendChild(card);
             }
             block.appendChild(grid);
@@ -811,7 +878,7 @@
         }
 
         const hasVideo = files.some(
-          (f) => f.type.startsWith('video/') || f.name.toLowerCase().match(/\ Lorenzo (mp4|webm|mov|ogg)$/)
+          (f) => f.type.startsWith('video/') || f.name.toLowerCase().match(/\.(mp4|webm|mov|ogg)$/)
         );
         if (hasVideo) {
           alert('🚨 权限拦截：主封面区域不允许使用视频作为展示封面，请选择纯图片格式素材！');
@@ -969,6 +1036,6 @@
 
       document.addEventListener('DOMContentLoaded', initWorkflow);
     </script>
-    <script src="assets/js/upgrade-patch.js?v=20260920"></script>
+    <script type="module" src="assets/js/admin-v2.js?v=20260921"></script>
   </body>
 </html>

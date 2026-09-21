@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="DorisY 动漫世界：精选动漫推荐、漫画连载与漫友社区，快速浏览优质二次元内容。">
-  <meta name="keywords" content="动漫,漫画,二次元,动漫推荐,漫友社区,DorisY">
+  <meta name="description" content="NOBI 动漫：精选动漫推荐、漫画连载与漫友社区，快速浏览优质二次元内容。">
+  <meta name="keywords" content="动漫,漫画,二次元,动漫推荐,漫友社区,NOBI 动漫">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://nobistudio.com/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="DorisY 动漫世界">
+  <meta property="og:title" content="NOBI 动漫">
   <meta property="og:description" content="精选动漫推荐、漫画连载与漫友社区。">
   <meta property="og:url" content="https://nobistudio.com/">
   <meta property="og:image" content="images/IMG_4822.jpeg">
   <meta name="twitter:card" content="summary_large_image">
-  <title>DorisY 动漫世界</title>
+  <title>NOBI 动漫</title>
   <script src="assets/js/site-config.js"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
@@ -23,15 +23,16 @@
   <link rel="stylesheet" href="assets/css/main.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
   <script src="assets/js/security.js" defer></script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"DorisY 动漫世界","url":"https://nobistudio.com/","description":"精选动漫、漫画连载与漫友社区。","inLanguage":"zh-CN"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"NOBI 动漫","url":"https://nobistudio.com/","description":"精选动漫、漫画连载与漫友社区。","inLanguage":"zh-CN"}</script>
   <script type="module" src="assets/js/main.js?v=20260920"></script>
+  <script type="module" src="assets/js/src/site-v2.js?v=20260921"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主要内容</a>
   <header class="site-header">
-    <a class="logo" href="index.html" aria-label="返回 DorisY 动漫世界首页">
-      <span class="logo__name"><strong>NOBI</strong> STUDIO</span>
-      <span class="logo__tagline">动漫连接热爱</span>
+    <a class="logo" href="index.html" aria-label="返回 NOBI 动漫首页">
+      <span class="logo__name"><strong>NOBI</strong></span>
+      <span class="logo__tagline">动漫</span>
     </a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单">
       <span class="nav-toggle__icon" aria-hidden="true"></span>
@@ -47,7 +48,7 @@
       <input id="site-search-input" name="q" type="search" placeholder="搜索动漫、角色或作品…">
       <button type="submit" aria-label="搜索">⌕</button>
     </form>
-    <button id="user-btn" class="nav__button user-button" type="button" aria-label="登录或注册">登录</button>
+    <button id="user-btn" class="nav__button account-control" type="button" aria-label="登录或注册"><span class="account-control__label">登录</span></button>
     <div id="admin-entrance-wrapper" hidden><a href="admin.html" class="admin-entrance-btn">控制台</a></div>
   </header>
 
@@ -82,11 +83,7 @@
         <a class="section__more" href="recommend.html">查看全部 <span aria-hidden="true">›</span></a>
       </div>
       <div class="cards" id="anime-container">
-        <a class="card" href="detail.html?category=anime&amp;slot=0"><img src="images/IMG_4893.webp" srcset="images/IMG_4893-480.webp 480w, images/IMG_4893-960.webp 960w, images/IMG_4893.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="魔法少女作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">魔法少女</h3><p class="card__tag">魔法 / 冒险</p></div></a>
-        <a class="card" href="detail.html?category=anime&amp;slot=1"><img src="images/IMG_4896.webp" srcset="images/IMG_4896-480.webp 480w, images/IMG_4896-960.webp 960w, images/IMG_4896.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="校园恋爱作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">校园恋爱</h3><p class="card__tag">恋爱 / 校园</p></div></a>
-        <a class="card" href="detail.html?category=anime&amp;slot=2"><img src="images/IMG_4907.webp" srcset="images/IMG_4907-480.webp 480w, images/IMG_4907-960.webp 960w, images/IMG_4907.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="战斗冒险作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">战斗冒险</h3><p class="card__tag">热血 / 冒险</p></div></a>
-        <a class="card" href="detail.html?category=anime&amp;slot=3"><img src="images/IMG_5606.jpeg" alt="异世界作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">异世界</h3><p class="card__tag">幻想 / 冒险</p></div></a>
-        <a class="card" href="detail.html?category=anime&amp;slot=4"><img src="images/IMG_5607.jpeg" alt="治愈日常作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">治愈日常</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 9.2</strong></p></div></a>
+        <div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><span class="sr-only" role="status">正在加载本季热门</span>
       </div>
     </section>
 
@@ -96,11 +93,7 @@
         <a class="section__more" href="manga.html">查看全部 <span aria-hidden="true">›</span></a>
       </div>
       <div class="cards" id="manga-container">
-        <a class="card" href="detail.html?category=manga&amp;slot=0"><img src="images/IMG_5608.jpeg" alt="星夜幻想作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">星夜幻想</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 8.9</strong></p></div></a>
-        <a class="card" href="detail.html?category=manga&amp;slot=1"><img src="images/IMG_4893.webp" srcset="images/IMG_4893-480.webp 480w, images/IMG_4893-960.webp 960w, images/IMG_4893.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="都市异闻作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">都市异闻</h3><p class="card__tag">TV&nbsp;&nbsp; 2025 <strong>★ 8.7</strong></p></div></a>
-        <a class="card" href="detail.html?category=manga&amp;slot=2"><img src="images/IMG_4896.webp" srcset="images/IMG_4896-480.webp 480w, images/IMG_4896-960.webp 960w, images/IMG_4896.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="魔法学院作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">魔法学院</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 9.0</strong></p></div></a>
-        <a class="card" href="detail.html?category=manga&amp;slot=3"><img src="images/IMG_4907.webp" srcset="images/IMG_4907-480.webp 480w, images/IMG_4907-960.webp 960w, images/IMG_4907.webp 1600w" sizes="(max-width: 768px) 46vw, 20vw" alt="青春物语作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">青春物语</h3><p class="card__tag">Movie&nbsp;&nbsp; 2025 <strong>★ 8.8</strong></p></div></a>
-        <a class="card" href="detail.html?category=manga&amp;slot=4"><img src="images/IMG_5606.jpeg" alt="异世界生活作品封面" loading="lazy" decoding="async"><div class="card__body"><h3 class="card__title">异世界生活</h3><p class="card__tag">TV&nbsp;&nbsp; 2026 <strong>★ 8.6</strong></p></div></a>
+        <div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><span class="sr-only" role="status">正在加载新番推荐</span>
       </div>
     </section>
 
@@ -112,11 +105,11 @@
 
   <footer class="site-footer">
     <div class="site-footer__inner">
-      <div class="footer-brand"><strong><span>NOBI</span> STUDIO</strong><small>动漫连接热爱，也连接你我</small></div>
+      <div class="footer-brand"><strong><span>NOBI</span> 动漫</strong><small>动漫连接热爱，也连接你我</small></div>
       <nav class="footer-nav" aria-label="页脚导航"><a href="index.html">关于我们</a><a href="mailto:xiao.ye751111@outlook.com">联系我们</a><a href="community.html">漫友社区</a><a href="#main-content">隐私政策</a></nav>
       <p class="footer-quote">“愿你在动漫的世界里，永远保持热爱。”</p>
     </div>
-    <p class="copyright">© <span data-current-year>2026</span> NOBI STUDIO. All rights reserved.</p>
+    <p class="copyright">© <span data-current-year>2026</span> NOBI 动漫 · nobistudio.com</p>
   </footer>
 
   <div id="auth-modal" class="modal" hidden>
@@ -176,6 +169,5 @@
       </form>
     </div>
   </div>
-  <script src="assets/js/upgrade-patch.js?v=20260920"></script>
 </body>
 </html>

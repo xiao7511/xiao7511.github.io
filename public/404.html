@@ -5,11 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#100d20">
+  <script src="assets/js/site-config.js"></script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/main.css">
-  <title>页面未找到 - DorisY 动漫世界</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
+  <script type="module" src="assets/js/src/site-v2.js?v=20260921"></script>
+  <title>页面未找到 - NOBI 动漫</title>
 </head>
 <body>
+  <header class="site-header">
+    <a class="logo" href="index.html" aria-label="返回 NOBI 动漫首页"><span class="logo__name"><strong>NOBI</strong></span><span class="logo__tagline">动漫</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="打开主导航菜单"><span class="nav-toggle__icon" aria-hidden="true"></span></button>
+    <nav id="site-nav" class="nav" aria-label="主导航"><a href="index.html" class="nav__link">首页</a><a href="recommend.html" class="nav__link">动漫库</a><a href="manga.html" class="nav__link">漫画库</a><a href="community.html" class="nav__link">社区</a></nav>
+    <a class="nav__account-link" href="index.html?auth=login" data-account-link><span class="account-control__label">登录</span></a>
+  </header>
   <main id="main-content" class="section">
     <div class="state">
       <p class="eyebrow">错误 404</p>
@@ -18,5 +27,6 @@
       <a class="button state__action" href="index.html">返回首页</a>
     </div>
   </main>
+  <footer class="site-footer">NOBI 动漫 · nobistudio.com</footer>
 </body>
 </html>
