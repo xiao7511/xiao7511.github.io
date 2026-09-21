@@ -1298,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const result = await togglePostLike(window.supabaseClient, { postId, isLiked });
       if (!result.authenticated) {
-        alert("请先登录再参与社区点赞互动哦！");
+        alert('登录状态已失效，请重新登录后再试。');
         return;
       }
       await fetchPosts();

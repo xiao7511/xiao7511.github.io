@@ -159,6 +159,12 @@ test('community loads posts and persistent post-like controls without console er
   await page.goto('/community.html');
   await expect(page.locator('#posts-list .post-card').first()).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.like-action-btn').first()).toBeVisible();
+  const dialogPromise = page.waitForEvent('dialog');
+  const likeClickPromise = page.locator('.like-action-btn').first().click();
+  const dialog = await dialogPromise;
+  expect(dialog.message()).toBe('登录状态已失效，请重新登录后再试。');
+  await dialog.dismiss();
+  await likeClickPromise;
   expect(errors).toEqual([]);
 });
 
