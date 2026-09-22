@@ -1677,6 +1677,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadHomeContent() {
+    const createDetailUrl = (item) => {
+      const category = String(item?.category || '');
+      const slot = String(item?.slot_index ?? '');
+      if (!['anime', 'manga'].includes(category) || !/^\d{1,3}$/.test(slot)) return '';
+      return `detail.html?${new URLSearchParams({ category, slot })}`;
+    };
+
     const renderCategory = (container, slots, emptyMessage) => {
       if (!container) return;
       container.replaceChildren();
@@ -1686,10 +1693,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       slots.slice(0, 6).forEach((slot) => {
-        const params = new URLSearchParams({
-          category: String(slot.category || ''),
-          slot: String(slot.slot_index ?? '')
-        });
+        const detailUrl = createDetailUrl(slot);
+        if (!detailUrl) return;
         const image = element('img', {
           attributes: {
             alt: slot.title ? `${slot.title}封面` : '作品封面',
@@ -1699,7 +1704,8 @@ document.addEventListener('DOMContentLoaded', () => {
             'data-image-kind': 'cover',
             'data-image-index': '0',
             'data-image-url': slot.cover_url,
-            'data-preview-image': ''
+            'data-preview-image': '',
+            'data-detail-url': detailUrl
           }
         });
         setImageSource(image, slot.cover_url, 'images/IMG_4893.webp');
@@ -1709,7 +1715,7 @@ document.addEventListener('DOMContentLoaded', () => {
             {
               className: 'card',
               attributes: {
-                href: `detail.html?${params}`,
+                href: detailUrl,
                 'aria-label': `查看${slot.title || '未命名作品'}详情`
               }
             },

@@ -14,7 +14,7 @@ const contentRecord = {
   detail_urls: [imageUrl]
 };
 
-async function mockRuntime(page, { posts = [], features = false } = {}) {
+async function mockRuntime(page, { posts = [], features = false, socialLinks = false } = {}) {
   const records = [
     contentRecord,
     { ...contentRecord, id: '8d99585e-379d-46d0-99c1-0eb2a32a3aa7', category: 'manga' },
@@ -29,7 +29,17 @@ async function mockRuntime(page, { posts = [], features = false } = {}) {
             content_management: records,
             posts,
             post_likes: [],
-            site_config: features ? [{ section: 'features_v2', url: '{"analytics":true,"imageLikes":true}' }] : []
+            site_config: [
+              ...(features ? [{ section: 'features_v2', url: '{"analytics":true,"imageLikes":true}' }] : []),
+              ...(socialLinks
+                ? [
+                    {
+                      section: 'social_links',
+                      url: '{"xiaohongshu":"https://www.xiaohongshu.com/user/profile/nobi","weibo":"https://weibo.com/nobi","twitter":"https://x.com/nobi","instagram":"https://www.instagram.com/nobi"}'
+                    }
+                  ]
+                : [])
+            ]
           })};
           let imageLiked = false;
           function query(table) {
@@ -136,6 +146,44 @@ test('home renders the NOBI brand and no more than six real cards per section', 
   expect(await page.locator('#manga-container .card').count()).toBeLessThanOrEqual(6);
 });
 
+test('home cover preview keeps a route to its matching detail page', async ({ page }) => {
+  await mockRuntime(page, { features: true });
+  await page.goto('/index.html');
+  const cover = page.locator('#anime-container .card img').first();
+  await expect(cover).toBeVisible({ timeout: 15_000 });
+  await cover.click();
+  const detailLink = page.locator('.image-detail-link');
+  await expect(detailLink).toBeVisible();
+  await expect(detailLink).toHaveAttribute('href', 'detail.html?category=anime&slot=0');
+  await detailLink.click();
+  await expect(page).toHaveURL(/detail\.html\?category=anime&slot=0$/);
+  await expect(page.locator('#detail-title')).toContainText('测试动漫');
+});
+
+test('home hero is full bleed and configured social icons render above copyright', async ({ page }) => {
+  await mockRuntime(page, { socialLinks: true });
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.goto('/index.html');
+  const bounds = await page.locator('.hero').evaluate((hero) => {
+    const rect = hero.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, viewport: document.documentElement.clientWidth };
+  });
+  expect(Math.abs(bounds.left)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.right - bounds.viewport)).toBeLessThanOrEqual(1);
+  const social = page.locator('.footer-social');
+  await expect(social.locator('.footer-social__link')).toHaveCount(4);
+  await expect(social).toBeVisible();
+  await expect(social.locator('xpath=following-sibling::*[1]')).toHaveClass('copyright');
+  expect(await social.evaluate((node) => getComputedStyle(node).position)).toBe('static');
+  await expect(page.locator('.social-dock')).toHaveCount(0);
+});
+
+test('footer omits social icons when no valid URLs are configured', async ({ page }) => {
+  await mockRuntime(page);
+  await page.goto('/index.html');
+  await expect(page.locator('.footer-social')).toHaveCount(0);
+});
+
 test('community loads posts and persistent post-like controls without console errors', async ({ page }) => {
   await mockRuntime(page, {
     posts: [
@@ -184,15 +232,37 @@ test('detail images open in the accessible preview', async ({ page }) => {
 });
 
 for (const viewport of [
-  { name: 'tablet', width: 820, height: 1180 },
-  { name: 'mobile', width: 390, height: 844 }
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 4, heroMin: 519, heroMax: 521 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 4, heroMin: 517, heroMax: 520 },
+  { name: 'desktop', width: 1366, height: 768, columns: 4, heroMin: 490, heroMax: 494 },
+  { name: 'laptop', width: 1024, height: 768, columns: 3, heroMin: 429, heroMax: 432 },
+  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 399, heroMax: 401 },
+  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 334, heroMax: 337 }
 ]) {
-  test(`home has no horizontal overflow on ${viewport.name}`, async ({ page }) => {
+  test(`home stays full bleed and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto('/index.html');
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
-    );
-    expect(overflow).toBeLessThanOrEqual(1);
+    const layout = await page.evaluate(() => {
+      const hero = document.querySelector('.hero').getBoundingClientRect();
+      const cards = document.querySelector('.cards');
+      return {
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        heroLeft: hero.left,
+        heroRight: hero.right,
+        heroHeight: hero.height,
+        viewport: document.documentElement.clientWidth,
+        columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
+        scrollbarWidth: getComputedStyle(document.documentElement).scrollbarWidth
+      };
+    });
+    expect(layout.overflow).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.heroLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(layout.heroRight - layout.viewport)).toBeLessThanOrEqual(1);
+    expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
+    expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
+    expect(layout.columns).toBe(viewport.columns);
+    expect(layout.scrollbarWidth).toBe('none');
+    await page.mouse.wheel(0, 700);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   });
 }
