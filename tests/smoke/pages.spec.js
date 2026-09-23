@@ -16,9 +16,22 @@ const contentRecord = {
 };
 
 async function mockRuntime(page, { posts = [], features = false, socialLinks = false } = {}) {
+  const animeRecords = Array.from({ length: 6 }, (_, index) => ({
+    ...contentRecord,
+    id: `d9428888-122b-4f20-9f6c-25789ab0a12${index}`,
+    slot_index: index,
+    title: `测试动漫 ${index + 1}`
+  }));
+  const mangaRecords = Array.from({ length: 6 }, (_, index) => ({
+    ...contentRecord,
+    id: `8d99585e-379d-46d0-99c1-0eb2a32a3aa${index}`,
+    category: 'manga',
+    slot_index: index,
+    title: `测试漫画 ${index + 1}`
+  }));
   const records = [
-    contentRecord,
-    { ...contentRecord, id: '8d99585e-379d-46d0-99c1-0eb2a32a3aa7', category: 'manga' },
+    ...animeRecords,
+    ...mangaRecords,
     { ...contentRecord, id: '5a0f1c6f-3c6e-4e71-a65d-6a5504945b82', category: 'banner' }
   ];
   await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4', (route) =>
@@ -135,7 +148,7 @@ for (const [path, selector] of pages) {
   });
 }
 
-test('home renders the NOBI brand and no more than five enriched cards per section', async ({ page }) => {
+test('home renders all six configured enriched cards per section', async ({ page }) => {
   const messages = [];
   page.on('console', (message) => messages.push(`${message.type()}: ${message.text()}`));
   await mockRuntime(page, { features: true });
@@ -143,8 +156,8 @@ test('home renders the NOBI brand and no more than five enriched cards per secti
   await expect(page.locator('.logo')).toContainText('NOBI');
   await expect(page.locator('.logo')).toContainText('动漫');
   await expect(page.locator('#anime-container .card').first(), messages.join('\n')).toBeVisible({ timeout: 15_000 });
-  expect(await page.locator('#anime-container .card').count()).toBeLessThanOrEqual(5);
-  expect(await page.locator('#manga-container .card').count()).toBeLessThanOrEqual(5);
+  await expect(page.locator('#anime-container .card')).toHaveCount(6);
+  await expect(page.locator('#manga-container .card')).toHaveCount(6);
   await expect(page.locator('#anime-container .card__type').first()).toHaveText('动漫');
   await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
   await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
@@ -247,9 +260,9 @@ test('detail images open in the accessible preview', async ({ page }) => {
 });
 
 for (const viewport of [
-  { name: 'desktop-xl', width: 1920, height: 1080, columns: 5, heroMin: 499, heroMax: 501 },
-  { name: 'desktop-lg', width: 1440, height: 900, columns: 5, heroMin: 452, heroMax: 455 },
-  { name: 'desktop', width: 1366, height: 768, columns: 5, heroMin: 429, heroMax: 432 },
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6, heroMin: 499, heroMax: 501 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 6, heroMin: 452, heroMax: 455 },
+  { name: 'desktop', width: 1366, height: 768, columns: 6, heroMin: 429, heroMax: 432 },
   { name: 'laptop', width: 1024, height: 768, columns: 4, heroMin: 398, heroMax: 401 },
   { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 367, heroMax: 369 },
   { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 359, heroMax: 361 }

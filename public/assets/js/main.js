@@ -1723,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      slots.slice(0, 5).forEach((slot) => {
+      slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
         const image = element('img', {
@@ -1777,8 +1777,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const animeContainer = document.getElementById('anime-container');
     const mangaContainer = document.getElementById('manga-container');
-    if (animeContainer) setLoadingState(animeContainer, { count: 5, variant: 'card', label: '正在加载热门动漫' });
-    if (mangaContainer) setLoadingState(mangaContainer, { count: 5, variant: 'card', label: '正在加载漫画连载' });
+    if (animeContainer) setLoadingState(animeContainer, { count: 6, variant: 'card', label: '正在加载热门动漫' });
+    if (mangaContainer) setLoadingState(mangaContainer, { count: 6, variant: 'card', label: '正在加载漫画连载' });
 
     try {
       if (!window.supabaseClient) throw new Error('内容服务尚未初始化');
