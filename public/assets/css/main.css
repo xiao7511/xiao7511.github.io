@@ -602,7 +602,7 @@ main {
 }
 
 .home-content {
-  width: calc(100% - 4rem);
+  width: min(calc(100% - 4rem), 82.5rem);
   margin-inline: auto;
 }
 
@@ -1428,7 +1428,9 @@ main {
 
 .home-page .footer-nav {
   display: grid;
+  justify-items: center;
   gap: 0.85rem;
+  text-align: center;
 }
 
 .footer-nav__links {
@@ -1440,6 +1442,10 @@ main {
 
 .home-page .footer-nav__links a {
   white-space: nowrap;
+}
+
+.home-page .footer-nav__links {
+  justify-content: center;
 }
 
 .footer-social-slot {
@@ -1984,7 +1990,10 @@ main {
     gap: 2rem;
   }
 
-  .home-page .footer-nav,
+  .home-page .footer-nav {
+    justify-self: stretch;
+  }
+
   .footer-social-slot {
     justify-self: start;
   }
@@ -1993,7 +2002,7 @@ main {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.5rem;
-    justify-items: start;
+    justify-items: center;
   }
 
   .home-page .footer-brand small {

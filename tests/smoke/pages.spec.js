@@ -305,6 +305,8 @@ for (const viewport of [
       const cards = document.querySelector('.cards');
       const media = document.querySelector('.card__media')?.getBoundingClientRect();
       const footer = document.querySelector('.site-footer__inner');
+      const footerNav = document.querySelector('.footer-nav');
+      const footerNavLinks = document.querySelector('.footer-nav__links');
       return {
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         heroLeft: hero.left,
@@ -330,6 +332,9 @@ for (const viewport of [
         footerNavTops: [...document.querySelectorAll('.footer-nav__links a')].map((link) =>
           Math.round(link.getBoundingClientRect().top)
         ),
+        footerNavTextAlign: getComputedStyle(footerNav).textAlign,
+        footerNavJustifyItems: getComputedStyle(footerNav).justifyItems,
+        footerNavLinksJustifyContent: getComputedStyle(footerNavLinks).justifyContent,
         scrollbarWidth: getComputedStyle(document.documentElement).scrollbarWidth
       };
     });
@@ -341,7 +346,9 @@ for (const viewport of [
     expect(layout.headerPosition).toBe('absolute');
     expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
     expect(layout.headerInsideHero).toBe(true);
-    expect(layout.homeContentGutter).toBe(viewport.width <= 768 ? 16 : 32);
+    expect(layout.homeContentGutter).toBe(
+      viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1320) / 2))
+    );
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
@@ -355,6 +362,9 @@ for (const viewport of [
     expect(layout.heroBoxShadow).toBe('none');
     expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
     expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);
+    expect(layout.footerNavTextAlign).toBe('center');
+    expect(layout.footerNavJustifyItems).toBe('center');
+    expect(layout.footerNavLinksJustifyContent).toBe('center');
     expect(layout.scrollbarWidth).toBe('none');
     await page.mouse.wheel(0, 700);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
