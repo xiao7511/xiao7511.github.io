@@ -66,10 +66,25 @@ function renderSocialLinks(config) {
   const dock = element('nav', { className: 'footer-social', attributes: { 'aria-label': 'NOBI 动漫社交媒体' } });
   links.forEach(({ key, label, href }) => {
     const anchor = element('a', {
-      className: 'footer-social__link',
-      attributes: { href, target: '_blank', rel: 'noopener noreferrer', 'aria-label': label, title: label }
+      className: `footer-social__link footer-social__link--${key}`,
+      attributes: {
+        href,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        'aria-label': label,
+        'data-social-platform': key,
+        title: label
+      }
     });
     anchor.innerHTML = SOCIAL_ICONS[key];
+    if (key === 'instagram') {
+      const instagramIcon = anchor.querySelector('svg');
+      instagramIcon?.insertAdjacentHTML(
+        'afterbegin',
+        '<defs><linearGradient id="nobi-instagram-gradient" x1="2" y1="22" x2="22" y2="2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffd600"/><stop offset="0.35" stop-color="#ff7a00"/><stop offset="0.68" stop-color="#ff0169"/><stop offset="1" stop-color="#d300c5"/></linearGradient></defs>'
+      );
+      instagramIcon?.querySelector('path')?.style.setProperty('fill', 'url("#nobi-instagram-gradient")');
+    }
     dock.append(anchor);
   });
   if (footerSlot) {

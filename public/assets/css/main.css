@@ -1324,13 +1324,34 @@ main {
   height: 1.25rem;
   align-items: center;
   justify-content: center;
-  color: var(--color-muted);
-  transition: color 160ms ease, transform 160ms ease;
+  color: #fff;
+  transition: filter 160ms ease, transform 160ms ease;
 }
 
 .footer-social__link:hover {
-  color: #fff;
+  filter: brightness(1.18) saturate(1.08);
   transform: translateY(-2px);
+}
+
+.footer-social__link--xiaohongshu {
+  width: 2.75rem;
+  color: #ff2442;
+}
+
+.footer-social__link--weibo {
+  color: #e6162d;
+}
+
+.footer-social__link--twitter {
+  color: #fff;
+}
+
+.footer-social__link--instagram {
+  color: #e1306c;
+}
+
+.footer-social__link--instagram svg {
+  fill: url("#nobi-instagram-gradient");
 }
 
 .footer-social svg {
@@ -1421,6 +1442,11 @@ main {
 .home-page .footer-social svg {
   width: 1.35rem;
   height: 1.35rem;
+}
+
+.home-page .footer-social__link--xiaohongshu,
+.home-page .footer-social__link--xiaohongshu svg {
+  width: 2.75rem;
 }
 
 .home-page .copyright {
