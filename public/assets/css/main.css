@@ -124,13 +124,16 @@ img {
 
 .home-page .site-header {
   position: absolute;
-  inset: 0 0 auto;
+  top: 0;
+  left: 50%;
+  width: min(calc(100% - 4rem), 82.5rem);
   min-height: 4.125rem;
-  padding-inline: 2rem;
+  padding-inline: 0;
   background: transparent;
   border-bottom: 0;
   box-shadow: none;
   backdrop-filter: none;
+  transform: translateX(-50%);
 }
 
 .home-page .site-header.is-menu-open {
@@ -432,9 +435,9 @@ main {
   --hero-edge: 2rem;
 
   position: relative;
-  width: 100vw;
+  width: min(calc(100% - 4rem), 82.5rem);
   height: clamp(25rem, 31.5vw, 31.25rem);
-  margin: 0 calc(50% - 50vw);
+  margin: 0 auto;
   overflow: hidden;
   background: #06101b;
 }
@@ -1856,13 +1859,14 @@ main {
   }
 
   .home-page .site-header {
-    padding-inline: 1rem;
+    width: calc(100% - 2rem);
+    padding-inline: 0;
   }
 
   .hero {
-    width: 100vw;
+    width: calc(100% - 2rem);
     height: clamp(20rem, 52vw, 23rem);
-    margin-top: 0;
+    margin: 0 auto;
   }
 
   .hero__content {

@@ -188,7 +188,9 @@ test('home cover preview keeps a route to its matching detail page', async ({ pa
   await expect(page.locator('#detail-title')).toContainText('测试动漫');
 });
 
-test('home hero is full bleed and configured social icons render in the footer social column', async ({ page }) => {
+test('home hero aligns with the content rail and configured social icons render in the footer social column', async ({
+  page
+}) => {
   await mockRuntime(page, { socialLinks: true });
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('/index.html');
@@ -196,8 +198,8 @@ test('home hero is full bleed and configured social icons render in the footer s
     const rect = hero.getBoundingClientRect();
     return { left: rect.left, right: rect.right, viewport: document.documentElement.clientWidth };
   });
-  expect(Math.abs(bounds.left)).toBeLessThanOrEqual(1);
-  expect(Math.abs(bounds.right - bounds.viewport)).toBeLessThanOrEqual(1);
+  expect(bounds.left).toBe(32);
+  expect(bounds.right).toBe(1334);
   await page.locator('.hero__control--next').click();
   await expect(page.locator('.hero__slide').nth(1)).toHaveClass(/is-active/);
   await expect(page.locator('.hero__pagination b')).toHaveText('02 / 03');
@@ -287,7 +289,7 @@ for (const viewport of [
   { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 367, heroMax: 369 },
   { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 359, heroMax: 361 }
 ]) {
-  test(`home stays full bleed and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
+  test(`home rails stay aligned and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
     await mockRuntime(page, { features: true });
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto('/index.html');
@@ -313,10 +315,13 @@ for (const viewport of [
         heroRight: hero.right,
         heroHeight: hero.height,
         viewport: document.documentElement.clientWidth,
+        headerLeft: header.left,
+        headerRight: header.right,
         headerPosition: getComputedStyle(headerElement).position,
         headerBackground: getComputedStyle(headerElement).backgroundColor,
         headerInsideHero: header.top >= hero.top && header.bottom <= hero.bottom,
-        homeContentGutter: Math.round((hero.width - homeContent.width) / 2),
+        homeContentLeft: homeContent.left,
+        homeContentRight: homeContent.right,
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
         cardMediaRatio: media ? media.width / media.height : 0,
         controlsInside: controls.top >= hero.top && controls.bottom <= hero.bottom,
@@ -339,16 +344,18 @@ for (const viewport of [
       };
     });
     expect(layout.overflow).toBeLessThanOrEqual(1);
-    expect(Math.abs(layout.heroLeft)).toBeLessThanOrEqual(1);
-    expect(Math.abs(layout.heroRight - layout.viewport)).toBeLessThanOrEqual(1);
+    const expectedGutter = viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1320) / 2));
+    expect(Math.round(layout.heroLeft)).toBe(expectedGutter);
+    expect(Math.round(layout.viewport - layout.heroRight)).toBe(expectedGutter);
+    expect(Math.round(layout.headerLeft)).toBe(expectedGutter);
+    expect(Math.round(layout.viewport - layout.headerRight)).toBe(expectedGutter);
+    expect(Math.round(layout.homeContentLeft)).toBe(expectedGutter);
+    expect(Math.round(layout.viewport - layout.homeContentRight)).toBe(expectedGutter);
     expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
     expect(layout.headerPosition).toBe('absolute');
     expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
     expect(layout.headerInsideHero).toBe(true);
-    expect(layout.homeContentGutter).toBe(
-      viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1320) / 2))
-    );
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
