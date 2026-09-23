@@ -9,6 +9,7 @@ const contentRecord = {
   slot_index: 0,
   title: '测试动漫',
   subtitle: '更新中',
+  published_at: '2024-08-18T00:00:00Z',
   theme_tags: ['冒险'],
   cover_url: imageUrl,
   detail_urls: [imageUrl]
@@ -134,16 +135,19 @@ for (const [path, selector] of pages) {
   });
 }
 
-test('home renders the NOBI brand and no more than six real cards per section', async ({ page }) => {
+test('home renders the NOBI brand and no more than five enriched cards per section', async ({ page }) => {
   const messages = [];
   page.on('console', (message) => messages.push(`${message.type()}: ${message.text()}`));
-  await mockRuntime(page);
+  await mockRuntime(page, { features: true });
   await page.goto('/index.html');
   await expect(page.locator('.logo')).toContainText('NOBI');
   await expect(page.locator('.logo')).toContainText('动漫');
   await expect(page.locator('#anime-container .card').first(), messages.join('\n')).toBeVisible({ timeout: 15_000 });
-  expect(await page.locator('#anime-container .card').count()).toBeLessThanOrEqual(6);
-  expect(await page.locator('#manga-container .card').count()).toBeLessThanOrEqual(6);
+  expect(await page.locator('#anime-container .card').count()).toBeLessThanOrEqual(5);
+  expect(await page.locator('#manga-container .card').count()).toBeLessThanOrEqual(5);
+  await expect(page.locator('#anime-container .card__type').first()).toHaveText('动漫');
+  await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
+  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
 });
 
 test('home cover preview keeps a route to its matching detail page', async ({ page }) => {
@@ -160,7 +164,7 @@ test('home cover preview keeps a route to its matching detail page', async ({ pa
   await expect(page.locator('#detail-title')).toContainText('测试动漫');
 });
 
-test('home hero is full bleed and configured social icons render above copyright', async ({ page }) => {
+test('home hero is full bleed and configured social icons render in the footer social column', async ({ page }) => {
   await mockRuntime(page, { socialLinks: true });
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('/index.html');
@@ -170,11 +174,21 @@ test('home hero is full bleed and configured social icons render above copyright
   });
   expect(Math.abs(bounds.left)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.right - bounds.viewport)).toBeLessThanOrEqual(1);
+  await page.locator('.hero__control--next').click();
+  await expect(page.locator('.hero__slide').nth(1)).toHaveClass(/is-active/);
+  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 03');
   const social = page.locator('.footer-social');
   await expect(social.locator('.footer-social__link')).toHaveCount(4);
   await expect(social).toBeVisible();
-  await expect(social.locator('xpath=following-sibling::*[1]')).toHaveClass('copyright');
+  await expect(page.locator('.footer-social-slot')).toContainText('社交媒体');
+  await expect(page.locator('.footer-social-slot .footer-social')).toHaveCount(1);
   expect(await social.evaluate((node) => getComputedStyle(node).position)).toBe('static');
+  expect(await social.evaluate((node) => getComputedStyle(node).flexDirection)).toBe('row');
+  expect(
+    await page
+      .locator('.site-footer__inner')
+      .evaluate((node) => getComputedStyle(node).gridTemplateColumns.split(' ').length)
+  ).toBe(3);
   await expect(page.locator('.social-dock')).toHaveCount(0);
 });
 
@@ -182,6 +196,7 @@ test('footer omits social icons when no valid URLs are configured', async ({ pag
   await mockRuntime(page);
   await page.goto('/index.html');
   await expect(page.locator('.footer-social')).toHaveCount(0);
+  await expect(page.locator('.footer-social-slot')).toBeHidden();
 });
 
 test('community loads posts and persistent post-like controls without console errors', async ({ page }) => {
@@ -232,19 +247,27 @@ test('detail images open in the accessible preview', async ({ page }) => {
 });
 
 for (const viewport of [
-  { name: 'desktop-xl', width: 1920, height: 1080, columns: 4, heroMin: 519, heroMax: 521 },
-  { name: 'desktop-lg', width: 1440, height: 900, columns: 4, heroMin: 517, heroMax: 520 },
-  { name: 'desktop', width: 1366, height: 768, columns: 4, heroMin: 490, heroMax: 494 },
-  { name: 'laptop', width: 1024, height: 768, columns: 3, heroMin: 429, heroMax: 432 },
-  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 399, heroMax: 401 },
-  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 334, heroMax: 337 }
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 5, heroMin: 499, heroMax: 501 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 5, heroMin: 452, heroMax: 455 },
+  { name: 'desktop', width: 1366, height: 768, columns: 5, heroMin: 429, heroMax: 432 },
+  { name: 'laptop', width: 1024, height: 768, columns: 4, heroMin: 398, heroMax: 401 },
+  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 367, heroMax: 369 },
+  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 359, heroMax: 361 }
 ]) {
   test(`home stays full bleed and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
+    await mockRuntime(page, { features: true });
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto('/index.html');
+    await expect(page.locator('.card__media').first()).toBeVisible({ timeout: 15_000 });
     const layout = await page.evaluate(() => {
-      const hero = document.querySelector('.hero').getBoundingClientRect();
+      const heroElement = document.querySelector('.hero');
+      const hero = heroElement.getBoundingClientRect();
+      const controls = document.querySelector('.hero__controls').getBoundingClientRect();
+      const previousControl = document.querySelector('.hero__control--prev').getBoundingClientRect();
+      const nextControl = document.querySelector('.hero__control--next').getBoundingClientRect();
       const cards = document.querySelector('.cards');
+      const media = document.querySelector('.card__media')?.getBoundingClientRect();
+      const footer = document.querySelector('.site-footer__inner');
       return {
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         heroLeft: hero.left,
@@ -252,6 +275,18 @@ for (const viewport of [
         heroHeight: hero.height,
         viewport: document.documentElement.clientWidth,
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
+        cardMediaRatio: media ? media.width / media.height : 0,
+        controlsInside: controls.top >= hero.top && controls.bottom <= hero.bottom,
+        previousControlNearLeft: previousControl.left - hero.left < 48,
+        nextControlNearRight: hero.right - nextControl.right < 48,
+        controlsSeparated: nextControl.left - previousControl.right > hero.width * 0.6,
+        heroBorderTop: getComputedStyle(heroElement).borderTopWidth,
+        heroBorderBottom: getComputedStyle(heroElement).borderBottomWidth,
+        heroBoxShadow: getComputedStyle(heroElement).boxShadow,
+        footerColumns: getComputedStyle(footer).gridTemplateColumns.split(' ').length,
+        footerNavTops: [...document.querySelectorAll('.footer-nav__links a')].map((link) =>
+          Math.round(link.getBoundingClientRect().top)
+        ),
         scrollbarWidth: getComputedStyle(document.documentElement).scrollbarWidth
       };
     });
@@ -261,6 +296,17 @@ for (const viewport of [
     expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
     expect(layout.columns).toBe(viewport.columns);
+    expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
+    expect(layout.cardMediaRatio).toBeLessThan(1.35);
+    expect(layout.controlsInside).toBe(true);
+    expect(layout.previousControlNearLeft).toBe(true);
+    expect(layout.nextControlNearRight).toBe(true);
+    expect(layout.controlsSeparated).toBe(true);
+    expect(layout.heroBorderTop).toBe('0px');
+    expect(layout.heroBorderBottom).toBe('0px');
+    expect(layout.heroBoxShadow).toBe('none');
+    expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
+    expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);
     expect(layout.scrollbarWidth).toBe('none');
     await page.mouse.wheel(0, 700);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);

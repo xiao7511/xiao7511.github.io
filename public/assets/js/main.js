@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 获取所有基础 DOM 元素
   const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
+  const carouselIndicators = Array.from(document.querySelectorAll('.hero__pagination span'));
+  const carouselCounter = document.querySelector('.hero__pagination b');
+  const carouselPrevious = document.querySelector('.hero__control--prev');
+  const carouselNext = document.querySelector('.hero__control--next');
   const userButton = document.getElementById('user-btn');
   const modal = document.getElementById('auth-modal');
   const modalClose = document.getElementById('modal-close');
@@ -67,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
     carouselSlides.forEach((slide, i) => {
       slide.classList.toggle('is-active', i === index);
     });
+    carouselIndicators.forEach((indicator, i) => indicator.classList.toggle('is-active', i === index));
+    if (carouselCounter) {
+      carouselCounter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(carouselSlides.length).padStart(2, '0')}`;
+    }
     currentSlideIndex = index;
   }
 
@@ -113,6 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
       startCarousel();
     }, { passive: true });
   }
+
+  carouselPrevious?.addEventListener('click', () => {
+    prevSlide();
+    startCarousel();
+  });
+  carouselNext?.addEventListener('click', () => {
+    nextSlide();
+    startCarousel();
+  });
 
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
@@ -1684,6 +1701,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return `detail.html?${new URLSearchParams({ category, slot })}`;
     };
 
+    const getPublishYear = (item) => {
+      const explicitYear = String(item?.year ?? '').trim();
+      if (/^(?:19|20)\d{2}$/.test(explicitYear)) return explicitYear;
+      for (const field of ['published_at', 'release_date', 'publish_date', 'created_at']) {
+        const value = item?.[field];
+        if (!value) continue;
+        const year = new Date(value).getUTCFullYear();
+        if (Number.isInteger(year) && year >= 1900 && year <= 2100) return String(year);
+      }
+      return '--';
+    };
+
+    const getCategoryLabel = (item) => (item?.category === 'manga' ? '漫画' : '动漫');
+
     const renderCategory = (container, slots, emptyMessage) => {
       if (!container) return;
       container.replaceChildren();
@@ -1692,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      slots.slice(0, 6).forEach((slot) => {
+      slots.slice(0, 5).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
         const image = element('img', {
@@ -1720,10 +1751,23 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             },
             [
-              image,
+              element('div', { className: 'card__media' }, [image]),
               element('div', { className: 'card__body' }, [
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
-                element('p', { className: 'card__tag', text: slot.subtitle || '更多详情' })
+                element('div', { className: 'card__meta' }, [
+                  element('span', { className: 'card__meta-group' }, [
+                    element('span', { className: 'card__type', text: getCategoryLabel(slot) }),
+                    element('span', { className: 'card__year', text: getPublishYear(slot) })
+                  ]),
+                  element('span', { className: 'card__likes', attributes: { 'aria-label': '封面点赞数' } }, [
+                    element('span', { className: 'card__like-icon', text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                    element('strong', {
+                      className: 'card__like-count',
+                      text: '—',
+                      attributes: { 'data-card-like-count': '' }
+                    })
+                  ])
+                ])
               ])
             ]
           )
@@ -1733,8 +1777,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const animeContainer = document.getElementById('anime-container');
     const mangaContainer = document.getElementById('manga-container');
-    if (animeContainer) setLoadingState(animeContainer, { count: 6, variant: 'card', label: '正在加载热门动漫' });
-    if (mangaContainer) setLoadingState(mangaContainer, { count: 6, variant: 'card', label: '正在加载漫画连载' });
+    if (animeContainer) setLoadingState(animeContainer, { count: 5, variant: 'card', label: '正在加载热门动漫' });
+    if (mangaContainer) setLoadingState(mangaContainer, { count: 5, variant: 'card', label: '正在加载漫画连载' });
 
     try {
       if (!window.supabaseClient) throw new Error('内容服务尚未初始化');

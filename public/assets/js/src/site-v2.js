@@ -54,13 +54,15 @@ function safeExternalUrl(value) {
 
 function renderSocialLinks(config) {
   document.querySelector('.footer-social')?.remove();
+  const footerSlot = document.querySelector('.footer-social-slot');
+  if (footerSlot) footerSlot.hidden = true;
   const links = Object.entries(SOCIAL_LABELS)
     .map(([key, label]) => ({ key, label, href: safeExternalUrl(config[key]) }))
     .filter((item) => item.href);
   if (!links.length) return;
 
   const copyright = document.querySelector('.site-footer .copyright');
-  if (!copyright) return;
+  if (!footerSlot && !copyright) return;
   const dock = element('nav', { className: 'footer-social', attributes: { 'aria-label': 'NOBI 动漫社交媒体' } });
   links.forEach(({ key, label, href }) => {
     const anchor = element('a', {
@@ -70,7 +72,12 @@ function renderSocialLinks(config) {
     anchor.innerHTML = SOCIAL_ICONS[key];
     dock.append(anchor);
   });
-  copyright.before(dock);
+  if (footerSlot) {
+    footerSlot.append(dock);
+    footerSlot.hidden = false;
+  } else {
+    copyright.before(dock);
+  }
 }
 
 function getDetailUrl(image) {
@@ -146,8 +153,13 @@ function getImageTarget(image) {
 }
 
 function applyLikeState(image, count, liked) {
-  image.dataset.likeCount = String(Number(count) || 0);
+  const normalizedCount = Number(count) || 0;
+  image.dataset.likeCount = String(normalizedCount);
   image.dataset.liked = String(Boolean(liked));
+  const card = image.closest('.card');
+  const cardCount = card?.querySelector('[data-card-like-count]');
+  if (cardCount) cardCount.textContent = String(normalizedCount);
+  card?.querySelector('.card__likes')?.classList.toggle('is-liked', Boolean(liked));
 }
 
 async function refreshLikeSummaries() {
