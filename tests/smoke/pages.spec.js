@@ -309,6 +309,8 @@ for (const viewport of [
       const footer = document.querySelector('.site-footer__inner');
       const footerNav = document.querySelector('.footer-nav');
       const footerNavLinks = document.querySelector('.footer-nav__links');
+      const footerBrandTagline = document.querySelector('.footer-brand__tagline');
+      const headerBrandTagline = document.querySelector('.logo__tagline');
       return {
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         heroLeft: hero.left,
@@ -319,7 +321,7 @@ for (const viewport of [
         headerRight: header.right,
         headerPosition: getComputedStyle(headerElement).position,
         headerBackground: getComputedStyle(headerElement).backgroundColor,
-        headerInsideHero: header.top >= hero.top && header.bottom <= hero.bottom,
+        headerAboveHero: header.bottom <= hero.top && hero.top - header.bottom <= 1,
         homeContentLeft: homeContent.left,
         homeContentRight: homeContent.right,
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
@@ -340,6 +342,8 @@ for (const viewport of [
         footerNavTextAlign: getComputedStyle(footerNav).textAlign,
         footerNavJustifyItems: getComputedStyle(footerNav).justifyItems,
         footerNavLinksJustifyContent: getComputedStyle(footerNavLinks).justifyContent,
+        footerBrandTaglineFontSize: getComputedStyle(footerBrandTagline).fontSize,
+        headerBrandTaglineFontSize: getComputedStyle(headerBrandTagline).fontSize,
         scrollbarWidth: getComputedStyle(document.documentElement).scrollbarWidth
       };
     });
@@ -353,9 +357,9 @@ for (const viewport of [
     expect(Math.round(layout.viewport - layout.homeContentRight)).toBe(expectedGutter);
     expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
-    expect(layout.headerPosition).toBe('absolute');
+    expect(layout.headerPosition).toBe('relative');
     expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerInsideHero).toBe(true);
+    expect(layout.headerAboveHero).toBe(true);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
@@ -372,6 +376,7 @@ for (const viewport of [
     expect(layout.footerNavTextAlign).toBe('center');
     expect(layout.footerNavJustifyItems).toBe('center');
     expect(layout.footerNavLinksJustifyContent).toBe('center');
+    expect(layout.footerBrandTaglineFontSize).toBe(layout.headerBrandTaglineFontSize);
     expect(layout.scrollbarWidth).toBe('none');
     await page.mouse.wheel(0, 700);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
