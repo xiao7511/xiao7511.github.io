@@ -1723,6 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      let renderedCount = 0;
       slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
@@ -1772,7 +1773,12 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
           )
         );
+        renderedCount += 1;
       });
+
+      for (let index = renderedCount; index < 6; index += 1) {
+        container.append(element('div', { className: 'card card--empty', attributes: { 'aria-hidden': 'true' } }));
+      }
     };
 
     const animeContainer = document.getElementById('anime-container');

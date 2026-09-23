@@ -15,14 +15,14 @@ const contentRecord = {
   detail_urls: [imageUrl]
 };
 
-async function mockRuntime(page, { posts = [], features = false, socialLinks = false } = {}) {
-  const animeRecords = Array.from({ length: 6 }, (_, index) => ({
+async function mockRuntime(page, { posts = [], features = false, socialLinks = false, contentCount = 6 } = {}) {
+  const animeRecords = Array.from({ length: contentCount }, (_, index) => ({
     ...contentRecord,
     id: `d9428888-122b-4f20-9f6c-25789ab0a12${index}`,
     slot_index: index,
     title: `测试动漫 ${index + 1}`
   }));
-  const mangaRecords = Array.from({ length: 6 }, (_, index) => ({
+  const mangaRecords = Array.from({ length: contentCount }, (_, index) => ({
     ...contentRecord,
     id: `8d99585e-379d-46d0-99c1-0eb2a32a3aa${index}`,
     category: 'manga',
@@ -163,6 +163,17 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
 });
 
+test('home keeps six grid positions when fewer than six items are configured', async ({ page }) => {
+  await mockRuntime(page, { features: true, contentCount: 4 });
+  await page.goto('/index.html');
+  await expect(page.locator('#anime-container .card')).toHaveCount(6);
+  await expect(page.locator('#anime-container .card:not(.card--empty)')).toHaveCount(4);
+  await expect(page.locator('#anime-container .card--empty')).toHaveCount(2);
+  await expect(page.locator('#manga-container .card')).toHaveCount(6);
+  await expect(page.locator('#manga-container .card:not(.card--empty)')).toHaveCount(4);
+  await expect(page.locator('#manga-container .card--empty')).toHaveCount(2);
+});
+
 test('home cover preview keeps a route to its matching detail page', async ({ page }) => {
   await mockRuntime(page, { features: true });
   await page.goto('/index.html');
@@ -284,6 +295,10 @@ for (const viewport of [
     const layout = await page.evaluate(() => {
       const heroElement = document.querySelector('.hero');
       const hero = heroElement.getBoundingClientRect();
+      const headerElement = document.querySelector('.site-header');
+      const header = headerElement.getBoundingClientRect();
+      const homeContent = document.querySelector('.home-content').getBoundingClientRect();
+      const heroContent = document.querySelector('.hero__content').getBoundingClientRect();
       const controls = document.querySelector('.hero__controls').getBoundingClientRect();
       const previousControl = document.querySelector('.hero__control--prev').getBoundingClientRect();
       const nextControl = document.querySelector('.hero__control--next').getBoundingClientRect();
@@ -296,12 +311,18 @@ for (const viewport of [
         heroRight: hero.right,
         heroHeight: hero.height,
         viewport: document.documentElement.clientWidth,
+        headerPosition: getComputedStyle(headerElement).position,
+        headerBackground: getComputedStyle(headerElement).backgroundColor,
+        headerInsideHero: header.top >= hero.top && header.bottom <= hero.bottom,
+        homeContentGutter: Math.round((hero.width - homeContent.width) / 2),
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
         cardMediaRatio: media ? media.width / media.height : 0,
         controlsInside: controls.top >= hero.top && controls.bottom <= hero.bottom,
         previousControlNearLeft: previousControl.left - hero.left < 48,
         nextControlNearRight: hero.right - nextControl.right < 48,
         controlsSeparated: nextControl.left - previousControl.right > hero.width * 0.6,
+        previousControlClearOfContent:
+          document.documentElement.clientWidth <= 768 || previousControl.right <= heroContent.left,
         heroBorderTop: getComputedStyle(heroElement).borderTopWidth,
         heroBorderBottom: getComputedStyle(heroElement).borderBottomWidth,
         heroBoxShadow: getComputedStyle(heroElement).boxShadow,
@@ -317,6 +338,10 @@ for (const viewport of [
     expect(Math.abs(layout.heroRight - layout.viewport)).toBeLessThanOrEqual(1);
     expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
+    expect(layout.headerPosition).toBe('absolute');
+    expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(layout.headerInsideHero).toBe(true);
+    expect(layout.homeContentGutter).toBe(viewport.width <= 768 ? 16 : 32);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
@@ -324,6 +349,7 @@ for (const viewport of [
     expect(layout.previousControlNearLeft).toBe(true);
     expect(layout.nextControlNearRight).toBe(true);
     expect(layout.controlsSeparated).toBe(true);
+    expect(layout.previousControlClearOfContent).toBe(true);
     expect(layout.heroBorderTop).toBe('0px');
     expect(layout.heroBorderBottom).toBe('0px');
     expect(layout.heroBoxShadow).toBe('none');
