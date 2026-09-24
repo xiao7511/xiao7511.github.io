@@ -271,7 +271,7 @@ test('detail images expose persistent overlay likes and still open in the access
   await expect(likeButton).toContainText('点赞0');
   await likeButton.click();
   await expect(likeButton).toContainText('已点赞1');
-  await image.click();
+  await image.click({ position: { x: 16, y: 16 } });
   await expect(page.locator('#image-lightbox')).toBeVisible();
   await expect(page.locator('.image-lightbox__image')).toBeVisible();
   await expect(page.locator('.image-lightbox .image-like-button')).toContainText('已点赞 1');
@@ -317,7 +317,7 @@ for (const viewport of [
         headerRight: header.right,
         headerPosition: getComputedStyle(headerElement).position,
         headerBackground: getComputedStyle(headerElement).backgroundColor,
-        headerAboveHero: header.bottom <= hero.top && hero.top - header.bottom <= 1,
+        headerHeroGap: hero.top - header.bottom,
         homeContentLeft: homeContent.left,
         homeContentRight: homeContent.right,
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
@@ -355,7 +355,7 @@ for (const viewport of [
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
     expect(layout.headerPosition).toBe('relative');
     expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerAboveHero).toBe(true);
+    expect(layout.headerHeroGap).toBeCloseTo(viewport.width <= 768 ? 0 : 20, 0);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
@@ -364,9 +364,9 @@ for (const viewport of [
     expect(layout.nextControlNearRight).toBe(true);
     expect(layout.controlsSeparated).toBe(true);
     expect(layout.previousControlClearOfContent).toBe(true);
-    expect(layout.heroBorderTop).toBe('0px');
-    expect(layout.heroBorderBottom).toBe('0px');
-    expect(layout.heroBoxShadow).toBe('none');
+    expect(layout.heroBorderTop).toBe('1px');
+    expect(layout.heroBorderBottom).toBe('1px');
+    expect(layout.heroBoxShadow).not.toBe('none');
     expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
     expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);
     expect(layout.footerNavTextAlign).toBe('center');

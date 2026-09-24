@@ -97,6 +97,7 @@ function renderSocialLinks(config) {
 
 function getDetailUrl(image) {
   const value = image.dataset.detailUrl || image.closest('a[href]')?.getAttribute('href') || '';
+  if (!value) return '';
   try {
     const url = new URL(value, location.href);
     const route = new URLSearchParams(url.search);
