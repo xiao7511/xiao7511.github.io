@@ -435,9 +435,12 @@ main {
   position: relative;
   width: min(calc(100% - 4rem), 82.5rem);
   height: clamp(25rem, 31.5vw, 31.25rem);
-  margin: 0 auto;
+  margin: 1.25rem auto 0;
   overflow: hidden;
   background: #06101b;
+  border: 1px solid rgba(101, 184, 255, 0.16);
+  border-radius: 1.25rem;
+  box-shadow: 0 1.5rem 3.5rem rgba(0, 0, 0, 0.28);
 }
 
 .hero::after {
@@ -605,6 +608,17 @@ main {
 .home-content {
   width: min(calc(100% - 4rem), 82.5rem);
   margin-inline: auto;
+  position: relative;
+}
+
+.home-content::before {
+  position: absolute;
+  top: 0;
+  right: 2rem;
+  left: 2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(101, 184, 255, 0.35), transparent);
+  content: "";
 }
 
 .home-page .section {
@@ -1280,6 +1294,28 @@ main {
   background: rgba(255, 91, 126, 0.3);
 }
 
+.image-like-button--overlay {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  z-index: 3;
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  color: #fff;
+  background: rgba(5, 18, 31, 0.78);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0.4rem 1rem rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.image-like-button--overlay:hover,
+.image-like-button--overlay:focus-visible {
+  background: rgba(31, 55, 78, 0.94);
+}
+
 .forum-pagination {
   justify-content: center;
   margin-top: 1rem;
@@ -1746,6 +1782,7 @@ main {
 }
 
 .gallery-item {
+  position: relative;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--radius-md);

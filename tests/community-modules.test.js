@@ -18,6 +18,18 @@ function session(userId = 'verified-user', token = accessToken({ sub: userId }))
 }
 
 describe('community likes modules', () => {
+  test('uses the atomic backend toggle when the RPC is available', async () => {
+    const rpc = vi.fn(async () => ({ data: [{ liked: true, like_count: 3 }], error: null }));
+    const client = {
+      auth: { getSession: async () => ({ data: { session: session() }, error: null }) },
+      rpc
+    };
+    await expect(togglePostLike(client, { postId: 42, isLiked: false })).resolves.toMatchObject({
+      authenticated: true
+    });
+    expect(rpc).toHaveBeenCalledWith('toggle_post_like', { p_post_id: 42, p_remove: false });
+  });
+
   test('shares one Supabase client across concurrent page initializers', async () => {
     const createdClient = { id: 'shared-client' };
     const createClient = vi.fn(() => createdClient);
