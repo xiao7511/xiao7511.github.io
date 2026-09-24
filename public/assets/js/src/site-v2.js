@@ -171,10 +171,42 @@ function applyLikeState(image, count, liked) {
   const normalizedCount = Number(count) || 0;
   image.dataset.likeCount = String(normalizedCount);
   image.dataset.liked = String(Boolean(liked));
-  const card = image.closest('.card');
-  const cardCount = card?.querySelector('[data-card-like-count]');
-  if (cardCount) cardCount.textContent = String(normalizedCount);
-  card?.querySelector('.card__likes')?.classList.toggle('is-liked', Boolean(liked));
+  const scope = image.closest('.card, .gallery-item') || image.parentElement;
+  const button = scope?.querySelector('[data-image-like]');
+  const countNode = button?.querySelector('[data-image-like-count]');
+  if (countNode) countNode.textContent = String(normalizedCount);
+  button?.classList.toggle('is-liked', Boolean(liked));
+  button?.setAttribute('aria-pressed', String(Boolean(liked)));
+  const label = button?.querySelector('[data-image-like-label]');
+  if (label) label.textContent = liked ? '已点赞' : '点赞';
+}
+
+async function toggleImageLike(image, button) {
+  const target = getImageTarget(image);
+  if (!features.imageLikes || !target || button.disabled) return;
+  button.disabled = true;
+  try {
+    const { data, error } = await client.rpc('toggle_image_like', {
+      p_content_id: target.contentId,
+      p_image_kind: target.kind,
+      p_image_index: target.index,
+      p_image_key: target.imageKey,
+      p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
+    });
+    if (error) throw error;
+    const result = data?.[0];
+    applyLikeState(image, result?.like_count || 0, result?.liked || false);
+    if ('BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('nobi-engagement');
+      channel.postMessage({ type: 'image-like-changed' });
+      channel.close();
+    }
+  } catch (_) {
+    button.dataset.error = '点赞暂时不可用';
+    button.setAttribute('aria-label', '点赞暂时不可用，请稍后重试');
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function refreshLikeSummaries() {
@@ -304,8 +336,25 @@ function initImagePreview() {
   document.addEventListener(
     'click',
     (event) => {
+      const likeButton = event.target.closest('[data-image-like]');
+      if (likeButton) {
+        const scope = likeButton.closest('.card, .gallery-item') || likeButton.parentElement;
+        const image = scope?.querySelector('img[data-content-id][data-image-kind]');
+        if (!image) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleImageLike(image, likeButton);
+        return;
+      }
       const image = event.target.closest('img[data-preview-image], .gallery-item img');
       if (!image) return;
+      const detailUrl = getDetailUrl(image);
+      if (detailUrl) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.assign(detailUrl);
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       openLightbox(image);

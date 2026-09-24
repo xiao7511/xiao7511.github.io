@@ -174,16 +174,12 @@ test('home keeps six grid positions when fewer than six items are configured', a
   await expect(page.locator('#manga-container .card--empty')).toHaveCount(2);
 });
 
-test('home cover preview keeps a route to its matching detail page', async ({ page }) => {
+test('home cover opens its matching detail page directly', async ({ page }) => {
   await mockRuntime(page, { features: true });
   await page.goto('/index.html');
   const cover = page.locator('#anime-container .card img').first();
   await expect(cover).toBeVisible({ timeout: 15_000 });
   await cover.click();
-  const detailLink = page.locator('.image-detail-link');
-  await expect(detailLink).toBeVisible();
-  await expect(detailLink).toHaveAttribute('href', 'detail.html?category=anime&slot=0');
-  await detailLink.click();
   await expect(page).toHaveURL(/detail\.html\?category=anime&slot=0$/);
   await expect(page.locator('#detail-title')).toContainText('测试动漫');
 });
@@ -266,19 +262,19 @@ test('community loads posts and persistent post-like controls without console er
   expect(errors).toEqual([]);
 });
 
-test('detail images open in the accessible preview', async ({ page }) => {
+test('detail images expose persistent overlay likes and still open in the accessible preview', async ({ page }) => {
   await mockRuntime(page, { features: true });
   await page.goto('/detail.html?category=anime&slot=0');
   const image = page.locator('.gallery-item img').first();
   await expect(image).toBeVisible({ timeout: 15_000 });
+  const likeButton = page.locator('.gallery-item .image-like-button--overlay').first();
+  await expect(likeButton).toContainText('点赞0');
+  await likeButton.click();
+  await expect(likeButton).toContainText('已点赞1');
   await image.click();
   await expect(page.locator('#image-lightbox')).toBeVisible();
   await expect(page.locator('.image-lightbox__image')).toBeVisible();
-  await expect(page.locator('.image-like-button')).toContainText('点赞 0');
-  await page.locator('.image-like-button').click();
-  await expect(page.locator('.image-like-button')).toContainText('已点赞 1');
-  await page.locator('.image-like-button').click();
-  await expect(page.locator('.image-like-button')).toContainText('点赞 0');
+  await expect(page.locator('.image-lightbox .image-like-button')).toContainText('已点赞 1');
 });
 
 for (const viewport of [

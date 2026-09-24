@@ -143,9 +143,18 @@ function initContentTools(client, supabaseUrl) {
     const button = event.target.closest('.delete-content-btn');
     if (!button) return;
     const { category, slot } = button.dataset;
-    if (!confirm(`确定删除${category === 'anime' ? '动漫' : '漫画'}第 ${Number(slot) + 1} 个内容吗？此操作会移除前台内容。`)) return;
+    if (
+      !confirm(
+        `确定删除${category === 'anime' ? '动漫' : '漫画'}第 ${Number(slot) + 1} 个内容吗？此操作会移除前台内容。`
+      )
+    )
+      return;
     button.disabled = true;
-    const { error } = await client.from('content_management').delete().eq('category', category).eq('slot_index', Number(slot));
+    const { error } = await client
+      .from('content_management')
+      .delete()
+      .eq('category', category)
+      .eq('slot_index', Number(slot));
     if (error) {
       alert(`删除失败：${error.message}`);
       button.disabled = false;
@@ -161,4 +170,12 @@ window.addEventListener('nobi:admin-ready', async (event) => {
   await Promise.all([loadStats(client), loadSocialConfig(client)]);
   initSocialForm(client);
   initContentTools(client, event.detail?.supabaseUrl);
+  document.getElementById('refresh-admin-stats')?.addEventListener('click', () => loadStats(client));
+  if ('BroadcastChannel' in window) {
+    const engagementChannel = new BroadcastChannel('nobi-engagement');
+    engagementChannel.addEventListener('message', () => loadStats(client));
+  }
+  window.setInterval(() => {
+    if (!document.hidden) loadStats(client);
+  }, 15000);
 });

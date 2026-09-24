@@ -1318,6 +1318,11 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('登录状态已失效，请重新登录后再试。');
         return;
       }
+      if ('BroadcastChannel' in window) {
+        const channel = new BroadcastChannel('nobi-engagement');
+        channel.postMessage({ type: 'post-like-changed' });
+        channel.close();
+      }
       await fetchPosts();
     } catch(err) {
       console.error("点赞操作失败:", err);
@@ -1752,7 +1757,19 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             },
             [
-              element('div', { className: 'card__media' }, [image]),
+              element('div', { className: 'card__media' }, [
+                image,
+                element('button', {
+                  className: 'image-like-button image-like-button--overlay',
+                  attributes: {
+                    type: 'button', 'data-image-like': '', 'aria-label': '点赞这张封面', 'aria-pressed': 'false'
+                  }
+                }, [
+                  element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                  element('span', { className: 'sr-only', text: '点赞', attributes: { 'data-image-like-label': '' } }),
+                  element('strong', { className: 'card__like-count', text: '0', attributes: { 'data-image-like-count': '' } })
+                ])
+              ]),
               element('div', { className: 'card__body' }, [
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
                 element('div', { className: 'card__meta' }, [
@@ -1760,14 +1777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     element('span', { className: 'card__type', text: getCategoryLabel(slot) }),
                     element('span', { className: 'card__year', text: getPublishYear(slot) })
                   ]),
-                  element('span', { className: 'card__likes', attributes: { 'aria-label': '封面点赞数' } }, [
-                    element('span', { className: 'card__like-icon', text: '♡', attributes: { 'aria-hidden': 'true' } }),
-                    element('strong', {
-                      className: 'card__like-count',
-                      text: '—',
-                      attributes: { 'data-card-like-count': '' }
-                    })
-                  ])
+                  element('span', { className: 'card__engagement-hint', text: '点击封面查看详情' })
                 ])
               ])
             ]
