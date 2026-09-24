@@ -1,6 +1,9 @@
 import { getAuthenticatedSession, isAuthJwtError, refreshAuthenticatedSession } from '../auth/session.js';
 
 async function mutatePostLike(client, { postId, isLiked, userId }) {
+  if (typeof client.rpc === 'function') {
+    return client.rpc('toggle_post_like', { p_post_id: postId, p_remove: isLiked });
+  }
   const request = isLiked
     ? client.from('post_likes').delete().eq('post_id', postId).eq('user_id', userId)
     : client.from('post_likes').insert({ post_id: postId, user_id: userId });

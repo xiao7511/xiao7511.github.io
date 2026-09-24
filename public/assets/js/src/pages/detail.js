@@ -61,7 +61,28 @@ export async function initDetailPage() {
         }
       });
       if (setImageSource(image, url, 'images/IMG_4893.webp')) {
-        stream.append(element('div', { className: 'gallery-item' }, [image]));
+        stream.append(
+          element('div', { className: 'gallery-item' }, [
+            image,
+            element(
+              'button',
+              {
+                className: 'image-like-button image-like-button--overlay',
+                attributes: {
+                  type: 'button',
+                  'data-image-like': '',
+                  'aria-label': `点赞第 ${index + 1} 张图片`,
+                  'aria-pressed': 'false'
+                }
+              },
+              [
+                element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                element('span', { text: '点赞', attributes: { 'data-image-like-label': '' } }),
+                element('strong', { text: '0', attributes: { 'data-image-like-count': '' } })
+              ]
+            )
+          ])
+        );
       }
     });
 

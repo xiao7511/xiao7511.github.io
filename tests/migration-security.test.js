@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 const migrationUrl = new URL('../supabase/migrations/202609210001_nobi_v2_engagement.sql', import.meta.url);
 const preflightUrl = new URL('../supabase/production_preflight.sql', import.meta.url);
 const verificationUrl = new URL('../supabase/verify_nobi_v2_engagement.sql', import.meta.url);
+const postLikeMigrationUrl = new URL('../supabase/migrations/202609240001_atomic_post_likes.sql', import.meta.url);
 
 describe('NOBI engagement migration static security contract', () => {
   test('serializes page-view deduplication and indexes the lookup', async () => {
@@ -98,5 +99,16 @@ describe('NOBI engagement migration static security contract', () => {
     expect(executableSql).toContain("tablename in ('users', 'site_config')");
     expect(executableSql).toContain("table_name = 'site_config'");
     expect(executableSql).toContain('having count(*) > 1');
+  });
+});
+
+describe('atomic post like migration', () => {
+  test('persists post likes through one authenticated atomic RPC', async () => {
+    const sql = await readFile(postLikeMigrationUrl, 'utf8');
+    expect(sql).toContain('function public.toggle_post_like');
+    expect(sql).toContain('security definer');
+    expect(sql).toContain('auth.uid()');
+    expect(sql).toContain('on conflict (post_id, user_id) do nothing');
+    expect(sql).toContain('grant execute on function public.toggle_post_like(bigint, boolean) to authenticated');
   });
 });
