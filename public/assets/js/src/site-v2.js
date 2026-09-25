@@ -1,7 +1,13 @@
 import { initializeSupabase } from './api/supabase.js';
 import { element, safeImageUrl, setImageSource } from './components/dom.js';
 import { initSiteHeader } from './components/header.js';
-import { getImageKey, imageTargetKey, isImageTarget, mapImageLikeSummaries } from './images/likes.js';
+import {
+  getImageKey,
+  imageTargetKey,
+  isImageTarget,
+  mapImageLikeSummaries,
+  sumImageLikeCounts
+} from './images/likes.js';
 
 const DEFAULT_AVATAR = 'images/nobi-avatar.svg';
 const SOCIAL_LABELS = {
@@ -168,12 +174,25 @@ function getImageTarget(image) {
   return isImageTarget(target) ? target : null;
 }
 
+function getImageLikeButton(image) {
+  const scope = image.closest('.card, .gallery-item') || image.parentElement;
+  return scope?.querySelector('[data-image-like]') || null;
+}
+
+function getLikeSummaryKeys(button) {
+  try {
+    const keys = JSON.parse(button?.dataset.imageLikeSummaryKeys || '[]');
+    return Array.isArray(keys) ? keys.filter((key) => typeof key === 'string' && key) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
 function applyLikeState(image, count, liked) {
   const normalizedCount = Number(count) || 0;
   image.dataset.likeCount = String(normalizedCount);
   image.dataset.liked = String(Boolean(liked));
-  const scope = image.closest('.card, .gallery-item') || image.parentElement;
-  const button = scope?.querySelector('[data-image-like]');
+  const button = getImageLikeButton(image);
   const countNode = button?.querySelector('[data-image-like-count]');
   if (countNode) countNode.textContent = String(normalizedCount);
   button?.classList.toggle('is-liked', Boolean(liked));
@@ -196,7 +215,15 @@ async function toggleImageLike(image, button) {
     });
     if (error) throw error;
     const result = data?.[0];
-    applyLikeState(image, result?.like_count || 0, result?.liked || false);
+    const summaryKeys = getLikeSummaryKeys(button);
+    const displayedCount = summaryKeys.length
+      ? Number(button.querySelector('[data-image-like-count]')?.textContent) || 0
+      : result?.like_count || 0;
+    applyLikeState(image, displayedCount, result?.liked || false);
+    if (summaryKeys.length) {
+      lastLikeTargetSignature = '';
+      await refreshLikeSummaries();
+    }
     if ('BroadcastChannel' in window) {
       const channel = new BroadcastChannel('nobi-engagement');
       channel.postMessage({ type: 'image-like-changed' });
@@ -214,7 +241,8 @@ async function refreshLikeSummaries() {
   if (!features.imageLikes) return;
   const images = [...document.querySelectorAll('img[data-content-id][data-image-kind]')];
   const targets = images.map(getImageTarget).filter(Boolean);
-  const imageKeys = [...new Set(targets.map((target) => target.imageKey))].sort();
+  const summaryKeys = images.flatMap((image) => getLikeSummaryKeys(getImageLikeButton(image)));
+  const imageKeys = [...new Set([...targets.map((target) => target.imageKey), ...summaryKeys])].sort();
   const signature = imageKeys.join(',') + ':' + images.length;
   if (!imageKeys.length || signature === lastLikeTargetSignature) return;
   lastLikeTargetSignature = signature;
@@ -229,7 +257,9 @@ async function refreshLikeSummaries() {
       const target = getImageTarget(image);
       if (!target) return;
       const row = summaries.get(imageTargetKey(target));
-      applyLikeState(image, row?.count || 0, row?.liked || false);
+      const aggregateKeys = getLikeSummaryKeys(getImageLikeButton(image));
+      const displayedCount = aggregateKeys.length ? sumImageLikeCounts(summaries, aggregateKeys) : row?.count || 0;
+      applyLikeState(image, displayedCount, row?.liked || false);
     });
   } catch (_) {
     lastLikeTargetSignature = '';

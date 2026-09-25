@@ -3,7 +3,8 @@ import {
   getImageKey,
   imageTargetKey,
   isImageTarget,
-  mapImageLikeSummaries
+  mapImageLikeSummaries,
+  sumImageLikeCounts
 } from '../public/assets/js/src/images/likes.js';
 import { isValidSocialUrl } from '../public/assets/js/src/config/social.js';
 
@@ -48,6 +49,15 @@ describe('image engagement helpers', () => {
     const row = summary.get(imageTargetKey(target));
     expect(row?.count || 0).toBe(0);
     expect(row?.liked || false).toBe(false);
+  });
+
+  test('sums unique detail-image likes for one homepage theme', () => {
+    const summary = mapImageLikeSummaries([
+      { image_key: 'images/detail-1.webp', like_count: 2, liked: false },
+      { image_key: 'images/detail-2.webp', like_count: 5, liked: true }
+    ]);
+    expect(sumImageLikeCounts(summary, ['images/detail-1.webp', 'images/detail-2.webp'])).toBe(7);
+    expect(sumImageLikeCounts(summary, ['images/detail-1.webp', 'images/detail-1.webp'])).toBe(2);
   });
 
   test('accepts only empty or HTTP(S) social links', () => {

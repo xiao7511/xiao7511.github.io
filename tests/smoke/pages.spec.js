@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 const contentId = 'd9428888-122b-4f20-9f6c-25789ab0a123';
 const imageUrl = 'http://127.0.0.1:4173/storage/v1/object/public/images/IMG_4893.webp';
 const imageKey = 'images/IMG_4893.webp';
+const secondDetailImageUrl = 'http://127.0.0.1:4173/storage/v1/object/public/images/IMG_4873.webp';
+const secondDetailImageKey = 'images/IMG_4873.webp';
 const contentRecord = {
   id: contentId,
   category: 'anime',
@@ -12,7 +14,7 @@ const contentRecord = {
   published_at: '2024-08-18T00:00:00Z',
   theme_tags: ['冒险'],
   cover_url: imageUrl,
-  detail_urls: [imageUrl]
+  detail_urls: [imageUrl, secondDetailImageUrl]
 };
 
 async function mockRuntime(
@@ -94,8 +96,17 @@ async function mockRuntime(
                 from: query,
                 rpc: async (name, args) => {
                   if (name === 'get_image_like_summary') {
-                    if (!args.p_image_keys.includes('${imageKey}')) return { data: [], error: null };
-                    return { data: [{ image_key: '${imageKey}', like_count: imageLiked ? 1 : 0, liked: imageLiked }], error: null };
+                    return {
+                      data: [
+                        ...(args.p_image_keys.includes('${imageKey}')
+                          ? [{ image_key: '${imageKey}', like_count: imageLiked ? 1 : 0, liked: imageLiked }]
+                          : []),
+                        ...(args.p_image_keys.includes('${secondDetailImageKey}')
+                          ? [{ image_key: '${secondDetailImageKey}', like_count: 4, liked: false }]
+                          : [])
+                      ],
+                      error: null
+                    };
                   }
                   if (name === 'toggle_image_like') {
                     if (args.p_image_key !== '${imageKey}') return { data: null, error: { message: 'invalid image key' } };
@@ -178,10 +189,17 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#manga-container .card')).toHaveCount(6);
   await expect(page.locator('#anime-container .card__type').first()).toHaveText('动漫');
   await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
-  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
+  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('4');
+  await expect(page.locator('#anime-container .image-like-button--inline').first()).toHaveAttribute(
+    'data-image-like-summary-keys',
+    JSON.stringify([imageKey, secondDetailImageKey])
+  );
   await expect(page.locator('#anime-container .image-like-button--overlay')).toHaveCount(0);
   const inlineLike = page.locator('#anime-container .image-like-button--inline').first();
   await expect(inlineLike).toBeVisible();
+  await inlineLike.click();
+  await expect(inlineLike).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('5');
   const [mediaBounds, likeBounds] = await Promise.all([
     page.locator('#anime-container .card__media').first().boundingBox(),
     inlineLike.boundingBox()

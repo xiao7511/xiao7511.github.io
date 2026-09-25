@@ -35,3 +35,7 @@ export function imageTargetKey(target) {
 export function mapImageLikeSummaries(rows = []) {
   return new Map(rows.map((row) => [row.image_key, { count: Number(row.like_count) || 0, liked: Boolean(row.liked) }]));
 }
+
+export function sumImageLikeCounts(summaries, imageKeys = []) {
+  return [...new Set(imageKeys)].reduce((total, imageKey) => total + (summaries.get(imageKey)?.count || 0), 0);
+}

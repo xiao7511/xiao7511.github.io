@@ -3,6 +3,7 @@ import { togglePostLike } from './src/community/likes.js';
 import { groupLikesByPostId } from './src/community/posts.js';
 import { element, setContentState, setImageSource, setLoadingState } from './src/components/dom.js';
 import { initSiteHeader, updateCopyrightYear } from './src/components/header.js';
+import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
 
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
@@ -1763,6 +1764,11 @@ document.addEventListener('DOMContentLoaded', () => {
       slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
+        const detailImageKeys = [
+          ...new Set(
+            (Array.isArray(slot.detail_urls) ? slot.detail_urls : []).map((url) => getImageKey(url)).filter(Boolean)
+          )
+        ];
         const image = element('img', {
           attributes: {
             alt: slot.title ? `${slot.title}封面` : '作品封面',
@@ -1802,7 +1808,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   element('button', {
                     className: 'image-like-button image-like-button--inline',
                     attributes: {
-                      type: 'button', 'data-image-like': '', 'aria-label': '点赞这张封面', 'aria-pressed': 'false'
+                      type: 'button',
+                      'data-image-like': '',
+                      'data-image-like-summary-keys': JSON.stringify(detailImageKeys),
+                      'aria-label': '点赞该主题，数字为详情图片总点赞量',
+                      'aria-pressed': 'false'
                     }
                   }, [
                     element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
