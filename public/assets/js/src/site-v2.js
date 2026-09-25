@@ -188,6 +188,20 @@ function getLikeSummaryKeys(button) {
   }
 }
 
+function getRankingSummaryKeys(item) {
+  try {
+    const keys = JSON.parse(item?.dataset.rankingLikeKeys || '[]');
+    return Array.isArray(keys) ? keys.filter((key) => typeof key === 'string' && key) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function formatCompactCount(value) {
+  const count = Number(value) || 0;
+  return count >= 10000 ? `${(count / 10000).toFixed(count >= 100000 ? 0 : 1)}万` : String(count);
+}
+
 function applyLikeState(image, count, liked) {
   const normalizedCount = Number(count) || 0;
   image.dataset.likeCount = String(normalizedCount);
@@ -240,8 +254,12 @@ async function toggleImageLike(image, button) {
 async function refreshLikeSummaries() {
   if (!features.imageLikes) return;
   const images = [...document.querySelectorAll('img[data-content-id][data-image-kind]')];
+  const rankingItems = [...document.querySelectorAll('[data-ranking-like-keys]')];
   const targets = images.map(getImageTarget).filter(Boolean);
-  const summaryKeys = images.flatMap((image) => getLikeSummaryKeys(getImageLikeButton(image)));
+  const summaryKeys = [
+    ...images.flatMap((image) => getLikeSummaryKeys(getImageLikeButton(image))),
+    ...rankingItems.flatMap(getRankingSummaryKeys)
+  ];
   const imageKeys = [...new Set([...targets.map((target) => target.imageKey), ...summaryKeys])].sort();
   const signature = imageKeys.join(',') + ':' + images.length;
   if (!imageKeys.length || signature === lastLikeTargetSignature) return;
@@ -261,6 +279,29 @@ async function refreshLikeSummaries() {
       const displayedCount = aggregateKeys.length ? sumImageLikeCounts(summaries, aggregateKeys) : row?.count || 0;
       applyLikeState(image, displayedCount, row?.liked || false);
     });
+    rankingItems.forEach((item) => {
+      const count = sumImageLikeCounts(summaries, getRankingSummaryKeys(item));
+      item.dataset.rankingLikeCount = String(count);
+      const countNode = item.querySelector('[data-ranking-like-count]');
+      if (countNode) countNode.textContent = `♡ ${formatCompactCount(count)}`;
+    });
+    const rankingList = document.getElementById('ranking-container');
+    if (rankingList && rankingItems.length) {
+      rankingItems
+        .sort(
+          (a, b) =>
+            Number(b.dataset.rankingLikeCount) - Number(a.dataset.rankingLikeCount) ||
+            Number(a.dataset.rankingOrder) - Number(b.dataset.rankingOrder)
+        )
+        .forEach((item, index) => {
+          const number = item.querySelector('.ranking-item__number');
+          if (number) {
+            number.className = `ranking-item__number ranking-item__number--${index + 1}`;
+            number.textContent = String(index + 1);
+          }
+          rankingList.append(item);
+        });
+    }
   } catch (_) {
     lastLikeTargetSignature = '';
   }

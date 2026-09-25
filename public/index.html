@@ -44,10 +44,11 @@
       <a href="community.html" class="nav__link">社区</a>
     </nav>
     <form class="site-search" action="recommend.html" role="search">
-      <label class="sr-only" for="site-search-input">搜索动漫、角色或作品</label>
-      <input id="site-search-input" name="q" type="search" placeholder="搜索动漫、角色或作品…">
+      <label class="sr-only" for="site-search-input">搜索动漫、漫画、角色、作者</label>
+      <input id="site-search-input" name="q" type="search" placeholder="搜索动漫、漫画、角色、作者…">
       <button type="submit" aria-label="搜索">⌕</button>
     </form>
+    <button class="mobile-search-toggle" type="button" aria-label="打开搜索" aria-expanded="false" aria-controls="site-search-input">⌕</button>
     <button id="user-btn" class="nav__button account-control" type="button" aria-label="登录或注册"><span class="account-control__label">登录</span></button>
     <div id="admin-entrance-wrapper" hidden><a href="admin.html" class="admin-entrance-btn">控制台</a></div>
   </header>
@@ -66,12 +67,13 @@
         </div>
       </div>
       <div class="hero__content">
-        <p class="eyebrow">本周编辑精选</p>
-        <h1>动漫，<br>让世界更温柔</h1>
-        <p class="hero__text">在光影交错的故事里，找到属于你的那份感动。</p>
+        <p class="eyebrow" data-hero-eyebrow>本周编辑精选</p>
+        <h1 data-hero-title>动漫，<br>让世界更温柔</h1>
+        <p class="hero__text" data-hero-description>在光影交错的故事里，找到属于你的那份感动。</p>
+        <div class="hero__tags" data-hero-tags hidden></div>
         <div class="hero__actions">
-          <a class="hero__button hero__button--primary" href="recommend.html">▶&nbsp; 立即探索</a>
-          <a class="hero__button" href="#recommend-title">♡&nbsp; 浏览收藏</a>
+          <a class="hero__button hero__button--primary" data-hero-primary href="recommend.html">▶&nbsp; 立即观看</a>
+          <a class="hero__button" data-hero-detail href="recommend.html">查看详情</a>
         </div>
       </div>
       <div class="hero__controls" role="group" aria-label="轮播图手动控制">
@@ -82,6 +84,7 @@
     </section>
 
     <div class="home-content">
+      <div class="home-main">
       <section class="section" aria-labelledby="recommend-title">
         <div class="section__head section__head--row">
           <div><h2 id="recommend-title"><span aria-hidden="true">🔥</span> 本季热门</h2><p>大家都在看的精彩作品</p></div>
@@ -94,29 +97,44 @@
 
       <section class="section" aria-labelledby="manga-title">
         <div class="section__head section__head--row">
-          <div><h2 id="manga-title"><span aria-hidden="true">👑</span> 新番推荐</h2><p>不容错过的最新内容</p></div>
-          <a class="section__more" href="manga.html">查看全部 <span aria-hidden="true">›</span></a>
+          <div><h2 id="manga-title"><span aria-hidden="true">★</span> 新番推荐</h2><p>不容错过的最新内容</p></div>
+          <a class="section__more" href="recommend.html">查看全部 <span aria-hidden="true">›</span></a>
         </div>
         <div class="cards" id="manga-container">
           <div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><div class="skeleton skeleton--card" aria-hidden="true"></div><span class="sr-only" role="status">正在加载新番推荐</span>
         </div>
       </section>
 
-      <aside class="discovery" aria-label="发现更多作品">
-        <div><strong>有些故事，<br>看过之后，世界都会不一样。</strong></div>
-        <a href="recommend.html">发现更多<br><span>值得喜欢的作品&nbsp; →</span></a>
+      <section class="section section--updates" aria-labelledby="updates-title">
+        <div class="section__head section__head--row">
+          <div><h2 id="updates-title"><span aria-hidden="true">◷</span> 最近更新</h2><p>追上刚刚更新的精彩内容</p></div>
+        </div>
+        <div class="update-grid" id="updates-container"><div class="skeleton skeleton--update" aria-hidden="true"></div><div class="skeleton skeleton--update" aria-hidden="true"></div><div class="skeleton skeleton--update" aria-hidden="true"></div><div class="skeleton skeleton--update" aria-hidden="true"></div><span class="sr-only" role="status">正在加载最近更新</span></div>
+      </section>
+      </div>
+
+      <aside class="home-sidebar" aria-label="排行榜与最新资讯">
+        <section class="sidebar-panel" aria-labelledby="ranking-title">
+          <div class="sidebar-panel__head"><h2 id="ranking-title"><span aria-hidden="true">🏆</span> 人气排行榜</h2></div>
+          <div class="ranking-tabs" role="tablist" aria-label="排行榜时间范围"><button type="button" role="tab" aria-selected="false" disabled title="当前数据源暂不提供分时统计">本周</button><button type="button" role="tab" aria-selected="false" disabled title="当前数据源暂不提供分时统计">本月</button><button class="is-active" type="button" role="tab" aria-selected="true">总榜</button></div>
+          <ol class="ranking-list" id="ranking-container"><li class="skeleton skeleton--ranking" aria-hidden="true"></li><li class="skeleton skeleton--ranking" aria-hidden="true"></li><li class="skeleton skeleton--ranking" aria-hidden="true"></li></ol>
+        </section>
+        <section class="sidebar-panel" aria-labelledby="news-title">
+          <div class="sidebar-panel__head"><h2 id="news-title"><span aria-hidden="true">📢</span> 最新资讯</h2></div>
+          <div class="news-list" id="news-container"><div class="skeleton skeleton--news" aria-hidden="true"></div><div class="skeleton skeleton--news" aria-hidden="true"></div><div class="skeleton skeleton--news" aria-hidden="true"></div></div>
+        </section>
       </aside>
     </div>
   </main>
 
   <footer class="site-footer">
     <div class="site-footer__inner">
-      <div class="footer-brand"><strong><span class="footer-brand__name">NOBI</span><span class="footer-brand__tagline">STUDIO</span></strong><small>动漫连接热爱<br>也连接你我</small></div>
+      <div class="footer-brand"><strong><span class="footer-brand__name">NOBI</span><span class="footer-brand__tagline">动漫</span></strong><small>喜欢动漫的人，都在这里。</small></div>
       <nav class="footer-nav" aria-label="页脚导航">
-        <span class="footer-column-title">页面导航</span>
-        <div class="footer-nav__links"><a href="index.html">首页</a><a href="recommend.html">动漫库</a><a href="manga.html">漫画库</a><a href="community.html">社区</a><a href="mailto:xiao.ye751111@outlook.com">联系我们</a></div>
+        <span class="footer-column-title">了解 NOBI</span>
+        <div class="footer-nav__links"><a href="index.html#about">关于我们</a><a href="index.html#terms">使用条款</a><a href="index.html#privacy">隐私政策</a><a href="index.html#links">友情链接</a><a href="mailto:xiao.ye751111@outlook.com">联系我们</a></div>
       </nav>
-      <div class="footer-social-slot" hidden><span class="footer-column-title">社交媒体</span></div>
+      <div class="footer-social-slot" hidden><span class="footer-column-title">关注我们</span></div>
     </div>
     <p class="copyright">© <span data-current-year>2026</span> NOBI 动漫 · nobistudio.com</p>
   </footer>

@@ -25,6 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const carouselCounter = document.querySelector('.hero__pagination b');
   const carouselPrevious = document.querySelector('.hero__control--prev');
   const carouselNext = document.querySelector('.hero__control--next');
+  const heroEyebrow = document.querySelector('[data-hero-eyebrow]');
+  const heroTitle = document.querySelector('[data-hero-title]');
+  const heroDescription = document.querySelector('[data-hero-description]');
+  const heroTags = document.querySelector('[data-hero-tags]');
+  const heroDetail = document.querySelector('[data-hero-detail]');
+  const heroFallback = {
+    eyebrow: heroEyebrow?.textContent || '',
+    title: heroTitle?.textContent || '',
+    description: heroDescription?.textContent || ''
+  };
   const userButton = document.getElementById('user-btn');
   const modal = document.getElementById('auth-modal');
   const modalClose = document.getElementById('modal-close');
@@ -46,6 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const avatarOptions = Array.from(document.querySelectorAll('.avatar-option'));
   initSiteHeader();
   updateCopyrightYear();
+  document.querySelector('.ranking-tabs')?.addEventListener('click', (event) => {
+    const tab = event.target.closest('[role="tab"]');
+    if (!tab || tab.disabled) return;
+    document.querySelectorAll('.ranking-tabs [role="tab"]').forEach((item) => {
+      const active = item === tab;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+  });
   const modalController = createModalController(modal);
 
   // 寻找 const avatarOptions = Array.from(document.querySelectorAll('.avatar-option')); 在下方添加： 20260614
@@ -76,6 +95,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carouselCounter) {
       carouselCounter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(carouselSlides.length).padStart(2, '0')}`;
     }
+    const activeSlide = carouselSlides[index];
+    if (heroEyebrow) heroEyebrow.textContent = activeSlide.dataset.eyebrow || heroFallback.eyebrow;
+    if (heroTitle) heroTitle.textContent = activeSlide.dataset.title || heroFallback.title;
+    if (heroDescription) heroDescription.textContent = activeSlide.dataset.description || heroFallback.description;
+    const tags = JSON.parse(activeSlide.dataset.tags || '[]');
+    if (heroTags) {
+      heroTags.replaceChildren(...tags.map((tag) => element('span', { text: tag })));
+      heroTags.hidden = !tags.length;
+    }
+    if (heroDetail) heroDetail.href = activeSlide.dataset.detailUrl || 'recommend.html';
     currentSlideIndex = index;
   }
 
@@ -146,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.supabaseClient) {
         const { data, error } = await window.supabaseClient
           .from('content_management')
-          .select('id, slot_index, cover_url')
+          .select('*')
           .eq('category', 'banner')
           .order('slot_index', { ascending: true });
 
@@ -179,11 +208,17 @@ document.addEventListener('DOMContentLoaded', () => {
               imgElement.dataset.imageUrl = source;
               imgElement.dataset.previewImage = '';
             }
+            const tags = Array.isArray(record?.theme_tags) ? record.theme_tags.filter(Boolean).slice(0, 4) : [];
+            slide.dataset.eyebrow = record?.year ? `${record.year} · 新番` : '';
+            slide.dataset.title = record?.title || '';
+            slide.dataset.description = record?.subtitle || '';
+            slide.dataset.tags = JSON.stringify(tags);
           } else {
             setImageSource(imgElement, fallbackImages.section_banner[index] || imgElement.src);
           }
         }
       });
+      showSlide(currentSlideIndex);
     } catch (err) {
       console.warn('正在平滑切换回本地备份图层呈现。');
     }
@@ -1731,6 +1766,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadHomeContent() {
+    const ANIME_FALLBACK = 'images/nobi-anime-placeholder.svg';
     const createDetailUrl = (item) => {
       const category = String(item?.category || '');
       const slot = String(item?.slot_index ?? '');
@@ -1750,7 +1786,27 @@ document.addEventListener('DOMContentLoaded', () => {
       return '--';
     };
 
-    const getCategoryLabel = (item) => (item?.category === 'manga' ? '漫画' : '动漫');
+    const getCategoryLabel = (item) => {
+      const tags = Array.isArray(item?.theme_tags) ? item.theme_tags.filter(Boolean).slice(0, 2) : [];
+      return tags.join(' · ') || (item?.category === 'manga' ? '漫画' : '动漫');
+    };
+
+    const getTimestamp = (item) => {
+      for (const field of ['updated_at', 'published_at', 'release_date', 'publish_date', 'created_at']) {
+        const timestamp = Date.parse(item?.[field] || '');
+        if (Number.isFinite(timestamp)) return timestamp;
+      }
+      return 0;
+    };
+
+    const formatDate = (item) => {
+      const timestamp = getTimestamp(item);
+      return timestamp ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(timestamp) : '';
+    };
+
+    const detailLikeKeys = (item) => [
+      ...new Set((Array.isArray(item?.detail_urls) ? item.detail_urls : []).map((url) => getImageKey(url)).filter(Boolean))
+    ];
 
     const renderCategory = (container, slots, emptyMessage) => {
       if (!container) return;
@@ -1764,11 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
       slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
-        const detailImageKeys = [
-          ...new Set(
-            (Array.isArray(slot.detail_urls) ? slot.detail_urls : []).map((url) => getImageKey(url)).filter(Boolean)
-          )
-        ];
+        const detailImageKeys = detailLikeKeys(slot);
         const image = element('img', {
           attributes: {
             alt: slot.title ? `${slot.title}封面` : '作品封面',
@@ -1782,7 +1834,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'data-detail-url': detailUrl
           }
         });
-        setImageSource(image, slot.cover_url, 'images/IMG_4893.webp');
+        setImageSource(image, slot.cover_url, ANIME_FALLBACK);
         container.append(
           element(
             'article',
@@ -1802,8 +1854,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
                 element('div', { className: 'card__meta' }, [
                   element('span', { className: 'card__meta-group' }, [
-                    element('span', { className: 'card__type', text: getCategoryLabel(slot) }),
-                    element('span', { className: 'card__year', text: getPublishYear(slot) })
+                    element('span', { className: 'card__year', text: getPublishYear(slot) }),
+                    element('span', { className: 'card__type', text: getCategoryLabel(slot) })
                   ]),
                   element('button', {
                     className: 'image-like-button image-like-button--inline',
@@ -1832,8 +1884,65 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
+    const renderUpdates = (container, records) => {
+      if (!container) return;
+      const items = records.filter((item) => createDetailUrl(item)).sort((a, b) => getTimestamp(b) - getTimestamp(a)).slice(0, 6);
+      if (!items.length) {
+        setContentState(container, { message: '暂时没有更新内容。' });
+        return;
+      }
+      container.replaceChildren(...items.map((item) => {
+        const image = element('img', { attributes: { alt: item.title ? `${item.title}缩略图` : '作品缩略图', loading: 'lazy', decoding: 'async', width: '320', height: '180' } });
+        setImageSource(image, item.cover_url, ANIME_FALLBACK);
+        const text = [element('h3', { text: item.title || '未命名作品' })];
+        if (item.subtitle) text.push(element('p', { text: item.subtitle }));
+        const date = formatDate(item);
+        if (date) text.push(element('time', { text: `${date} 更新`, attributes: { datetime: new Date(getTimestamp(item)).toISOString() } }));
+        return element('a', { className: 'update-card', attributes: { href: createDetailUrl(item) } }, [element('div', { className: 'update-card__media' }, [image]), element('div', { className: 'update-card__body' }, text)]);
+      }));
+    };
+
+    const renderRanking = (container, records) => {
+      if (!container) return;
+      const items = records.filter((item) => createDetailUrl(item)).slice(0, 5);
+      if (!items.length) {
+        container.replaceChildren(element('li', { className: 'content-state', text: '暂无排行数据' }));
+        return;
+      }
+      container.replaceChildren(...items.map((item, index) => {
+        const image = element('img', { attributes: { alt: '', loading: 'lazy', decoding: 'async', width: '96', height: '128' } });
+        setImageSource(image, item.cover_url, ANIME_FALLBACK);
+        return element('li', { className: 'ranking-item', attributes: { 'data-ranking-like-keys': JSON.stringify(detailLikeKeys(item)), 'data-ranking-order': index } }, [
+          element('span', { className: `ranking-item__number ranking-item__number--${index + 1}`, text: index + 1 }),
+          element('a', { className: 'ranking-item__media', attributes: { href: createDetailUrl(item), 'aria-label': `查看${item.title || '作品'}详情` } }, [image]),
+          element('div', { className: 'ranking-item__body' }, [element('a', { className: 'ranking-item__title', text: item.title || '未命名作品', attributes: { href: createDetailUrl(item) } }), element('span', { className: 'ranking-item__tag', text: getCategoryLabel(item) }), element('span', { className: 'ranking-item__likes', text: '♡ 0', attributes: { 'data-ranking-like-count': '' } })])
+        ]);
+      }));
+    };
+
+    const renderNews = (container, records) => {
+      if (!container) return;
+      const items = records.filter((item) => createDetailUrl(item)).sort((a, b) => getTimestamp(b) - getTimestamp(a)).slice(0, 4);
+      if (!items.length) {
+        setContentState(container, { message: '暂无最新资讯。' });
+        return;
+      }
+      container.replaceChildren(...items.map((item) => {
+        const image = element('img', { attributes: { alt: '', loading: 'lazy', decoding: 'async', width: '120', height: '80' } });
+        setImageSource(image, item.cover_url, ANIME_FALLBACK);
+        const body = [element('h3', { text: item.title || '未命名作品' })];
+        if (item.subtitle) body.push(element('p', { text: item.subtitle }));
+        const date = formatDate(item);
+        if (date) body.push(element('time', { text: date, attributes: { datetime: new Date(getTimestamp(item)).toISOString() } }));
+        return element('a', { className: 'news-item', attributes: { href: createDetailUrl(item) } }, [image, element('div', { className: 'news-item__body' }, body)]);
+      }));
+    };
+
     const animeContainer = document.getElementById('anime-container');
     const mangaContainer = document.getElementById('manga-container');
+    const updatesContainer = document.getElementById('updates-container');
+    const rankingContainer = document.getElementById('ranking-container');
+    const newsContainer = document.getElementById('news-container');
     if (animeContainer) setLoadingState(animeContainer, { count: 6, variant: 'card', label: '正在加载热门动漫' });
     if (mangaContainer) setLoadingState(mangaContainer, { count: 6, variant: 'card', label: '正在加载漫画连载' });
 
@@ -1843,19 +1952,25 @@ document.addEventListener('DOMContentLoaded', () => {
       if (error) throw error;
 
       const records = Array.isArray(managementData) ? managementData : [];
+      const animeRecords = records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index);
+      const mangaRecords = records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index);
+      const catalogRecords = [...animeRecords, ...mangaRecords];
       renderCategory(
         animeContainer,
-        records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index),
+        animeRecords,
         '暂时没有动漫推荐，稍后再来看看吧。'
       );
       renderCategory(
         mangaContainer,
-        records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index),
+        mangaRecords,
         '暂时没有漫画连载，稍后再来看看吧。'
       );
+      renderUpdates(updatesContainer, catalogRecords);
+      renderRanking(rankingContainer, catalogRecords);
+      renderNews(newsContainer, catalogRecords);
     } catch (error) {
       console.error('主页动态数据加载失败:', error);
-      [animeContainer, mangaContainer].filter(Boolean).forEach((container) => {
+      [animeContainer, mangaContainer, updatesContainer, rankingContainer, newsContainer].filter(Boolean).forEach((container) => {
         setContentState(container, {
           message: '内容加载失败，请检查网络后重试。',
           kind: 'error',

@@ -4,6 +4,7 @@
   const TRUSTED_IMAGE_HOSTS = new Set([
     window.location.hostname,
     'api.dicebear.com',
+    'api.nobistudio.com',
     'www.nobistudio.com',
     'nobistudio.com'
   ]);

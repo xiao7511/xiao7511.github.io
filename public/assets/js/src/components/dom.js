@@ -1,4 +1,10 @@
-const TRUSTED_IMAGE_HOSTS = new Set([location.hostname, 'api.dicebear.com', 'www.nobistudio.com', 'nobistudio.com']);
+const TRUSTED_IMAGE_HOSTS = new Set([
+  location.hostname,
+  'api.dicebear.com',
+  'api.nobistudio.com',
+  'www.nobistudio.com',
+  'nobistudio.com'
+]);
 
 for (const origin of [window.SiteConfig?.siteOrigin, window.SiteConfig?.apiOrigin]) {
   try {
@@ -8,7 +14,7 @@ for (const origin of [window.SiteConfig?.siteOrigin, window.SiteConfig?.apiOrigi
   }
 }
 
-export function safeImageUrl(value, fallback = '') {
+export function normalizeImageUrl(value, fallback = '') {
   try {
     const url = new URL(String(value || ''), location.href);
     const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
@@ -18,6 +24,8 @@ export function safeImageUrl(value, fallback = '') {
     return fallback;
   }
 }
+
+export const safeImageUrl = normalizeImageUrl;
 
 export function element(tag, options = {}, children = []) {
   const node = document.createElement(tag);

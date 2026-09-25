@@ -187,9 +187,13 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#anime-container .card').first(), messages.join('\n')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('#anime-container .card')).toHaveCount(6);
   await expect(page.locator('#manga-container .card')).toHaveCount(6);
-  await expect(page.locator('#anime-container .card__type').first()).toHaveText('动漫');
+  await expect(page.locator('#anime-container .card__type').first()).toHaveText('冒险');
   await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
   await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('4');
+  await expect(page.locator('#updates-container .update-card')).toHaveCount(6);
+  await expect(page.locator('#ranking-container .ranking-item')).toHaveCount(5);
+  await expect(page.locator('#ranking-container .ranking-item').first()).toContainText('♡ 4');
+  await expect(page.locator('#news-container .news-item')).toHaveCount(4);
   await expect(page.locator('#anime-container .image-like-button--inline').first()).toHaveAttribute(
     'data-image-like-summary-keys',
     JSON.stringify([imageKey, secondDetailImageKey])
@@ -246,7 +250,7 @@ test('home hero aligns with the content rail and configured social icons render 
   const social = page.locator('.footer-social');
   await expect(social.locator('.footer-social__link')).toHaveCount(4);
   await expect(social).toBeVisible();
-  await expect(page.locator('.footer-social-slot')).toContainText('社交媒体');
+  await expect(page.locator('.footer-social-slot')).toContainText('关注我们');
   await expect(page.locator('.footer-social-slot .footer-social')).toHaveCount(1);
   await expect(social.locator('[data-social-platform="xiaohongshu"]')).toHaveCSS('color', 'rgb(255, 36, 66)');
   await expect(social.locator('[data-social-platform="weibo"]')).toHaveCSS('color', 'rgb(230, 22, 45)');
@@ -363,12 +367,15 @@ test('detail images expose persistent overlay likes and still open in the access
 });
 
 for (const viewport of [
-  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6, heroMin: 499, heroMax: 501 },
-  { name: 'desktop-lg', width: 1440, height: 900, columns: 6, heroMin: 452, heroMax: 455 },
-  { name: 'desktop', width: 1366, height: 768, columns: 6, heroMin: 429, heroMax: 432 },
-  { name: 'laptop', width: 1024, height: 768, columns: 4, heroMin: 398, heroMax: 401 },
-  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 367, heroMax: 369 },
-  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 359, heroMax: 361 }
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6, heroMin: 429, heroMax: 431 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 6, heroMin: 402, heroMax: 405 },
+  { name: 'desktop-compact', width: 1280, height: 800, columns: 6, heroMin: 357, heroMax: 360 },
+  { name: 'desktop', width: 1366, height: 768, columns: 6, heroMin: 381, heroMax: 384 },
+  { name: 'laptop', width: 1024, height: 768, columns: 3, heroMin: 347, heroMax: 350 },
+  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 299, heroMax: 302 },
+  { name: 'mobile-wide', width: 430, height: 932, columns: 2, heroMin: 290, heroMax: 293 },
+  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 272, heroMax: 275 },
+  { name: 'mobile-compact', width: 375, height: 812, columns: 2, heroMin: 261, heroMax: 264 }
 ]) {
   test(`home rails stay aligned and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
     await mockRuntime(page, { features: true });
@@ -430,21 +437,22 @@ for (const viewport of [
       };
     });
     expect(layout.overflow).toBeLessThanOrEqual(1);
-    const expectedGutter = viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1320) / 2));
+    const expectedGutter = viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1440) / 2));
     expect(Math.round(layout.heroLeft)).toBe(expectedGutter);
     expect(Math.round(layout.viewport - layout.heroRight)).toBe(expectedGutter);
-    expect(Math.round(layout.headerLeft)).toBe(expectedGutter);
-    expect(Math.round(layout.viewport - layout.headerRight)).toBe(expectedGutter);
+    expect(Math.round(layout.headerLeft)).toBe(0);
+    expect(Math.round(layout.viewport - layout.headerRight)).toBe(0);
     expect(Math.round(layout.homeContentLeft)).toBe(expectedGutter);
     expect(Math.round(layout.viewport - layout.homeContentRight)).toBe(expectedGutter);
     expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
-    expect(layout.headerPosition).toBe('relative');
-    expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerHeroGap).toBeCloseTo(0, 0);
+    expect(layout.headerPosition).toBe('sticky');
+    expect(layout.headerBackground).not.toBe('rgba(0, 0, 0, 0)');
+    expect(layout.headerHeroGap).toBeGreaterThanOrEqual(11);
+    expect(layout.headerHeroGap).toBeLessThanOrEqual(21);
     expect(layout.columns).toBe(viewport.columns);
-    expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
-    expect(layout.cardMediaRatio).toBeLessThan(1.35);
+    expect(layout.cardMediaRatio).toBeGreaterThan(0.65);
+    expect(layout.cardMediaRatio).toBeLessThan(0.68);
     expect(layout.controlsInside).toBe(true);
     expect(layout.previousControlNearLeft).toBe(true);
     expect(layout.nextControlNearRight).toBe(true);
