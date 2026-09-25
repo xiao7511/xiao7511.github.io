@@ -25,7 +25,9 @@ describe('community likes modules', () => {
       rpc
     };
     await expect(togglePostLike(client, { postId: 42, isLiked: false })).resolves.toMatchObject({
-      authenticated: true
+      authenticated: true,
+      liked: true,
+      likeCount: 3
     });
     expect(rpc).toHaveBeenCalledWith('toggle_post_like', { p_post_id: 42, p_remove: false });
   });

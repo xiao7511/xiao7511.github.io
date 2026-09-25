@@ -35,5 +35,11 @@ export async function togglePostLike(client, { postId, isLiked }) {
     throw result.error;
   }
 
-  return { authenticated: true, user: authState.session.user };
+  const row = Array.isArray(result.data) ? result.data[0] : result.data;
+  return {
+    authenticated: true,
+    user: authState.session.user,
+    liked: typeof row?.liked === 'boolean' ? row.liked : !isLiked,
+    likeCount: Number.isFinite(Number(row?.like_count)) ? Number(row.like_count) : null
+  };
 }

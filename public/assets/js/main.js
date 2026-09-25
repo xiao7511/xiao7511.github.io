@@ -1098,6 +1098,35 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 2. 渲染主贴、回复与分页
+  const createForumAvatar = (value, className, label) => {
+    const image = element('img', {
+      className: `post-avatar ${className}`,
+      attributes: { alt: label, loading: 'lazy', decoding: 'async' }
+    });
+    setImageSource(image, value, 'images/nobi-avatar.svg');
+    return image;
+  };
+
+  const createReplyItem = (reply) => {
+    const replyHeader = element('div', { className: 'reply-header' }, [
+      createForumAvatar(
+        reply.avatar_url || reply.avatar,
+        'post-avatar--tiny',
+        `${reply.nickname || '社区用户'}的头像`
+      ),
+      element('span', { className: 'reply-author', text: reply.nickname || '热心网友' }),
+      element('time', {
+        className: 'reply-time',
+        text: new Date(reply.created_at).toLocaleTimeString(),
+        attributes: { datetime: reply.created_at }
+      })
+    ]);
+    return element('div', { className: 'reply-item' }, [
+      replyHeader,
+      element('div', { className: 'reply-content', text: reply.content })
+    ]);
+  };
+
   async function fetchPosts() {
     if (!postsList) return;
 
@@ -1157,18 +1186,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const postCard = element('article', { className: 'post-card' });
         const likedUserIds = likesByPostId.get(post.id) || [];
         const isLiked = Boolean(currentUser && likedUserIds.includes(currentUser.id));
-        const createAvatar = (value, className, label) => {
-          const image = element('img', {
-            className: `post-avatar ${className}`,
-            attributes: { alt: label, loading: 'lazy', decoding: 'async' }
-          });
-          setImageSource(image, value, 'images/nobi-avatar.svg');
-          return image;
-        };
-
         const header = element('div', { className: 'post-header' });
         header.append(
-          createAvatar(post.avatar_url || post.avatar, 'post-avatar--small', `${post.nickname || '社区用户'}的头像`),
+          createForumAvatar(post.avatar_url || post.avatar, 'post-avatar--small', `${post.nickname || '社区用户'}的头像`),
           element('div', {}, [
             element('div', { className: 'post-author', text: post.nickname || '神秘漫友' }),
             element('time', {
@@ -1185,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const likeButton = element('button', {
           className: `post-action like-action-btn${isLiked ? ' is-liked' : ''}`,
           text: `${isLiked ? '❤️ 已赞' : '🤍 点赞'}（${likedUserIds.length}）`,
-          attributes: { type: 'button', 'aria-pressed': String(isLiked) }
+          attributes: { type: 'button', 'aria-pressed': String(isLiked), 'data-like-count': likedUserIds.length }
         });
         const replyButton = element('button', {
           className: 'post-action reply-action-btn',
@@ -1193,33 +1213,16 @@ document.addEventListener('DOMContentLoaded', () => {
           attributes: {
             type: 'button',
             'aria-expanded': 'false',
-            'aria-controls': `reply-box-${post.id}`
+            'aria-controls': `reply-box-${post.id}`,
+            'data-reply-count': postReplies.length
           }
         });
         actions.append(likeButton, replyButton);
 
         const repliesContainer = element('div', { className: 'replies' });
         postReplies.forEach((reply) => {
-            const replyHeader = element('div', { className: 'reply-header' }, [
-              createAvatar(
-                reply.avatar_url || reply.avatar,
-                'post-avatar--tiny',
-                `${reply.nickname || '社区用户'}的头像`
-              ),
-              element('span', { className: 'reply-author', text: reply.nickname || '热心网友' }),
-              element('time', {
-                className: 'reply-time',
-                text: new Date(reply.created_at).toLocaleTimeString(),
-                attributes: { datetime: reply.created_at }
-              })
-            ]);
-            repliesContainer.append(
-              element('div', { className: 'reply-item' }, [
-                replyHeader,
-                element('div', { className: 'reply-content', text: reply.content })
-              ])
-            );
-          });
+          repliesContainer.append(createReplyItem(reply));
+        });
 
         const replyInput = element('input', {
           className: 'reply-input',
@@ -1244,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         likeButton.addEventListener('click', async () => {
-          await toggleLike(post.id, isLiked);
+          await toggleLike(post.id, likeButton);
         });
         replyButton.addEventListener('click', () => {
           const willOpen = replyBox.hidden;
@@ -1252,7 +1255,9 @@ document.addEventListener('DOMContentLoaded', () => {
           replyButton.setAttribute('aria-expanded', String(willOpen));
           if (willOpen) replyInput.focus();
         });
-        submitReplyButton.addEventListener('click', () => submitReply(post.id, replyInput));
+        submitReplyButton.addEventListener('click', () =>
+          submitReply(post.id, replyInput, repliesContainer, replyButton, submitReplyButton)
+        );
 
         postCard.append(header);
         if (post.title) postCard.append(element('h2', { className: 'post-title', text: post.title }));
@@ -1311,27 +1316,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 🎯 论坛全新架构：Fetch 帖子与二级树状评论渲染
   // ==========================================
-  async function toggleLike(postId, isLiked) {
+  async function toggleLike(postId, button) {
+    const isLiked = button.getAttribute('aria-pressed') === 'true';
+    const previousCount = Number(button.dataset.likeCount) || 0;
+    button.disabled = true;
     try {
       const result = await togglePostLike(window.supabaseClient, { postId, isLiked });
       if (!result.authenticated) {
         alert('登录状态已失效，请重新登录后再试。');
         return;
       }
+      const liked = result.liked;
+      const likeCount = result.likeCount ?? Math.max(0, previousCount + (liked ? 1 : -1));
+      button.dataset.likeCount = String(likeCount);
+      button.classList.toggle('is-liked', liked);
+      button.setAttribute('aria-pressed', String(liked));
+      button.textContent = `${liked ? '❤️ 已赞' : '🤍 点赞'}（${likeCount}）`;
       if ('BroadcastChannel' in window) {
         const channel = new BroadcastChannel('nobi-engagement');
         channel.postMessage({ type: 'post-like-changed' });
         channel.close();
       }
-      await fetchPosts();
     } catch(err) {
       console.error("点赞操作失败:", err);
       alert(`点赞失败，数据库返回: ${err.message} (代码: ${err.code || 'unknown'})`);
+    } finally {
+      button.disabled = false;
     }
   }
 
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  async function submitReply(postId, inputElem) {
+  async function submitReply(postId, inputElem, repliesContainer, replyButton, submitButton) {
     if (!window.supabaseClient) return;
     if (!inputElem) return;
     const content = inputElem.value.trim();
@@ -1340,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session ? session.user : null;
     if (!user) { alert('请先登录后再回复。'); return; }
+    submitButton.disabled = true;
+    submitButton.textContent = '发送中…';
 
     // ✨ 核心修复：回复时也实时获取 profiles 表中的最新昵称和头像
     const { data: profile } = await window.supabaseClient
@@ -1363,11 +1380,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (error) {
       alert(`回复失败: ${error.message}`);
+      submitButton.disabled = false;
+      submitButton.textContent = '发送';
       return;
     }
 
     inputElem.value = '';
-    await fetchPosts(); // 刷新列表以展示最新回复
+    repliesContainer.append(
+      createReplyItem({
+        content,
+        nickname: finalNickname,
+        avatar_url: finalAvatar,
+        created_at: new Date().toISOString()
+      })
+    );
+    const replyCount = (Number(replyButton.dataset.replyCount) || 0) + 1;
+    replyButton.dataset.replyCount = String(replyCount);
+    replyButton.textContent = `💬 回复（${replyCount}）`;
+    submitButton.disabled = false;
+    submitButton.textContent = '发送';
   }
 
  /* window.submitReply = async function(postId) {
@@ -1748,28 +1779,19 @@ document.addEventListener('DOMContentLoaded', () => {
         setImageSource(image, slot.cover_url, 'images/IMG_4893.webp');
         container.append(
           element(
-            'a',
+            'article',
             {
-              className: 'card',
-              attributes: {
-                href: detailUrl,
-                'aria-label': `查看${slot.title || '未命名作品'}详情`
-              }
+              className: 'card'
             },
             [
-              element('div', { className: 'card__media' }, [
-                image,
-                element('button', {
-                  className: 'image-like-button image-like-button--overlay',
-                  attributes: {
-                    type: 'button', 'data-image-like': '', 'aria-label': '点赞这张封面', 'aria-pressed': 'false'
-                  }
-                }, [
-                  element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
-                  element('span', { className: 'sr-only', text: '点赞', attributes: { 'data-image-like-label': '' } }),
-                  element('strong', { className: 'card__like-count', text: '0', attributes: { 'data-image-like-count': '' } })
-                ])
-              ]),
+              element(
+                'a',
+                {
+                  className: 'card__media',
+                  attributes: { href: detailUrl, 'aria-label': `查看${slot.title || '未命名作品'}详情` }
+                },
+                [image]
+              ),
               element('div', { className: 'card__body' }, [
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
                 element('div', { className: 'card__meta' }, [
@@ -1777,7 +1799,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     element('span', { className: 'card__type', text: getCategoryLabel(slot) }),
                     element('span', { className: 'card__year', text: getPublishYear(slot) })
                   ]),
-                  element('span', { className: 'card__engagement-hint', text: '点击封面查看详情' })
+                  element('button', {
+                    className: 'image-like-button image-like-button--inline',
+                    attributes: {
+                      type: 'button', 'data-image-like': '', 'aria-label': '点赞这张封面', 'aria-pressed': 'false'
+                    }
+                  }, [
+                    element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                    element('span', { className: 'sr-only', text: '点赞', attributes: { 'data-image-like-label': '' } }),
+                    element('strong', { className: 'card__like-count', text: '0', attributes: { 'data-image-like-count': '' } })
+                  ])
                 ])
               ])
             ]

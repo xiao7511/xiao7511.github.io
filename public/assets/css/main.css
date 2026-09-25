@@ -435,12 +435,12 @@ main {
   position: relative;
   width: min(calc(100% - 4rem), 82.5rem);
   height: clamp(25rem, 31.5vw, 31.25rem);
-  margin: 1.25rem auto 0;
+  margin: 0 auto;
   overflow: hidden;
   background: #06101b;
-  border: 1px solid rgba(101, 184, 255, 0.16);
+  border: 1px solid rgba(101, 184, 255, 0.06);
   border-radius: 1.25rem;
-  box-shadow: 0 1.5rem 3.5rem rgba(0, 0, 0, 0.28);
+  box-shadow: 0 1.1rem 2.8rem rgba(0, 0, 0, 0.16);
 }
 
 .hero::after {
@@ -1814,6 +1814,31 @@ main {
 .image-like-button.is-liked,
 .detail-like-btn.is-liked {
   color: #c62828;
+}
+
+.home-page .image-like-button--inline {
+  position: static;
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  color: #d9e7f4;
+  background: rgba(101, 184, 255, 0.08);
+  border: 1px solid rgba(101, 184, 255, 0.18);
+  box-shadow: none;
+}
+
+.home-page .image-like-button--inline:hover,
+.home-page .image-like-button--inline:focus-visible {
+  color: #fff;
+  background: rgba(101, 184, 255, 0.16);
+}
+
+.home-page .image-like-button--inline.is-liked {
+  color: #ff91a4;
+  background: rgba(255, 91, 126, 0.12);
+  border-color: rgba(255, 145, 164, 0.28);
 }
 
 .admin-image-item {

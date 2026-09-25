@@ -15,7 +15,18 @@ const contentRecord = {
   detail_urls: [imageUrl]
 };
 
-async function mockRuntime(page, { posts = [], features = false, socialLinks = false, contentCount = 6 } = {}) {
+async function mockRuntime(
+  page,
+  { posts = [], features = false, socialLinks = false, contentCount = 6, sessionUser = null } = {}
+) {
+  const session = sessionUser
+    ? {
+        user: sessionUser,
+        access_token: `test.${Buffer.from(
+          JSON.stringify({ sub: sessionUser.id, role: 'authenticated', exp: 4102444800 })
+        ).toString('base64url')}.signature`
+      }
+    : null;
   const animeRecords = Array.from({ length: contentCount }, (_, index) => ({
     ...contentRecord,
     id: `d9428888-122b-4f20-9f6c-25789ab0a12${index}`,
@@ -55,7 +66,9 @@ async function mockRuntime(page, { posts = [], features = false, socialLinks = f
                 : [])
             ]
           })};
+          const currentSession = ${JSON.stringify(session)};
           let imageLiked = false;
+          let postLiked = false;
           function query(table) {
             let rows = [...(tables[table] || [])];
             let head = false;
@@ -89,12 +102,17 @@ async function mockRuntime(page, { posts = [], features = false, socialLinks = f
                     imageLiked = !imageLiked;
                     return { data: [{ liked: imageLiked, like_count: imageLiked ? 1 : 0 }], error: null };
                   }
+                  if (name === 'toggle_post_like') {
+                    postLiked = !args.p_remove;
+                    return { data: [{ liked: postLiked, like_count: postLiked ? 1 : 0 }], error: null };
+                  }
                   return { data: [], error: null };
                 },
                 auth: {
-                  getSession: async () => ({ data: { session: null }, error: null }),
-                  getUser: async () => ({ data: { user: null }, error: null }),
-                  onAuthStateChange(callback) { queueMicrotask(() => callback('INITIAL_SESSION', null)); return { data: { subscription: { unsubscribe() {} } } }; },
+                  getSession: async () => ({ data: { session: currentSession }, error: null }),
+                  getUser: async () => ({ data: { user: currentSession?.user || null }, error: null }),
+                  refreshSession: async () => ({ data: { session: currentSession }, error: null }),
+                  onAuthStateChange(callback) { queueMicrotask(() => callback('INITIAL_SESSION', currentSession)); return { data: { subscription: { unsubscribe() {} } } }; },
                   signOut: async () => ({ error: null })
                 }
               };
@@ -161,6 +179,14 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#anime-container .card__type').first()).toHaveText('动漫');
   await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
   await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
+  await expect(page.locator('#anime-container .image-like-button--overlay')).toHaveCount(0);
+  const inlineLike = page.locator('#anime-container .image-like-button--inline').first();
+  await expect(inlineLike).toBeVisible();
+  const [mediaBounds, likeBounds] = await Promise.all([
+    page.locator('#anime-container .card__media').first().boundingBox(),
+    inlineLike.boundingBox()
+  ]);
+  expect(likeBounds.y).toBeGreaterThanOrEqual(mediaBounds.y + mediaBounds.height);
 });
 
 test('home keeps six grid positions when fewer than six items are configured', async ({ page }) => {
@@ -262,6 +288,47 @@ test('community loads posts and persistent post-like controls without console er
   expect(errors).toEqual([]);
 });
 
+test('community likes and replies update the current post without rerendering the list', async ({ page }) => {
+  const post = {
+    id: 42,
+    user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+    created_at: '2026-09-21T01:00:00Z',
+    content: '保持当前页面状态的社区帖子。',
+    nickname: 'NOBI 漫友',
+    avatar_url: 'http://127.0.0.1:4173/images/nobi-avatar.svg',
+    title: '局部更新测试',
+    category: '交流',
+    parent_id: null
+  };
+  await mockRuntime(page, {
+    posts: [post],
+    sessionUser: { id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670', email: 'local@example.com' }
+  });
+  await page.goto('/community.html');
+  const postCard = page.locator('#posts-list .post-card').first();
+  await expect(postCard).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(() => {
+    window.__communityPostCard = document.querySelector('#posts-list .post-card');
+  });
+
+  const likeButton = postCard.locator('.like-action-btn');
+  await likeButton.click();
+  await expect(likeButton).toContainText('已赞（1）');
+  expect(
+    await page.evaluate(() => window.__communityPostCard === document.querySelector('#posts-list .post-card'))
+  ).toBe(true);
+
+  await postCard.locator('.reply-action-btn').click();
+  await postCard.locator('.reply-input').fill('这条回复无需刷新页面。');
+  await postCard.locator('.reply-submit').click();
+  await expect(postCard.locator('.reply-item')).toHaveCount(1);
+  await expect(postCard.locator('.reply-content')).toHaveText('这条回复无需刷新页面。');
+  await expect(postCard.locator('.reply-action-btn')).toContainText('回复（1）');
+  expect(
+    await page.evaluate(() => window.__communityPostCard === document.querySelector('#posts-list .post-card'))
+  ).toBe(true);
+});
+
 test('detail images expose persistent overlay likes and still open in the accessible preview', async ({ page }) => {
   await mockRuntime(page, { features: true });
   await page.goto('/detail.html?category=anime&slot=0');
@@ -330,6 +397,7 @@ for (const viewport of [
           document.documentElement.clientWidth <= 768 || previousControl.right <= heroContent.left,
         heroBorderTop: getComputedStyle(heroElement).borderTopWidth,
         heroBorderBottom: getComputedStyle(heroElement).borderBottomWidth,
+        heroBorderColor: getComputedStyle(heroElement).borderTopColor,
         heroBoxShadow: getComputedStyle(heroElement).boxShadow,
         footerColumns: getComputedStyle(footer).gridTemplateColumns.split(' ').length,
         footerNavTops: [...document.querySelectorAll('.footer-nav__links a')].map((link) =>
@@ -355,7 +423,7 @@ for (const viewport of [
     expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
     expect(layout.headerPosition).toBe('relative');
     expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerHeroGap).toBeCloseTo(viewport.width <= 768 ? 0 : 20, 0);
+    expect(layout.headerHeroGap).toBeCloseTo(0, 0);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(1.32);
     expect(layout.cardMediaRatio).toBeLessThan(1.35);
@@ -366,6 +434,7 @@ for (const viewport of [
     expect(layout.previousControlClearOfContent).toBe(true);
     expect(layout.heroBorderTop).toBe('1px');
     expect(layout.heroBorderBottom).toBe('1px');
+    expect(layout.heroBorderColor).toBe('rgba(101, 184, 255, 0.06)');
     expect(layout.heroBoxShadow).not.toBe('none');
     expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
     expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);
