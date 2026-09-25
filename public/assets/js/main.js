@@ -1767,6 +1767,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadHomeContent() {
     const ANIME_FALLBACK = 'images/nobi-anime-placeholder.svg';
+    const markImageOrientation = (image) => {
+      const update = () => {
+        if (!image.naturalWidth || !image.naturalHeight) return;
+        image.dataset.imageOrientation = image.naturalWidth > image.naturalHeight ? 'landscape' : 'portrait';
+      };
+      image.addEventListener('load', update, { once: true });
+      if (image.complete) update();
+    };
     const createDetailUrl = (item) => {
       const category = String(item?.category || '');
       const slot = String(item?.slot_index ?? '');
@@ -1834,6 +1842,7 @@ document.addEventListener('DOMContentLoaded', () => {
             'data-detail-url': detailUrl
           }
         });
+        markImageOrientation(image);
         setImageSource(image, slot.cover_url, ANIME_FALLBACK);
         container.append(
           element(
@@ -1911,6 +1920,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       container.replaceChildren(...items.map((item, index) => {
         const image = element('img', { attributes: { alt: '', loading: 'lazy', decoding: 'async', width: '96', height: '128' } });
+        markImageOrientation(image);
         setImageSource(image, item.cover_url, ANIME_FALLBACK);
         return element('li', { className: 'ranking-item', attributes: { 'data-ranking-like-keys': JSON.stringify(detailLikeKeys(item)), 'data-ranking-order': index } }, [
           element('span', { className: `ranking-item__number ranking-item__number--${index + 1}`, text: index + 1 }),

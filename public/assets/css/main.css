@@ -962,11 +962,6 @@ main {
   background: rgba(255, 102, 142, 0.2);
 }
 
-.ranking-tabs button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 .ranking-list,
 .news-list {
   display: grid;
@@ -1032,6 +1027,11 @@ main {
 }
 
 .ranking-item__likes { color: #ff9bb2; }
+
+.home-page .card__media img[data-image-orientation="landscape"],
+.ranking-item__media img[data-image-orientation="landscape"] {
+  object-fit: cover;
+}
 
 .news-item {
   display: grid;

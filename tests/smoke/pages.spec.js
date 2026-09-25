@@ -193,6 +193,10 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#updates-container .update-card')).toHaveCount(6);
   await expect(page.locator('#ranking-container .ranking-item')).toHaveCount(5);
   await expect(page.locator('#ranking-container .ranking-item').first()).toContainText('♡ 4');
+  await page.getByRole('tab', { name: '本周' }).click();
+  await expect(page.getByRole('tab', { name: '本周' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: '本月' }).click();
+  await expect(page.getByRole('tab', { name: '本月' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#news-container .news-item')).toHaveCount(4);
   await expect(page.locator('#anime-container .image-like-button--inline').first()).toHaveAttribute(
     'data-image-like-summary-keys',

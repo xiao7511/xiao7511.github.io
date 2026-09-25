@@ -116,7 +116,7 @@
       <aside class="home-sidebar" aria-label="排行榜与最新资讯">
         <section class="sidebar-panel" aria-labelledby="ranking-title">
           <div class="sidebar-panel__head"><h2 id="ranking-title"><span aria-hidden="true">🏆</span> 人气排行榜</h2></div>
-          <div class="ranking-tabs" role="tablist" aria-label="排行榜时间范围"><button type="button" role="tab" aria-selected="false" disabled title="当前数据源暂不提供分时统计">本周</button><button type="button" role="tab" aria-selected="false" disabled title="当前数据源暂不提供分时统计">本月</button><button class="is-active" type="button" role="tab" aria-selected="true">总榜</button></div>
+          <div class="ranking-tabs" role="tablist" aria-label="排行榜时间范围"><button type="button" role="tab" aria-selected="false" data-ranking-period="week">本周</button><button type="button" role="tab" aria-selected="false" data-ranking-period="month">本月</button><button class="is-active" type="button" role="tab" aria-selected="true" data-ranking-period="all">总榜</button></div>
           <ol class="ranking-list" id="ranking-container"><li class="skeleton skeleton--ranking" aria-hidden="true"></li><li class="skeleton skeleton--ranking" aria-hidden="true"></li><li class="skeleton skeleton--ranking" aria-hidden="true"></li></ol>
         </section>
         <section class="sidebar-panel" aria-labelledby="news-title">
