@@ -6,11 +6,11 @@ defineProps<{ item: ContentItem }>();
 </script>
 
 <template>
-  <article class="content-card">
+  <RouterLink :to="`/${item.category}/${item.id}`" class="content-card">
     <ContentImage :src="item.cover_url" :alt="`${item.title}封面`" />
     <div class="content-card__body">
-      <h3>{{ item.title }}</h3>
-      <p>{{ item.year || item.subtitle || 'NOBI 推荐' }}</p>
+      <h3>{{ item.title || '未命名作品' }}</h3>
+      <p>{{ item.theme_tags?.slice(0, 2).join(' · ') || item.subtitle || 'NOBI 推荐' }}</p>
     </div>
-  </article>
+  </RouterLink>
 </template>

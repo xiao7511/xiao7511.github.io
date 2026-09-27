@@ -7,6 +7,9 @@ export default [
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   ...vue.configs['flat/essential'],
-  { files: ['**/*.vue'], languageOptions: { parserOptions: { parser: tseslint.parser }, globals: { URLSearchParams: 'readonly' } } },
+  {
+    files: ['**/*.vue'],
+    languageOptions: { parserOptions: { parser: tseslint.parser }, globals: { URLSearchParams: 'readonly' } }
+  },
   { rules: { 'vue/multi-word-component-names': 'off' } }
 ];

@@ -14,11 +14,10 @@ export async function initNative(router: Router, auth: ReturnType<typeof useAuth
     if (router.currentRoute.value.path !== '/') {
       if (window.history.state?.back) router.back();
       else void router.replace('/');
-    }
-    else if (Capacitor.getPlatform() === 'android') void App.exitApp();
+    } else if (Capacitor.getPlatform() === 'android') void App.exitApp();
   });
   await App.addListener('appStateChange', ({ isActive }) => {
-    if (isActive) void auth.restoreSession();
+    if (isActive) void auth.resume();
   });
 }
 
@@ -26,10 +25,12 @@ export async function hideSplash(): Promise<void> {
   if (Capacitor.isNativePlatform()) await SplashScreen.hide();
 }
 
-export async function shareContent(title: string, url: string): Promise<void> {
+export async function shareContent(title: string, url: string, text?: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
-    await Share.share({ title, url, dialogTitle: '分享 NOBI 内容' });
+    await Share.share({ title, text, url, dialogTitle: '分享 NOBI 内容' });
   } else if (navigator.share) {
-    await navigator.share({ title, url });
+    await navigator.share({ title, text, url });
+  } else {
+    await navigator.clipboard.writeText(url);
   }
 }

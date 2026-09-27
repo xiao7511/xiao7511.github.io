@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAppStore } from './stores/app';
 import TabIcon from './components/TabIcon.vue';
+import AppToast from './components/AppToast.vue';
 
 const app = useAppStore();
 const tabs = [
@@ -21,5 +22,6 @@ const tabs = [
         <TabIcon :name="tab.icon" /><span>{{ tab.label }}</span>
       </RouterLink>
     </nav>
+    <AppToast />
   </div>
 </template>

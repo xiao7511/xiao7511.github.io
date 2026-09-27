@@ -11,6 +11,15 @@ export function apiOrigin(): string {
   return url.origin;
 }
 
+export function webOrigin(): string {
+  const raw = import.meta.env.VITE_WEB_BASE_URL || 'https://www.nobistudio.com';
+  const url = new URL(raw);
+  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
+    throw new Error('Web 地址必须使用 HTTPS');
+  }
+  return url.origin;
+}
+
 export interface PublicSupabaseConfig {
   url: string;
   key: string;

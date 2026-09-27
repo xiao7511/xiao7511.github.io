@@ -1,10 +1,56 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useToastStore } from '../stores/toast';
+import AppAvatar from '../components/AppAvatar.vue';
 const auth = useAuthStore();
+const toast = useToastStore();
+const router = useRouter();
+async function logout(): Promise<void> {
+  try {
+    await auth.signOut();
+    toast.show('已退出登录', 'success');
+    await router.replace('/');
+  } catch {
+    toast.show(auth.error || '退出失败', 'error');
+  }
+}
 </script>
-
 <template>
-  <div class="page listing-page"><div class="page-heading"><span class="eyebrow">ACCOUNT</span><h1>我的</h1><p>你的 NOBI 空间</p></div>
-    <div class="coming-panel"><span aria-hidden="true">◉</span><h2 v-if="auth.user">{{ auth.user.email || '已登录' }}</h2><h2 v-else>欢迎来到 NOBI</h2><p v-if="auth.error">{{ auth.error }}</p><p v-else-if="!auth.ready">正在检查登录状态…</p><p v-else>账号与收藏体验将在下一阶段上线。</p></div>
+  <div class="page listing-page">
+    <div class="page-heading">
+      <span class="eyebrow">ACCOUNT</span>
+      <h1>我的</h1>
+      <p>你的 NOBI 空间</p>
+    </div>
+    <div v-if="auth.user" class="profile-card">
+      <AppAvatar
+        :src="auth.profile?.avatar_url"
+        :name="auth.profile?.nickname || auth.user.email || '用户'"
+        size="large"
+      />
+      <h2>{{ auth.profile?.nickname || auth.user.email?.split('@')[0] }}</h2>
+      <p>{{ auth.user.email }}</p>
+      <dl>
+        <div>
+          <dt>账号 ID</dt>
+          <dd>{{ auth.user.id }}</dd>
+        </div>
+        <div>
+          <dt>收藏</dt>
+          <dd>即将推出</dd>
+        </div>
+      </dl>
+      <button class="secondary-button" type="button" :disabled="auth.loading" @click="logout">退出登录</button>
+    </div>
+    <div v-else class="profile-card profile-card--guest">
+      <AppAvatar size="large" name="NOBI" />
+      <h2>欢迎来到 NOBI</h2>
+      <p>登录后参与社区讨论与点赞。</p>
+      <div class="button-row">
+        <RouterLink to="/login" class="primary-button">登录</RouterLink
+        ><RouterLink to="/register" class="secondary-button">注册</RouterLink>
+      </div>
+    </div>
   </div>
 </template>

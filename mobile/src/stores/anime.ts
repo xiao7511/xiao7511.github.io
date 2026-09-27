@@ -10,9 +10,13 @@ export const useAnimeStore = defineStore('anime', () => {
   async function load(): Promise<void> {
     loading.value = true;
     error.value = null;
-    try { items.value = await fetchContent('recommend'); }
-    catch { error.value = '动漫内容加载失败，请检查网络后重试。'; }
-    finally { loading.value = false; }
+    try {
+      items.value = await fetchContent('recommend');
+    } catch {
+      error.value = '动漫内容加载失败，请检查网络后重试。';
+    } finally {
+      loading.value = false;
+    }
   }
   return { items, loading, error, load };
 });
