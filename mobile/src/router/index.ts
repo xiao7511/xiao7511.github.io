@@ -12,10 +12,12 @@ export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
+    { path: '/search', name: 'search', component: () => import('../views/SearchView.vue') },
     { path: '/anime', name: 'anime', component: () => import('../views/AnimeView.vue') },
     { path: '/anime/:id', name: 'anime-detail', component: () => import('../views/ContentDetailView.vue') },
     { path: '/manga', name: 'manga', component: () => import('../views/MangaView.vue') },
     { path: '/manga/:id', name: 'manga-detail', component: () => import('../views/ContentDetailView.vue') },
+    { path: '/banner/:slot/:id', name: 'banner-detail', component: () => import('../views/ContentDetailView.vue') },
     { path: '/community', name: 'community', component: () => import('../views/CommunityView.vue') },
     {
       path: '/community/new',

@@ -1,95 +1,196 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
-import { useAnimeStore } from '../stores/anime';
-import { useMangaStore } from '../stores/manga';
-import { useCommunityStore } from '../stores/community';
+import { onMounted, ref } from 'vue';
+import {
+  contentLabel,
+  contentRoute,
+  contentTimestamp,
+  contentYear,
+  fetchHomeData,
+  type HomeData
+} from '../services/home';
+import HomeCarousel from '../components/HomeCarousel.vue';
 import ContentCard from '../components/ContentCard.vue';
 import ContentImage from '../components/ContentImage.vue';
 import AppSkeleton from '../components/AppSkeleton.vue';
+import AppAvatar from '../components/AppAvatar.vue';
+import SocialIcon from '../components/SocialIcon.vue';
+import { useAuthStore } from '../stores/auth';
 
-const anime = useAnimeStore();
-const manga = useMangaStore();
-const community = useCommunityStore();
-const featured = computed(() => anime.items.find((item) => item.title) ?? anime.items[0]);
-const hotPosts = computed(() => [...community.posts].sort((a, b) => b.likeCount - a.likeCount).slice(0, 2));
-onMounted(() => {
-  if (!anime.items.length) void anime.load();
-  if (!manga.items.length) void manga.load();
-  if (!community.posts.length) void community.load(1);
-});
+const auth = useAuthStore();
+const data = ref<HomeData | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+async function load(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+  try {
+    data.value = await fetchHomeData();
+  } catch {
+    error.value = '首页内容加载失败，请检查网络后重试。';
+  } finally {
+    loading.value = false;
+  }
+}
+
+function formatDate(timestamp: number): string {
+  return timestamp ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(timestamp) : '';
+}
+
+onMounted(load);
 </script>
+
 <template>
-  <div class="page home-page">
+  <div class="page home-page home-aligned">
     <header class="home-header">
       <div class="brand">
         <span class="brand__mark">N</span><span>NOBI<small>动漫</small></span>
       </div>
-      <RouterLink to="/anime" class="header-action" aria-label="浏览动漫">⌕</RouterLink
-      ><RouterLink to="/profile" class="header-action header-action--avatar" aria-label="我的账号">◉</RouterLink>
+      <RouterLink to="/search" class="header-action" aria-label="搜索">⌕</RouterLink>
+      <RouterLink to="/profile" class="home-account" aria-label="我的账号">
+        <AppAvatar
+          :src="auth.profile?.avatar_url"
+          :name="auth.profile?.nickname || auth.user?.email?.split('@')[0] || 'NOBI'"
+        />
+        <span v-if="auth.user">{{ auth.profile?.nickname || auth.user.email?.split('@')[0] }}</span>
+      </RouterLink>
     </header>
-    <RouterLink v-if="featured" :to="`/anime/${featured.id}`" class="hero" aria-label="本季精选"
-      ><ContentImage :src="featured.cover_url" :alt="featured.title || '精选作品'" />
-      <div class="hero__shade"></div>
-      <div class="hero__content">
-        <span class="eyebrow">NOBI · 本季精选</span>
-        <h1>{{ featured.title || '未命名作品' }}</h1>
-        <p>{{ featured.theme_tags?.join(' · ') || featured.subtitle || '发现更多精彩内容' }}</p>
-        <span class="hero__share">查看详情 ›</span>
-      </div></RouterLink
-    >
-    <div v-else-if="anime.loading" class="hero hero__skeleton" role="status">正在加载精选内容…</div>
-    <div v-else class="hero hero__empty">
-      <span>NOBI 精选</span>
-      <p>{{ anime.error || '当前暂无推荐作品' }}</p>
-      <button v-if="anime.error" type="button" @click="anime.load">重试</button>
+
+    <div v-if="loading" class="home-carousel home-carousel--loading" role="status">正在加载轮播内容…</div>
+    <div v-else-if="error" class="state-message">
+      <p>{{ error }}</p>
+      <button type="button" @click="load">重试</button>
     </div>
+    <HomeCarousel v-else-if="data?.banners.length" :items="data.banners" />
+    <p v-else class="state-message">当前没有轮播内容</p>
+
     <section class="content-section">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">ANIME</span>
-          <h2>新番推荐</h2>
+          <span class="eyebrow">POPULAR</span>
+          <h2>🔥 本季热门</h2>
         </div>
         <RouterLink to="/anime">查看全部 ›</RouterLink>
       </div>
-      <AppSkeleton v-if="anime.loading" />
-      <p v-else-if="anime.error" class="state-message">{{ anime.error }}</p>
-      <div v-else-if="anime.items.length" class="card-grid">
-        <ContentCard v-for="entry in anime.items.slice(0, 4)" :key="entry.id" :item="entry" />
+      <AppSkeleton v-if="loading" />
+      <div v-else-if="data?.popular.length" class="card-grid home-card-grid">
+        <ContentCard
+          v-for="item in data.popular.slice(0, 4)"
+          :key="item.id"
+          :item="item"
+          :year="contentYear(item)"
+          :label="contentLabel(item)"
+          :like-count="item.likeCount"
+        />
       </div>
-      <p v-else class="state-message">暂无动漫推荐</p>
+      <p v-else class="state-message">暂无热门内容</p>
     </section>
+
     <section class="content-section">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">MANGA</span>
-          <h2>热门漫画</h2>
+          <span class="eyebrow">NEW RELEASES</span>
+          <h2>⭐ 新番推荐</h2>
         </div>
         <RouterLink to="/manga">查看全部 ›</RouterLink>
       </div>
-      <AppSkeleton v-if="manga.loading" :count="2" />
-      <p v-else-if="manga.error" class="state-message">{{ manga.error }}</p>
-      <div v-else-if="manga.items.length" class="card-grid">
-        <ContentCard v-for="entry in manga.items.slice(0, 2)" :key="entry.id" :item="entry" />
+      <AppSkeleton v-if="loading" />
+      <div v-else-if="data?.recommendations.length" class="card-grid home-card-grid">
+        <ContentCard
+          v-for="item in data.recommendations.slice(0, 4)"
+          :key="item.id"
+          :item="item"
+          :year="contentYear(item)"
+          :label="contentLabel(item)"
+          :like-count="item.likeCount"
+        />
       </div>
-      <p v-else class="state-message">暂无漫画内容</p>
+      <p v-else class="state-message">暂无新番推荐</p>
     </section>
+
     <section class="content-section">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">COMMUNITY</span>
-          <h2>社区热门</h2>
+          <span class="eyebrow">UPDATES</span>
+          <h2>🕒 最近更新</h2>
         </div>
-        <RouterLink to="/community">进入社区 ›</RouterLink>
       </div>
-      <AppSkeleton v-if="community.loading" :count="2" variant="post" />
-      <div v-else-if="hotPosts.length" class="home-posts">
-        <RouterLink v-for="post in hotPosts" :key="post.id" :to="`/community/${post.id}`"
-          ><strong>{{ post.title || post.nickname || '社区动态' }}</strong>
-          <p>{{ post.content }}</p>
-          <span>♥ {{ post.likeCount }} · 评论 {{ post.replyCount }}</span></RouterLink
+      <AppSkeleton v-if="loading" :count="2" />
+      <div v-else-if="data?.updates.length" class="home-update-list">
+        <RouterLink v-for="item in data.updates" :key="item.id" :to="contentRoute(item)" class="home-update-card">
+          <ContentImage :src="item.cover_url" :alt="`${item.title || '作品'}缩略图`" />
+          <div>
+            <h3>{{ item.title || '未命名作品' }}</h3>
+            <p v-if="item.subtitle">{{ item.subtitle }}</p>
+            <time>{{ formatDate(contentTimestamp(item)) }} 更新</time>
+          </div>
+        </RouterLink>
+      </div>
+      <p v-else class="state-message">暂无更新内容</p>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">RANKING</span>
+          <h2>🏆 人气排行榜</h2>
+        </div>
+      </div>
+      <AppSkeleton v-if="loading" :count="2" />
+      <ol v-else-if="data?.ranking.length" class="home-ranking-list">
+        <li v-for="(item, index) in data.ranking" :key="item.id">
+          <span class="home-ranking-number">{{ index + 1 }}</span>
+          <RouterLink :to="contentRoute(item)">
+            <ContentImage :src="item.cover_url" alt="" />
+            <div>
+              <h3>{{ item.title || '未命名作品' }}</h3>
+              <span>{{ contentLabel(item) }}</span
+              ><strong>♡ {{ item.likeCount }}</strong>
+            </div>
+          </RouterLink>
+        </li>
+      </ol>
+      <p v-else class="state-message">暂无排行数据</p>
+    </section>
+
+    <section class="content-section">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">NEWS</span>
+          <h2>📢 最新资讯</h2>
+        </div>
+      </div>
+      <AppSkeleton v-if="loading" :count="2" />
+      <div v-else-if="data?.news.length" class="home-news-list">
+        <RouterLink v-for="item in data.news" :key="item.id" :to="contentRoute(item)">
+          <ContentImage :src="item.cover_url" alt="" />
+          <div>
+            <h3>{{ item.title || '未命名作品' }}</h3>
+            <p v-if="item.subtitle">{{ item.subtitle }}</p>
+            <time>{{ formatDate(contentTimestamp(item)) }}</time>
+          </div>
+        </RouterLink>
+      </div>
+      <p v-else class="state-message">暂无最新资讯</p>
+    </section>
+
+    <section v-if="data?.socialLinks.length" class="content-section home-social">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">FOLLOW NOBI</span>
+          <h2>社媒</h2>
+        </div>
+      </div>
+      <nav aria-label="NOBI 社交媒体">
+        <a
+          v-for="link in data.socialLinks"
+          :key="link.key"
+          :href="link.href"
+          target="_blank"
+          rel="noopener noreferrer"
+          ><SocialIcon :name="link.key" /><span>{{ link.label }}</span></a
         >
-      </div>
-      <p v-else class="state-message">{{ community.error || '社区暂时没有动态' }}</p>
+      </nav>
     </section>
   </div>
 </template>

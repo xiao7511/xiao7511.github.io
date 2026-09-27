@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCommunityStore } from '../stores/community';
 import { useAuthStore } from '../stores/auth';
@@ -16,6 +16,17 @@ const auth = useAuthStore();
 const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
+const query = ref('');
+const category = ref('热门');
+const filteredPosts = computed(() => {
+  const needle = query.value.trim().toLowerCase();
+  const rows = community.posts.filter((post) => {
+    const matchesText = !needle || `${post.title ?? ''} ${post.content} ${post.nickname ?? ''}`.toLowerCase().includes(needle);
+    const matchesCategory = ['热门', '最新', '讨论'].includes(category.value) || post.category?.includes(category.value);
+    return matchesText && matchesCategory;
+  });
+  return category.value === '热门' ? [...rows].sort((a, b) => b.likeCount - a.likeCount) : rows;
+});
 onMounted(() => {
   if (!community.posts.length) void community.load(1);
 });
@@ -49,14 +60,18 @@ async function share(post: CommunityPost): Promise<void> {
       </div>
       <RouterLink to="/community/new" class="primary-button">发布</RouterLink>
     </div>
+    <div class="community-toolbar">
+      <label><span class="sr-only">搜索社区</span><input v-model="query" type="search" placeholder="搜索帖子或用户" /></label>
+      <div class="community-categories"><button v-for="item in ['热门','最新','动漫','漫画','讨论']" :key="item" type="button" :class="{active: category === item}" @click="category = item">{{ item }}</button></div>
+    </div>
     <AppSkeleton v-if="community.loading" variant="post" :count="3" /><AppError
       v-else-if="community.error"
       :message="community.error"
       @retry="community.load()"
     />
-    <div v-else-if="community.posts.length" class="feed-list">
+    <div v-else-if="filteredPosts.length" class="feed-list">
       <CommunityCard
-        v-for="post in community.posts"
+        v-for="post in filteredPosts"
         :key="post.id"
         :post="post"
         :pending="community.pendingLikes[post.id]"

@@ -25,6 +25,7 @@ function formatTime(value: string): string {
       </header>
       <h2 v-if="post.title">{{ post.title }}</h2>
       <p>{{ post.content }}</p>
+      <img v-if="post.image_url" class="post-card__image" :src="post.image_url" alt="帖子图片" loading="lazy" />
     </RouterLink>
     <footer>
       <button

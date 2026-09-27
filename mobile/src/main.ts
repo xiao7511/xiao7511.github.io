@@ -8,6 +8,8 @@ import './style.css';
 import './style-phase2.css';
 import './style-ios.css';
 import './style-phase4.css';
+import './style-home.css';
+import './style-phase42.css';
 
 const app = createApp(App);
 const pinia = createPinia();

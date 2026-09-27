@@ -1410,10 +1410,68 @@ main {
   gap: 0.55rem;
 }
 
+.reply-image {
+  display: block;
+  width: min(100%, 28rem);
+  max-height: 28rem;
+  margin-top: 0.6rem;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.reply-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.reply-image-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.reply-image-preview {
+  position: relative;
+  flex: 0 0 5rem;
+}
+
+.reply-image-preview img {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 0.65rem;
+  object-fit: cover;
+}
+
+.reply-image-preview button {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.4rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 0;
+  border-radius: 50%;
+  background: #111b27;
+  color: #fff;
+}
+
 .reply-box {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.55rem;
   margin-top: 0.75rem;
+}
+
+.reply-box .reply-input {
+  min-width: min(100%, 14rem);
+  flex: 1 1 14rem;
 }
 
 .reply-input {

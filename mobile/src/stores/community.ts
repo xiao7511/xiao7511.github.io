@@ -84,8 +84,8 @@ export const useCommunityStore = defineStore('community', () => {
     }
   }
 
-  async function reply(postId: number, content: string, session: Session, profile: Profile | null): Promise<void> {
-    await addReply(await getSupabase(), session, profile, postId, content);
+  async function reply(postId: number, content: string, session: Session, profile: Profile | null, imagePath: string | null = null): Promise<void> {
+    await addReply(await getSupabase(), session, profile, postId, content, imagePath);
     await loadPost(postId);
   }
 

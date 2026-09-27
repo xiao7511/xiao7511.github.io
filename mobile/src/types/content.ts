@@ -7,7 +7,15 @@ export interface ContentItem {
   cover_url?: string | null;
   detail_urls?: string[] | null;
   theme_tags?: string[] | null;
+  year?: string | number | null;
+  published_at?: string | null;
+  release_date?: string | null;
+  publish_date?: string | null;
+  created_at?: string | null;
   updated_at?: string | null;
+  status?: string | null;
+  region?: string | null;
+  description?: string | null;
 }
 
 export function isContentItem(value: unknown): value is ContentItem {

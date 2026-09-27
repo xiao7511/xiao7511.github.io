@@ -1,6 +1,7 @@
 import { initializeSupabase } from './src/api/supabase.js';
 import { togglePostLike } from './src/community/likes.js';
 import { groupLikesByPostId } from './src/community/posts.js';
+import { removeReplyImage, uploadReplyImage, validateReplyImage } from './src/community/reply-images.js';
 import { element, setContentState, setImageSource, setLoadingState } from './src/components/dom.js';
 import { initSiteHeader, updateCopyrightYear } from './src/components/header.js';
 import { getImageKey } from './src/images/likes.js';
@@ -1157,10 +1158,18 @@ document.addEventListener('DOMContentLoaded', () => {
         attributes: { datetime: reply.created_at }
       })
     ]);
-    return element('div', { className: 'reply-item' }, [
-      replyHeader,
-      element('div', { className: 'reply-content', text: reply.content })
-    ]);
+    const body = element('div', { className: 'reply-content' });
+    if (reply.content) body.append(element('div', { text: reply.content }));
+    if (reply.image_path) {
+      const image = element('img', {
+        className: 'reply-image',
+        attributes: { alt: '回复图片', loading: 'lazy', decoding: 'async' }
+      });
+      const imageUrl = window.supabaseClient.storage.from('community').getPublicUrl(reply.image_path).data.publicUrl;
+      setImageSource(image, imageUrl, 'images/nobi-anime-placeholder.svg');
+      body.append(image);
+    }
+    return element('div', { className: 'reply-item' }, [replyHeader, body]);
   };
 
   async function fetchPosts() {
@@ -1273,13 +1282,39 @@ document.addEventListener('DOMContentLoaded', () => {
           text: '发送',
           attributes: { type: 'button' }
         });
+        const replyFileInput = element('input', {
+          className: 'reply-image-input',
+          attributes: { type: 'file', accept: 'image/jpeg,image/png,image/webp', 'aria-label': '添加一张回复图片' }
+        });
+        const replyImageButton = element('label', { className: 'reply-image-button', text: '添加图片' }, [replyFileInput]);
+        const replyPreview = element('div', { className: 'reply-image-preview', attributes: { hidden: '' } });
+        replyFileInput.addEventListener('change', () => {
+          const file = replyFileInput.files?.[0];
+          replyPreview.replaceChildren();
+          if (!file) { replyPreview.hidden = true; return; }
+          try {
+            validateReplyImage(file);
+            const image = element('img', { attributes: { alt: '待上传图片预览' } });
+            const objectUrl = URL.createObjectURL(file);
+            image.src = objectUrl;
+            image.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+            const remove = element('button', { text: '×', attributes: { type: 'button', 'aria-label': '移除图片' } });
+            remove.addEventListener('click', () => { replyFileInput.value = ''; replyPreview.hidden = true; replyPreview.replaceChildren(); });
+            replyPreview.append(image, remove);
+            replyPreview.hidden = false;
+          } catch (error) {
+            replyFileInput.value = '';
+            replyPreview.hidden = true;
+            alert(error.message);
+          }
+        });
         const replyBox = element(
           'div',
           {
             className: 'reply-box',
             attributes: { id: `reply-box-${post.id}`, hidden: '' }
           },
-          [replyInput, submitReplyButton]
+          [replyInput, replyImageButton, replyPreview, submitReplyButton]
         );
 
         likeButton.addEventListener('click', async () => {
@@ -1292,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (willOpen) replyInput.focus();
         });
         submitReplyButton.addEventListener('click', () =>
-          submitReply(post.id, replyInput, repliesContainer, replyButton, submitReplyButton)
+          submitReply(post.id, replyInput, replyFileInput, replyPreview, repliesContainer, replyButton, submitReplyButton)
         );
 
         postCard.append(header);
@@ -1382,11 +1417,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  async function submitReply(postId, inputElem, repliesContainer, replyButton, submitButton) {
+  async function submitReply(postId, inputElem, fileInput, preview, repliesContainer, replyButton, submitButton) {
     if (!window.supabaseClient) return;
     if (!inputElem) return;
     const content = inputElem.value.trim();
-    if (!content) { alert('回复内容不能为空喵！'); return; }
+    const file = fileInput?.files?.[0] || null;
+    if (!content && !file) { alert('请输入回复内容或选择图片。'); return; }
 
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     const user = session ? session.user : null;
@@ -1404,17 +1440,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
     const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
 
+    let uploaded = null;
+    try {
+      if (file) uploaded = await uploadReplyImage(window.supabaseClient, user.id, file);
+    } catch (error) {
+      alert(`图片上传失败: ${error.message}`);
+      submitButton.disabled = false;
+      submitButton.textContent = '发送';
+      return;
+    }
+
     const { error } = await window.supabaseClient.from('posts').insert([
       {
         content,
         user_id: user.id,
         nickname: finalNickname,
         avatar_url: finalAvatar,
-        parent_id: postId // 关联到对应的主贴 ID
+        parent_id: postId,
+        image_path: uploaded?.path || null
       },
     ]);
 
     if (error) {
+      if (uploaded) await removeReplyImage(window.supabaseClient, uploaded.path).catch(() => undefined);
       alert(`回复失败: ${error.message}`);
       submitButton.disabled = false;
       submitButton.textContent = '发送';
@@ -1422,11 +1470,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     inputElem.value = '';
+    if (fileInput) fileInput.value = '';
+    if (preview) { preview.hidden = true; preview.replaceChildren(); }
     repliesContainer.append(
       createReplyItem({
         content,
         nickname: finalNickname,
         avatar_url: finalAvatar,
+        image_path: uploaded?.path || null,
         created_at: new Date().toISOString()
       })
     );

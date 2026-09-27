@@ -8,7 +8,7 @@ export async function fetchContent(path: 'recommend' | 'manga'): Promise<Content
   return payload.filter(isContentItem);
 }
 
-export async function fetchContentDetail(category: 'anime' | 'manga', slot: number): Promise<ContentItem> {
+export async function fetchContentDetail(category: 'anime' | 'manga' | 'banner', slot: number): Promise<ContentItem> {
   const query = new URLSearchParams({ category, slot: String(slot) });
   const payload = await fetchJson(`${apiOrigin()}/api/detail?${query}`);
   if (!isContentItem(payload) || payload.category !== category || payload.slot_index !== slot) {

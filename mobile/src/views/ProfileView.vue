@@ -23,7 +23,8 @@ async function logout(): Promise<void> {
       <h1>我的</h1>
       <p>你的 NOBI 空间</p>
     </div>
-    <div v-if="auth.user" class="profile-card">
+    <div v-if="auth.user" class="profile-card profile-card--aligned">
+      <div class="profile-cover" aria-hidden="true"></div>
       <AppAvatar
         :src="auth.profile?.avatar_url"
         :name="auth.profile?.nickname || auth.user.email || '用户'"
@@ -36,11 +37,12 @@ async function logout(): Promise<void> {
           <dt>账号 ID</dt>
           <dd>{{ auth.user.id }}</dd>
         </div>
-        <div>
-          <dt>收藏</dt>
-          <dd>即将推出</dd>
-        </div>
       </dl>
+      <nav class="profile-menu" aria-label="账号功能">
+        <RouterLink to="/community">我的帖子与社区</RouterLink>
+        <RouterLink to="/privacy">隐私与设置</RouterLink>
+        <RouterLink to="/support">消息与支持</RouterLink>
+      </nav>
       <button class="secondary-button" type="button" :disabled="auth.loading" @click="logout">退出登录</button>
       <RouterLink to="/account/delete" class="profile-danger-link">删除账号</RouterLink>
     </div>

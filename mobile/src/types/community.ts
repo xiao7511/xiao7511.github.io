@@ -11,6 +11,8 @@ export interface CommunityPost {
   likeCount: number;
   replyCount: number;
   liked: boolean;
+  image_path?: string | null;
+  image_url?: string | null;
 }
 
 export interface CommunityReply {
@@ -21,6 +23,8 @@ export interface CommunityReply {
   nickname: string | null;
   avatar_url: string | null;
   parent_id: number;
+  image_path?: string | null;
+  image_url?: string | null;
 }
 
 export interface CommunityPage {

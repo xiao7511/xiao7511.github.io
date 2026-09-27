@@ -14,6 +14,7 @@ interface PostRow {
   title: string | null;
   category: string | null;
   parent_id: number | null;
+  image_path: string | null;
 }
 
 interface LikeRow {
@@ -21,7 +22,11 @@ interface LikeRow {
   user_id: string;
 }
 
-const postColumns = 'id,user_id,created_at,content,nickname,avatar_url,title,category,parent_id';
+const postColumns = 'id,user_id,created_at,content,nickname,avatar_url,title,category,parent_id,image_path';
+
+function replyImageUrl(client: SupabaseClient, path: string | null): string | null {
+  return path ? client.storage.from('community').getPublicUrl(path).data.publicUrl || null : null;
+}
 
 function mapPost(row: PostRow, likes: LikeRow[], replies: PostRow[], userId?: string): CommunityPost {
   const postLikes = likes.filter((like) => like.post_id === row.id);
@@ -83,7 +88,11 @@ export async function fetchCommunityPost(
   const likes = (likesResult.data ?? []) as LikeRow[];
   return {
     post: mapPost(postResult.data as PostRow, likes, replies, sessionResult.data.session?.user.id),
-    replies: replies.map((reply) => ({ ...reply, parent_id: id }))
+    replies: replies.map((reply) => ({
+      ...reply,
+      parent_id: id,
+      image_url: replyImageUrl(supabase, reply.image_path)
+    }))
   };
 }
 
@@ -105,14 +114,16 @@ export async function addReply(
   session: Session,
   profile: Profile | null,
   postId: number,
-  content: string
+  content: string,
+  imagePath: string | null = null
 ): Promise<void> {
   const result = await client.from('posts').insert({
     content,
     user_id: session.user.id,
     nickname: profile?.nickname || session.user.email?.split('@')[0] || '社区用户',
     avatar_url: profile?.avatar_url || null,
-    parent_id: postId
+    parent_id: postId,
+    image_path: imagePath
   });
   if (result.error) throw result.error;
 }
