@@ -1,0 +1,127 @@
+.moderation-page {
+  min-height: 100vh;
+  margin: 0;
+  color: #f4f5f7;
+  background: #10131b;
+}
+
+.moderation-header,
+.moderation-shell {
+  max-width: 70rem;
+  padding: 1.25rem clamp(1rem, 4vw, 2rem);
+  margin: 0 auto;
+}
+
+.moderation-header,
+.moderation-heading,
+.moderation-report__meta,
+.moderation-report__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.moderation-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.moderation-header a,
+.moderation-heading p {
+  color: #f6b96b;
+}
+
+.moderation-heading h1 {
+  margin: 0.2rem 0 0;
+}
+
+.moderation-heading p {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.moderation-heading button,
+.moderation-report button {
+  min-height: 2.75rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid #465064;
+  border-radius: 0.7rem;
+  color: #f4f5f7;
+  background: #202632;
+  font: inherit;
+}
+
+.moderation-status {
+  padding: 1rem;
+  border: 1px solid #333b49;
+  border-radius: 0.8rem;
+  color: #b8c0cc;
+}
+
+.moderation-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.moderation-report {
+  padding: 1rem;
+  border: 1px solid #333b49;
+  border-radius: 1rem;
+  background: #1a202a;
+}
+
+.moderation-report__meta {
+  align-items: flex-start;
+  color: #9ca6b6;
+  font-size: 0.8rem;
+}
+
+.moderation-report__content,
+.moderation-report__details {
+  padding: 0.8rem;
+  border-radius: 0.6rem;
+  color: #d4d9e1;
+  background: #131821;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.moderation-report label {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+  color: #aeb7c5;
+}
+
+.moderation-report textarea {
+  min-height: 5rem;
+  padding: 0.7rem;
+  border: 1px solid #3b4555;
+  border-radius: 0.6rem;
+  color: #fff;
+  background: #151a23;
+  font: inherit;
+}
+
+.moderation-report__actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 0.8rem;
+}
+
+.moderation-report button[data-action='remove'] {
+  border-color: #8a4e56;
+  color: #f2a6ad;
+}
+
+@media (max-width: 40rem) {
+  .moderation-header,
+  .moderation-heading,
+  .moderation-report__meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -17,7 +17,12 @@ const auth = useAuthStore();
 const toast = useToastStore();
 const replyText = ref('');
 const sending = ref(false);
+const confirmingBlock = ref(false);
+const blocking = ref(false);
 const postId = computed(() => Number(route.params.id));
+const canActOnAuthor = computed(() =>
+  Boolean(community.selected?.user_id && community.selected.user_id !== auth.user?.id)
+);
 onMounted(() => {
   if (Number.isInteger(postId.value) && postId.value > 0) void community.loadPost(postId.value);
 });
@@ -63,6 +68,28 @@ async function submitReply(): Promise<void> {
     sending.value = false;
   }
 }
+async function blockAuthor(): Promise<void> {
+  const authorId = community.selected?.user_id;
+  if (!authorId) return;
+  if (!auth.session) {
+    await router.push({ name: 'login', query: { redirect: route.fullPath } });
+    return;
+  }
+  if (!confirmingBlock.value) {
+    confirmingBlock.value = true;
+    return;
+  }
+  blocking.value = true;
+  try {
+    await community.blockUser(authorId, auth.session);
+    toast.show('已屏蔽该用户', 'success');
+    await router.replace('/community');
+  } catch {
+    toast.show('屏蔽失败，请稍后重试', 'error');
+  } finally {
+    blocking.value = false;
+  }
+}
 function formatTime(value: string): string {
   return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
@@ -81,6 +108,13 @@ function formatTime(value: string): string {
         @like="like"
         @share="share"
       />
+      <div v-if="canActOnAuthor" class="safety-actions" aria-label="社区安全操作">
+        <RouterLink :to="`/community/${postId}/report`" class="text-button">举报内容</RouterLink>
+        <button type="button" class="text-button text-button--danger" :disabled="blocking" @click="blockAuthor">
+          {{ confirmingBlock ? '再次点击确认屏蔽' : '屏蔽此用户' }}
+        </button>
+        <button v-if="confirmingBlock" type="button" class="text-button" @click="confirmingBlock = false">取消</button>
+      </div>
       <section class="reply-section">
         <h2>评论 {{ community.replies.length }}</h2>
         <form class="reply-form" @submit.prevent="submitReply">

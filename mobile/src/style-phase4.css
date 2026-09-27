@@ -1,0 +1,124 @@
+.safety-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 4px 0;
+}
+
+.text-button--danger,
+.profile-danger-link {
+  color: #f09ba1;
+}
+
+.report-preview {
+  max-height: 130px;
+  padding: 12px;
+  margin: 0;
+  overflow: auto;
+  border-left: 3px solid #596579;
+  color: #c5ccd6;
+  background: #151b24;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.danger-card {
+  padding: 20px;
+  border: 1px solid #74444a;
+  border-radius: 16px;
+  background: #251b21;
+}
+
+.danger-card h2 {
+  margin-top: 0;
+}
+
+.danger-card li,
+.legal-page p {
+  color: #c2c9d3;
+  line-height: 1.7;
+}
+
+.danger-card form {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.danger-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.danger-card input {
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid #66444a;
+  border-radius: 11px;
+  background: #171b23;
+  color: #fff;
+}
+
+.danger-button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 11px;
+  background: #b64f5b;
+  color: #fff;
+  font-weight: 800;
+}
+
+.danger-button:disabled {
+  opacity: 0.45;
+}
+
+.profile-danger-link {
+  min-height: 44px;
+  padding: 13px 8px 0;
+  font-size: 13px;
+}
+
+.profile-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.profile-links a {
+  min-height: 44px;
+  padding: 13px;
+  border: 1px solid #333b49;
+  border-radius: 11px;
+  color: #c4ccd8;
+  text-align: center;
+}
+
+.legal-page {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}
+
+.legal-page > h1 {
+  margin-bottom: 6px;
+  font-size: clamp(29px, 8vw, 42px);
+}
+
+.legal-meta {
+  margin-top: 0;
+  color: #929cab;
+}
+
+.legal-page section {
+  padding-top: 10px;
+  margin-top: 20px;
+  border-top: 1px solid #2e3643;
+}
+
+.legal-page h2 {
+  font-size: 19px;
+}
+
+.legal-page .primary-button,
+.legal-page .secondary-button {
+  margin-top: 8px;
+}

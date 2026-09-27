@@ -33,6 +33,14 @@ It must be served directly over HTTPS with `application/json`, without a redirec
 
 `APPLE_TEAM_ID` is intentionally unresolved. Do not publish the placeholder.
 
+After obtaining the real Team ID, generate the deployable file from the repository root:
+
+```sh
+APPLE_TEAM_ID=A1B2C3D4E5 node scripts/generate-aasa.mjs
+```
+
+The generator rejects missing or malformed Team IDs and writes `public/.well-known/apple-app-site-association`. Review the generated app ID before committing and deploying it. No placeholder AASA file is published by Phase 4.
+
 ## Xcode requirement
 
 On the signing Mac, add the Associated Domains capability to the App target and add:

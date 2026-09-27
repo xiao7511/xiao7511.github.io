@@ -2,6 +2,8 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 import type { CommunityPage, CommunityPost, CommunityReply, Profile } from '../types/community';
 
+export type ReportReason = 'spam' | 'harassment' | 'hate' | 'sexual' | 'violence' | 'privacy' | 'other';
+
 interface PostRow {
   id: number;
   user_id: string | null;
@@ -131,4 +133,27 @@ export async function addPost(
     parent_id: null
   });
   if (result.error) throw result.error;
+}
+
+export async function reportPost(
+  client: SupabaseClient,
+  postId: number,
+  reason: ReportReason,
+  details: string
+): Promise<number> {
+  const result = await client.rpc('report_post', {
+    p_post_id: postId,
+    p_reason: reason,
+    p_details: details.trim() || null
+  });
+  if (result.error) throw result.error;
+  const id = Number(result.data);
+  if (!Number.isInteger(id) || id <= 0) throw new Error('INVALID_REPORT_RESPONSE');
+  return id;
+}
+
+export async function setUserBlock(client: SupabaseClient, userId: string, blocked: boolean): Promise<void> {
+  const result = await client.rpc('set_user_block', { p_blocked_id: userId, p_blocked: blocked });
+  if (result.error) throw result.error;
+  if (result.data !== blocked) throw new Error('INVALID_BLOCK_RESPONSE');
 }

@@ -42,6 +42,7 @@ async function logout(): Promise<void> {
         </div>
       </dl>
       <button class="secondary-button" type="button" :disabled="auth.loading" @click="logout">退出登录</button>
+      <RouterLink to="/account/delete" class="profile-danger-link">删除账号</RouterLink>
     </div>
     <div v-else class="profile-card profile-card--guest">
       <AppAvatar size="large" name="NOBI" />
@@ -52,5 +53,9 @@ async function logout(): Promise<void> {
         ><RouterLink to="/register" class="secondary-button">注册</RouterLink>
       </div>
     </div>
+    <nav class="profile-links" aria-label="支持与政策">
+      <RouterLink to="/privacy">隐私政策</RouterLink>
+      <RouterLink to="/support">支持与联系</RouterLink>
+    </nav>
   </div>
 </template>

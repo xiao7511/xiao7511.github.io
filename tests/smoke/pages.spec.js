@@ -168,7 +168,10 @@ const pages = [
   ['/manga.html', '#dynamic-manga-container'],
   ['/community.html', '#posts-list'],
   ['/detail.html?category=anime&slot=0', '#gallery-stream'],
-  ['/admin.html', '.admin-shell']
+  ['/admin.html', '.admin-shell'],
+  ['/privacy.html', '#main-content'],
+  ['/support.html', '#main-content'],
+  ['/moderation.html', '.moderation-shell']
 ];
 for (const [path, selector] of pages) {
   test(`${path} renders its application shell`, async ({ page }) => {

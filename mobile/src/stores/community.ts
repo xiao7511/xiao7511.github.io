@@ -1,7 +1,16 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { Session } from '@supabase/supabase-js';
-import { addPost, addReply, fetchCommunityPage, fetchCommunityPost, togglePostLike } from '../services/community';
+import {
+  addPost,
+  addReply,
+  fetchCommunityPage,
+  fetchCommunityPost,
+  reportPost,
+  setUserBlock,
+  togglePostLike,
+  type ReportReason
+} from '../services/community';
 import { runOptimisticLike, type LikeState } from '../services/optimistic-like';
 import { getSupabase } from '../services/supabase';
 import type { CommunityPost, CommunityReply, Profile } from '../types/community';
@@ -89,6 +98,19 @@ export const useCommunityStore = defineStore('community', () => {
     await load(1);
   }
 
+  async function report(id: number, reason: ReportReason, details: string, session: Session): Promise<number> {
+    if (!session.access_token) throw new Error('UNAUTHORIZED');
+    return reportPost(await getSupabase(), id, reason, details);
+  }
+
+  async function blockUser(userId: string, session: Session): Promise<void> {
+    if (!session.access_token || userId === session.user.id) throw new Error('INVALID_BLOCK_TARGET');
+    await setUserBlock(await getSupabase(), userId, true);
+    posts.value = posts.value.filter((post) => post.user_id !== userId);
+    replies.value = replies.value.filter((reply) => reply.user_id !== userId);
+    if (selected.value?.user_id === userId) selected.value = null;
+  }
+
   return {
     posts,
     selected,
@@ -104,6 +126,8 @@ export const useCommunityStore = defineStore('community', () => {
     loadPost,
     toggleLike,
     reply,
-    publish
+    publish,
+    report,
+    blockUser
   };
 });

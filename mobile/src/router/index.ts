@@ -23,8 +23,22 @@ export const router = createRouter({
       component: () => import('../views/ComposePostView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/community/:id/report',
+      name: 'community-report',
+      component: () => import('../views/ReportPostView.vue'),
+      meta: { requiresAuth: true }
+    },
     { path: '/community/:id', name: 'community-detail', component: () => import('../views/PostDetailView.vue') },
     { path: '/profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
+    {
+      path: '/account/delete',
+      name: 'account-delete',
+      component: () => import('../views/AccountDeleteView.vue'),
+      meta: { requiresAuth: true }
+    },
+    { path: '/privacy', name: 'privacy', component: () => import('../views/PrivacyView.vue') },
+    { path: '/support', name: 'support', component: () => import('../views/SupportView.vue') },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
     { path: '/register', name: 'register', component: () => import('../views/RegisterView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' }

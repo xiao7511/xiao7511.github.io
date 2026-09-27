@@ -7,6 +7,7 @@ import { hideSplash, initNative } from './services/native';
 import './style.css';
 import './style-phase2.css';
 import './style-ios.css';
+import './style-phase4.css';
 
 const app = createApp(App);
 const pinia = createPinia();

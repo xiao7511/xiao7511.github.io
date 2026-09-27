@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10131b" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>内容审核 · NOBI 动漫</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <link rel="stylesheet" href="assets/css/moderation.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
+    <script type="module" src="assets/js/moderation.js"></script>
+  </head>
+  <body class="moderation-page">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="moderation-header">
+      <a class="logo" href="index.html" aria-label="返回 NOBI 动漫首页"
+        ><span class="logo__name">NOBI</span><span class="logo__sub">审核</span></a
+      >
+      <nav><a href="admin.html">内容管理</a><a href="support.html">支持</a></nav>
+    </header>
+    <main id="main-content" class="moderation-shell">
+      <div class="moderation-heading">
+        <div>
+          <p>TRUST &amp; SAFETY</p>
+          <h1>社区举报队列</h1>
+        </div>
+        <button id="refresh-reports" type="button">刷新</button>
+      </div>
+      <p id="moderation-status" class="moderation-status" role="status">正在检查管理员会话…</p>
+      <div id="moderation-list" class="moderation-list" aria-live="polite"></div>
+    </main>
+  </body>
+</html>

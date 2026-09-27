@@ -2,6 +2,8 @@
 
 Status: **SERVER DEPLOYMENT REQUIRED**. The Worker is external to this repository, so this document does not claim that production has been fixed.
 
+The reviewed helper is committed at `scripts/worker-cors.mjs`. Copy or adapt it into the external Worker, call `handleWorkerPreflight(request)` before routing, and wrap normal responses with `applyWorkerCors(request, response)`. Repository tests prove the allowlist and evil-origin rejection, but they do not deploy the Worker.
+
 ## Current production issue
 
 The Worker reflects arbitrary request origins and returns `Access-Control-Allow-Credentials: true`. A preflight from `https://evil.example` was accepted. This policy must be replaced with an explicit allowlist.
@@ -27,3 +29,11 @@ The verified Worker endpoints use public requests or bearer/header authenticatio
 ## Verification
 
 Run OPTIONS and real requests for all five allowed origins. Then verify that `https://evil.example` receives no allow-origin header. Also check that responses include `Vary: Origin` and never combine credentials with a wildcard origin.
+
+Deployment order:
+
+1. Integrate and test the helper in the external Worker repository.
+2. Deploy to a non-production Worker route.
+3. Run allowed and disallowed preflights plus real GET requests.
+4. Deploy production with rollback metadata.
+5. Repeat the production checks and record response headers.
