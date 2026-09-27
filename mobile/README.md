@@ -13,6 +13,7 @@ npm run dev
 npm run typecheck
 npm run lint
 npm run build
+npm run cap:sync:ios
 npm run cap:sync:android
 ```
 
@@ -23,3 +24,7 @@ Copy `.env.example` to `.env` for **public** Supabase URL/key and optional API o
 Phase 2 connects the verified Worker content endpoints and existing Supabase Auth, `profiles`, `posts`, `post_likes`, and `toggle_post_like` RPC. It includes login/registration, session restore/refresh, content details, community feed/detail/replies, atomic likes, and profile state. Favorites and manga chapter reading remain unavailable because no verified production contract exists. Network failures produce visible error states; no sample records are inserted into the app.
 
 See `API_CONTRACT.md` for proven fields and `PHASE2_CORS.md` for the production CORS verification and server-side security finding.
+
+Phase 3 prepares the iPhone UI, NOBI icon/splash assets, native share fallback, lifecycle handling and Universal Link route mapping. Use `IOS_BUILD.md` for the macOS/Xcode handoff, `IOS_RELEASE_READINESS.md` for App Store blockers, and `PRODUCTION_TEST_CHECKLIST.md` for signed-device validation. Production Universal Links and the Worker CORS correction still require server deployment.
+
+Supabase sessions currently use the reviewed Web Storage adapter in WKWebView. Keep the adapter boundary when moving to Capacitor Preferences or a Keychain-backed secure-storage implementation. Such a migration must include device persistence, refresh, logout cleanup and upgrade tests; Phase 3 does not add an unverified native storage plugin.
