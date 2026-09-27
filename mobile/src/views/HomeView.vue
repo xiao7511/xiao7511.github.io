@@ -44,15 +44,14 @@ onMounted(load);
   <div class="page home-page home-aligned">
     <header class="home-header">
       <div class="brand">
-        <span class="brand__mark">N</span><span>NOBI<small>动漫</small></span>
+        <span>NOBI <small>动漫</small></span>
       </div>
-      <RouterLink to="/search" class="header-action" aria-label="搜索">⌕</RouterLink>
+      <RouterLink to="/search" class="header-action" aria-label="搜索"><span aria-hidden="true">⌕</span></RouterLink>
       <RouterLink to="/profile" class="home-account" aria-label="我的账号">
         <AppAvatar
           :src="auth.profile?.avatar_url"
-          :name="auth.profile?.nickname || auth.user?.email?.split('@')[0] || 'NOBI'"
+          :name="auth.user ? auth.profile?.nickname || auth.user.email?.split('@')[0] || 'NOBI' : 'NOBI'"
         />
-        <span v-if="auth.user">{{ auth.profile?.nickname || auth.user.email?.split('@')[0] }}</span>
       </RouterLink>
     </header>
 
@@ -66,11 +65,8 @@ onMounted(load);
 
     <section class="content-section">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">POPULAR</span>
-          <h2>🔥 本季热门</h2>
-        </div>
-        <RouterLink to="/anime">查看全部 ›</RouterLink>
+        <h2>本季热门</h2>
+        <RouterLink to="/anime">查看更多 ›</RouterLink>
       </div>
       <AppSkeleton v-if="loading" />
       <div v-else-if="data?.popular.length" class="card-grid home-card-grid">
@@ -88,11 +84,8 @@ onMounted(load);
 
     <section class="content-section">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">NEW RELEASES</span>
-          <h2>⭐ 新番推荐</h2>
-        </div>
-        <RouterLink to="/manga">查看全部 ›</RouterLink>
+        <h2>新番推荐</h2>
+        <RouterLink to="/manga">查看更多 ›</RouterLink>
       </div>
       <AppSkeleton v-if="loading" />
       <div v-else-if="data?.recommendations.length" class="card-grid home-card-grid">
@@ -110,10 +103,7 @@ onMounted(load);
 
     <section class="content-section">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">UPDATES</span>
-          <h2>🕒 最近更新</h2>
-        </div>
+        <h2>最近更新</h2>
       </div>
       <AppSkeleton v-if="loading" :count="2" />
       <div v-else-if="data?.updates.length" class="home-update-list">
@@ -131,10 +121,7 @@ onMounted(load);
 
     <section class="content-section">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">RANKING</span>
-          <h2>🏆 人气排行榜</h2>
-        </div>
+        <h2>人气排行榜</h2>
       </div>
       <AppSkeleton v-if="loading" :count="2" />
       <ol v-else-if="data?.ranking.length" class="home-ranking-list">
@@ -155,10 +142,7 @@ onMounted(load);
 
     <section class="content-section">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">NEWS</span>
-          <h2>📢 最新资讯</h2>
-        </div>
+        <h2>最新资讯</h2>
       </div>
       <AppSkeleton v-if="loading" :count="2" />
       <div v-else-if="data?.news.length" class="home-news-list">
@@ -176,10 +160,7 @@ onMounted(load);
 
     <section v-if="data?.socialLinks.length" class="content-section home-social">
       <div class="section-heading">
-        <div>
-          <span class="eyebrow">FOLLOW NOBI</span>
-          <h2>社媒</h2>
-        </div>
+        <h2>关注 NOBI</h2>
       </div>
       <nav aria-label="NOBI 社交媒体">
         <a

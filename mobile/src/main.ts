@@ -10,6 +10,7 @@ import './style-ios.css';
 import './style-phase4.css';
 import './style-home.css';
 import './style-phase42.css';
+import './style-phase43.css';
 
 const app = createApp(App);
 const pinia = createPinia();

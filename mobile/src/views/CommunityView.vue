@@ -17,6 +17,10 @@ const toast = useToastStore();
 const router = useRouter();
 const route = useRoute();
 const query = ref('');
+interface FocusableInput {
+  focus(): void;
+}
+const searchInput = ref<FocusableInput | null>(null);
 const category = ref('热门');
 const filteredPosts = computed(() => {
   const needle = query.value.trim().toLowerCase();
@@ -52,16 +56,13 @@ async function share(post: CommunityPost): Promise<void> {
 </script>
 <template>
   <div class="page listing-page">
-    <div class="page-heading page-heading--action">
-      <div>
-        <span class="eyebrow">COMMUNITY</span>
-        <h1>社区</h1>
-        <p>来自现有 NOBI 社区数据</p>
-      </div>
+    <div class="page-heading page-heading--action community-heading">
+      <h1>社区</h1>
+      <button type="button" class="header-action" aria-label="搜索社区" @click="searchInput?.focus()">⌕</button>
       <RouterLink to="/community/new" class="primary-button">发布</RouterLink>
     </div>
     <div class="community-toolbar">
-      <label><span class="sr-only">搜索社区</span><input v-model="query" type="search" placeholder="搜索帖子或用户" /></label>
+      <label><span class="sr-only">搜索社区</span><input ref="searchInput" v-model="query" type="search" placeholder="搜索帖子或用户" /></label>
       <div class="community-categories"><button v-for="item in ['热门','最新','动漫','漫画','讨论']" :key="item" type="button" :class="{active: category === item}" @click="category = item">{{ item }}</button></div>
     </div>
     <AppSkeleton v-if="community.loading" variant="post" :count="3" /><AppError

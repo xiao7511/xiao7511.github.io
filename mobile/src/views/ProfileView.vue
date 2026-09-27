@@ -18,10 +18,10 @@ async function logout(): Promise<void> {
 </script>
 <template>
   <div class="page listing-page">
-    <div class="page-heading">
-      <span class="eyebrow">ACCOUNT</span>
-      <h1>我的</h1>
-      <p>你的 NOBI 空间</p>
+    <div class="profile-topbar">
+      <button type="button" class="header-action" aria-label="返回" @click="router.back">‹</button>
+      <h1>个人中心</h1>
+      <span aria-hidden="true"></span>
     </div>
     <div v-if="auth.user" class="profile-card profile-card--aligned">
       <div class="profile-cover" aria-hidden="true"></div>
@@ -31,10 +31,10 @@ async function logout(): Promise<void> {
         size="large"
       />
       <h2>{{ auth.profile?.nickname || auth.user.email?.split('@')[0] }}</h2>
-      <p>{{ auth.user.email }}</p>
+      <p class="profile-email">{{ auth.user.email }}</p>
       <dl>
         <div>
-          <dt>账号 ID</dt>
+          <dt>UID</dt>
           <dd>{{ auth.user.id }}</dd>
         </div>
       </dl>

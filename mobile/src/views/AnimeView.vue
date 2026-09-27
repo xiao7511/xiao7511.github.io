@@ -38,9 +38,7 @@ onMounted(async () => {
 <template>
   <div class="page listing-page">
     <div class="page-heading">
-      <span class="eyebrow">EXPLORE</span>
       <h1>动漫库</h1>
-      <p>来自 NOBI 生产内容 API</p>
     </div>
     <div class="library-tabs" aria-label="动漫状态筛选">
       <button v-for="option in [{v:'all',l:'全部'},{v:'hot',l:'热门'},{v:'连载中',l:'连载中'},{v:'完结',l:'完结'}]" :key="option.v" type="button" :class="{active: state === option.v}" @click="state = option.v">{{ option.l }}</button>

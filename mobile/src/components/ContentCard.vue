@@ -11,7 +11,7 @@ defineProps<{ item: ContentItem; year?: string; label?: string; likeCount?: numb
     <div class="content-card__body">
       <h3>{{ item.title || '未命名作品' }}</h3>
       <div v-if="year || label || likeCount !== undefined" class="content-card__meta">
-        <span>{{ year || '--' }}</span
+        <span v-if="year && year !== '--'">{{ year }}</span
         ><span class="content-card__chip">{{ label || 'NOBI 推荐' }}</span
         ><strong>♡ {{ likeCount || 0 }}</strong>
       </div>

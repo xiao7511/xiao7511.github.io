@@ -91,13 +91,13 @@ onBeforeUnmount(stop);
       <ContentImage :src="active.cover_url" :alt="active.title || '精选内容'" />
       <div class="home-carousel__shade"></div>
       <div class="home-carousel__content">
-        <div v-if="active.year || active.theme_tags?.length" class="home-carousel__tags">
-          <span v-if="active.year">{{ active.year }} · 新番</span>
-          <span v-for="tag in (active.theme_tags ?? []).slice(0, 4)" :key="tag">{{ tag }}</span>
-        </div>
         <h1>{{ active.title || '未命名作品' }}</h1>
         <p v-if="active.subtitle">{{ active.subtitle }}</p>
-        <strong>查看详情 ›</strong>
+        <div v-if="active.year || active.theme_tags?.length" class="home-carousel__tags">
+          <span v-if="active.year">{{ active.year }}</span>
+          <span v-for="tag in (active.theme_tags ?? []).slice(0, 3)" :key="tag">{{ tag }}</span>
+        </div>
+        <strong class="home-carousel__cta">▶ 立即查看</strong>
       </div>
     </RouterLink>
     <div v-if="items.length > 1" class="home-carousel__dots" aria-label="选择轮播内容">
