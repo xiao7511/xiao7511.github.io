@@ -6,12 +6,12 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   plugins: {
     SplashScreen: {
-      launchShowDuration: 0,
+      launchShowDuration: 1000,
       launchAutoHide: false,
       backgroundColor: '#10131b',
       showSpinner: false
     },
-    StatusBar: { style: 'DARK', backgroundColor: '#10131b' }
+    StatusBar: { style: 'LIGHT', backgroundColor: '#10131b', overlaysWebView: false }
   }
 };
 

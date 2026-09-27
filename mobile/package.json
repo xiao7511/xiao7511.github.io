@@ -11,6 +11,8 @@
     "test": "vitest run",
     "cap:sync": "npm run build && cap sync",
     "cap:sync:android": "npm run build && cap sync android",
+    "cap:sync:ios": "npm run build && cap sync ios",
+    "ios": "npm run cap:sync:ios && cap open ios",
     "android": "npm run cap:sync:android && cap open android"
   },
   "dependencies": {

@@ -14,8 +14,8 @@ export function apiOrigin(): string {
 export function webOrigin(): string {
   const raw = import.meta.env.VITE_WEB_BASE_URL || 'https://www.nobistudio.com';
   const url = new URL(raw);
-  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) {
-    throw new Error('Web 地址必须使用 HTTPS');
+  if (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(url.hostname)) {
+    throw new Error('分享 Web 地址必须是非本机 HTTPS 地址');
   }
   return url.origin;
 }

@@ -5,10 +5,14 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { Router } from 'vue-router';
 import type { useAuthStore } from '../stores/auth';
+import { deepLinkRoute } from './deep-links';
+import { shareWithFallback } from './share';
+import { safeShareUrl } from './urls';
 
 export async function initNative(router: Router, auth: ReturnType<typeof useAuthStore>): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  await StatusBar.setStyle({ style: Style.Dark });
+  await StatusBar.setStyle({ style: Style.Light });
+  await StatusBar.setOverlaysWebView({ overlay: false }).catch(() => undefined);
   await StatusBar.setBackgroundColor({ color: '#10131b' }).catch(() => undefined);
   await App.addListener('backButton', () => {
     if (router.currentRoute.value.path !== '/') {
@@ -19,6 +23,13 @@ export async function initNative(router: Router, auth: ReturnType<typeof useAuth
   await App.addListener('appStateChange', ({ isActive }) => {
     if (isActive) void auth.resume();
   });
+  const openDeepLink = (url: string) => {
+    const target = deepLinkRoute(url);
+    if (target && target !== router.currentRoute.value.fullPath) void router.push(target);
+  };
+  await App.addListener('appUrlOpen', ({ url }) => openDeepLink(url));
+  const launch = await App.getLaunchUrl();
+  if (launch?.url) openDeepLink(launch.url);
 }
 
 export async function hideSplash(): Promise<void> {
@@ -26,11 +37,17 @@ export async function hideSplash(): Promise<void> {
 }
 
 export async function shareContent(title: string, url: string, text?: string): Promise<void> {
-  if (Capacitor.isNativePlatform()) {
-    await Share.share({ title, text, url, dialogTitle: '分享 NOBI 内容' });
-  } else if (navigator.share) {
-    await navigator.share({ title, text, url });
-  } else {
-    await navigator.clipboard.writeText(url);
-  }
+  const safeUrl = safeShareUrl(url);
+  if (!safeUrl) throw new Error('UNSAFE_SHARE_URL');
+  await shareWithFallback(
+    { title, text, url: safeUrl },
+    {
+      native: Capacitor.isNativePlatform(),
+      nativeShare: async (payload) => {
+        await Share.share({ ...payload, dialogTitle: '分享 NOBI 内容' });
+      },
+      webShare: navigator.share ? async (payload) => navigator.share(payload) : undefined,
+      copy: navigator.clipboard?.writeText ? async (value) => navigator.clipboard.writeText(value) : undefined
+    }
+  );
 }

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="NOBI App icon master">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ff76c8"/>
+      <stop offset="1" stop-color="#6ec1ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#brand)"/>
+  <path d="M288 240h240c176 0 288 96 288 272S704 784 528 784H288zm160 144v256h80c96 0 144-48 144-128s-48-128-144-128z" fill="#fff" fill-rule="evenodd"/>
+</svg>

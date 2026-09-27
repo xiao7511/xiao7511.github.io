@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" role="img" aria-label="NOBI splash master">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ff76c8"/>
+      <stop offset="1" stop-color="#6ec1ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="2732" height="2732" fill="#10131b"/>
+  <path d="M1136 1094h230c168 0 276 92 276 261s-108 261-276 261h-230zm153 138v246h77c92 0 138-46 138-123s-46-123-138-123z" fill="url(#brand)" fill-rule="evenodd"/>
+</svg>
