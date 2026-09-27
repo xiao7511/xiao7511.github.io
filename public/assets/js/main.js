@@ -1,7 +1,7 @@
 import { initializeSupabase } from './src/api/supabase.js';
 import { togglePostLike } from './src/community/likes.js';
 import { groupLikesByPostId } from './src/community/posts.js';
-import { removeReplyImage, uploadReplyImage, validateReplyImage } from './src/community/reply-images.js';
+import { createReplyWithOptionalImage, validateReplyImage } from './src/community/reply-images.js';
 import { element, setContentState, setImageSource, setLoadingState } from './src/components/dom.js';
 import { initSiteHeader, updateCopyrightYear } from './src/components/header.js';
 import { getImageKey } from './src/images/likes.js';
@@ -1165,9 +1165,24 @@ document.addEventListener('DOMContentLoaded', () => {
         className: 'reply-image',
         attributes: { alt: '回复图片', loading: 'lazy', decoding: 'async' }
       });
-      const imageUrl = window.supabaseClient.storage.from('community').getPublicUrl(reply.image_path).data.publicUrl;
-      setImageSource(image, imageUrl, 'images/nobi-anime-placeholder.svg');
-      body.append(image);
+      const fallback = element('span', {
+        className: 'reply-image-fallback',
+        text: '图片加载失败',
+        attributes: { hidden: '', role: 'status' }
+      });
+      const frame = element('div', { className: 'reply-image-frame' }, [image, fallback]);
+      const showFallback = () => {
+        image.hidden = true;
+        fallback.hidden = false;
+      };
+      try {
+        const imageUrl = window.supabaseClient.storage.from('community').getPublicUrl(reply.image_path).data.publicUrl;
+        if (setImageSource(image, imageUrl)) image.addEventListener('error', showFallback, { once: true });
+        else showFallback();
+      } catch (_) {
+        showFallback();
+      }
+      body.append(frame);
     }
     return element('div', { className: 'reply-item' }, [replyHeader, body]);
   };
@@ -1286,35 +1301,63 @@ document.addEventListener('DOMContentLoaded', () => {
           className: 'reply-image-input',
           attributes: { type: 'file', accept: 'image/jpeg,image/png,image/webp', 'aria-label': '添加一张回复图片' }
         });
-        const replyImageButton = element('label', { className: 'reply-image-button', text: '添加图片' }, [replyFileInput]);
+        const replyImageButton = element(
+          'label',
+          { className: 'reply-image-button', attributes: { title: '添加图片' } },
+          [
+            element('span', { className: 'reply-image-button__icon', text: '🖼', attributes: { 'aria-hidden': 'true' } }),
+            element('span', { className: 'sr-only', text: '添加图片' }),
+            replyFileInput
+          ]
+        );
         const replyPreview = element('div', { className: 'reply-image-preview', attributes: { hidden: '' } });
+
+        const clearReplyImageSelection = () => {
+          if (replyPreview.dataset.objectUrl) URL.revokeObjectURL(replyPreview.dataset.objectUrl);
+          delete replyPreview.dataset.objectUrl;
+          replyFileInput.value = '';
+          replyPreview.hidden = true;
+          replyPreview.replaceChildren();
+        };
+
         replyFileInput.addEventListener('change', () => {
           const file = replyFileInput.files?.[0];
+          if (replyPreview.dataset.objectUrl) URL.revokeObjectURL(replyPreview.dataset.objectUrl);
+          delete replyPreview.dataset.objectUrl;
           replyPreview.replaceChildren();
           if (!file) { replyPreview.hidden = true; return; }
           try {
             validateReplyImage(file);
             const image = element('img', { attributes: { alt: '待上传图片预览' } });
             const objectUrl = URL.createObjectURL(file);
+            replyPreview.dataset.objectUrl = objectUrl;
             image.src = objectUrl;
-            image.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
             const remove = element('button', { text: '×', attributes: { type: 'button', 'aria-label': '移除图片' } });
-            remove.addEventListener('click', () => { replyFileInput.value = ''; replyPreview.hidden = true; replyPreview.replaceChildren(); });
-            replyPreview.append(image, remove);
+            remove.addEventListener('click', clearReplyImageSelection);
+            const fileSize = `${(file.size / 1024).toFixed(file.size >= 1024 ? 0 : 1)} KB`;
+            replyPreview.append(
+              image,
+              element('span', { className: 'reply-image-preview__meta', text: `${file.name} · ${fileSize}` }),
+              remove
+            );
             replyPreview.hidden = false;
           } catch (error) {
-            replyFileInput.value = '';
-            replyPreview.hidden = true;
+            clearReplyImageSelection();
             alert(error.message);
           }
         });
+        const replyControls = element('div', { className: 'reply-controls' }, [
+          replyImageButton,
+          replyInput,
+          submitReplyButton
+        ]);
         const replyBox = element(
           'div',
           {
             className: 'reply-box',
             attributes: { id: `reply-box-${post.id}`, hidden: '' }
           },
-          [replyInput, replyImageButton, replyPreview, submitReplyButton]
+          [replyPreview, replyControls]
         );
 
         likeButton.addEventListener('click', async () => {
@@ -1327,7 +1370,17 @@ document.addEventListener('DOMContentLoaded', () => {
           if (willOpen) replyInput.focus();
         });
         submitReplyButton.addEventListener('click', () =>
-          submitReply(post.id, replyInput, replyFileInput, replyPreview, repliesContainer, replyButton, submitReplyButton)
+          submitReply(
+            post.id,
+            replyInput,
+            replyFileInput,
+            replyPreview,
+            repliesContainer,
+            replyButton,
+            submitReplyButton,
+            replyImageButton,
+            clearReplyImageSelection
+          )
         );
 
         postCard.append(header);
@@ -1417,75 +1470,103 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 3. 提交回复逻辑：同步更新最新的头像与昵称
-  async function submitReply(postId, inputElem, fileInput, preview, repliesContainer, replyButton, submitButton) {
+  async function submitReply(
+    postId,
+    inputElem,
+    fileInput,
+    preview,
+    repliesContainer,
+    replyButton,
+    submitButton,
+    imageButton,
+    clearReplyImageSelection
+  ) {
     if (!window.supabaseClient) return;
     if (!inputElem) return;
+    if (submitButton.dataset.sending === 'true') return;
     const content = inputElem.value.trim();
     const file = fileInput?.files?.[0] || null;
     if (!content && !file) { alert('请输入回复内容或选择图片。'); return; }
+    try {
+      if (file) validateReplyImage(file);
+    } catch (error) {
+      clearReplyImageSelection?.();
+      alert(error.message);
+      return;
+    }
 
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    const user = session ? session.user : null;
-    if (!user) { alert('请先登录后再回复。'); return; }
+    submitButton.dataset.sending = 'true';
     submitButton.disabled = true;
     submitButton.textContent = '发送中…';
+    inputElem.disabled = true;
+    if (fileInput) fileInput.disabled = true;
+    imageButton?.classList.add('is-disabled');
+    imageButton?.setAttribute('aria-disabled', 'true');
+    preview?.setAttribute('aria-busy', 'true');
 
-    // ✨ 核心修复：回复时也实时获取 profiles 表中的最新昵称和头像
-    const { data: profile } = await window.supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
-    const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
-
-    let uploaded = null;
     try {
-      if (file) uploaded = await uploadReplyImage(window.supabaseClient, user.id, file);
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      const user = session ? session.user : null;
+      if (!user) {
+        alert('请先登录后再回复。');
+        return;
+      }
+
+      // 回复时实时获取 profiles 表中的最新昵称和头像。
+      const { data: profile } = await window.supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
+      const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
+
+      const uploaded = await createReplyWithOptionalImage(window.supabaseClient, {
+        userId: user.id,
+        file,
+        createReply: async (imagePath) => {
+          const { error } = await window.supabaseClient.from('posts').insert([
+            {
+              content,
+              user_id: user.id,
+              nickname: finalNickname,
+              avatar_url: finalAvatar,
+              parent_id: postId,
+              image_path: imagePath
+            }
+          ]);
+          if (error) throw error;
+        }
+      });
+
+      inputElem.value = '';
+      clearReplyImageSelection?.();
+      repliesContainer.append(
+        createReplyItem({
+          content,
+          nickname: finalNickname,
+          avatar_url: finalAvatar,
+          image_path: uploaded?.path || null,
+          created_at: new Date().toISOString()
+        })
+      );
+      const replyCount = (Number(replyButton.dataset.replyCount) || 0) + 1;
+      replyButton.dataset.replyCount = String(replyCount);
+      replyButton.textContent = `💬 回复（${replyCount}）`;
     } catch (error) {
-      alert(`图片上传失败: ${error.message}`);
-      submitButton.disabled = false;
-      submitButton.textContent = '发送';
-      return;
-    }
-
-    const { error } = await window.supabaseClient.from('posts').insert([
-      {
-        content,
-        user_id: user.id,
-        nickname: finalNickname,
-        avatar_url: finalAvatar,
-        parent_id: postId,
-        image_path: uploaded?.path || null
-      },
-    ]);
-
-    if (error) {
-      if (uploaded) await removeReplyImage(window.supabaseClient, uploaded.path).catch(() => undefined);
+      if (error.cleanupError) console.error('回复创建失败，且上传图片清理失败:', error.cleanupError);
       alert(`回复失败: ${error.message}`);
+    } finally {
+      delete submitButton.dataset.sending;
       submitButton.disabled = false;
       submitButton.textContent = '发送';
-      return;
+      inputElem.disabled = false;
+      if (fileInput) fileInput.disabled = false;
+      imageButton?.classList.remove('is-disabled');
+      imageButton?.removeAttribute('aria-disabled');
+      preview?.removeAttribute('aria-busy');
     }
-
-    inputElem.value = '';
-    if (fileInput) fileInput.value = '';
-    if (preview) { preview.hidden = true; preview.replaceChildren(); }
-    repliesContainer.append(
-      createReplyItem({
-        content,
-        nickname: finalNickname,
-        avatar_url: finalAvatar,
-        image_path: uploaded?.path || null,
-        created_at: new Date().toISOString()
-      })
-    );
-    const replyCount = (Number(replyButton.dataset.replyCount) || 0) + 1;
-    replyButton.dataset.replyCount = String(replyCount);
-    replyButton.textContent = `💬 回复（${replyCount}）`;
-    submitButton.disabled = false;
-    submitButton.textContent = '发送';
   }
 
  /* window.submitReply = async function(postId) {

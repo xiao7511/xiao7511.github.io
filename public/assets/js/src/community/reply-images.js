@@ -3,9 +3,9 @@ const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'web
 
 export function validateReplyImage(file) {
   const extension = extensions[file?.type];
-  if (!extension) throw new Error('仅支持 JPEG、PNG 或 WebP 图片');
+  if (!extension) throw new Error('不支持该图片格式，请选择 JPEG、PNG 或 WebP 图片');
   if (!Number.isFinite(file.size) || file.size <= 0 || file.size > REPLY_IMAGE_MAX_BYTES) {
-    throw new Error('图片大小必须小于或等于 5MB');
+    throw new Error('图片不能超过 5MB');
   }
   return extension;
 }
@@ -26,4 +26,22 @@ export async function uploadReplyImage(client, userId, file) {
 export async function removeReplyImage(client, path) {
   const { error } = await client.storage.from('community').remove([path]);
   if (error) throw error;
+}
+
+export async function createReplyWithOptionalImage(client, { userId, file, createReply }) {
+  let uploaded = null;
+  try {
+    if (file) uploaded = await uploadReplyImage(client, userId, file);
+    await createReply(uploaded?.path || null);
+    return uploaded;
+  } catch (error) {
+    if (uploaded) {
+      try {
+        await removeReplyImage(client, uploaded.path);
+      } catch (cleanupError) {
+        error.cleanupError = cleanupError;
+      }
+    }
+    throw error;
+  }
 }

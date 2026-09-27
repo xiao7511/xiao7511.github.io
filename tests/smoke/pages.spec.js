@@ -19,7 +19,14 @@ const contentRecord = {
 
 async function mockRuntime(
   page,
-  { posts = [], features = false, socialLinks = false, contentCount = 6, sessionUser = null } = {}
+  {
+    posts = [],
+    features = false,
+    socialLinks = false,
+    contentCount = 6,
+    sessionUser = null,
+    replyInsertError = false
+  } = {}
 ) {
   const session = sessionUser
     ? {
@@ -69,8 +76,12 @@ async function mockRuntime(
             ]
           })};
           const currentSession = ${JSON.stringify(session)};
+          const failReplyInsert = ${JSON.stringify(replyInsertError)};
           let imageLiked = false;
           let postLiked = false;
+          window.__replyUploads = [];
+          window.__replyRemovals = [];
+          window.__postInserts = [];
           function query(table) {
             let rows = [...(tables[table] || [])];
             let head = false;
@@ -82,7 +93,15 @@ async function mockRuntime(
               order() { return api; },
               range(start, end) { rows = rows.slice(start, end + 1); return api; },
               maybeSingle() { return Promise.resolve({ data: rows[0] || null, error: null }); },
-              insert() { return Promise.resolve({ data: null, error: null }); },
+              insert(values) {
+                if (table === 'posts') {
+                  window.__postInserts.push(...values);
+                  if (failReplyInsert && values.some((value) => value.parent_id !== null)) {
+                    return Promise.resolve({ data: null, error: { message: 'mock reply insert failed' } });
+                  }
+                }
+                return Promise.resolve({ data: null, error: null });
+              },
               upsert() { return Promise.resolve({ data: null, error: null }); },
               delete() { return api; },
               update() { return api; },
@@ -125,6 +144,23 @@ async function mockRuntime(
                   refreshSession: async () => ({ data: { session: currentSession }, error: null }),
                   onAuthStateChange(callback) { queueMicrotask(() => callback('INITIAL_SESSION', currentSession)); return { data: { subscription: { unsubscribe() {} } } }; },
                   signOut: async () => ({ error: null })
+                },
+                storage: {
+                  from(bucket) {
+                    return {
+                      upload: async (path, file) => {
+                        window.__replyUploads.push({ bucket, path, type: file.type, size: file.size });
+                        return { error: null };
+                      },
+                      remove: async (paths) => {
+                        window.__replyRemovals.push({ bucket, paths });
+                        return { error: null };
+                      },
+                      getPublicUrl: () => ({
+                        data: { publicUrl: 'http://127.0.0.1:4173/images/IMG_4893.webp' }
+                      })
+                    };
+                  }
                 }
               };
             }
@@ -356,6 +392,174 @@ test('community likes and replies update the current post without rerendering th
   expect(
     await page.evaluate(() => window.__communityPostCard === document.querySelector('#posts-list .post-card'))
   ).toBe(true);
+});
+
+test('community previews, uploads and renders an image reply once', async ({ page }) => {
+  const post = {
+    id: 42,
+    user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+    created_at: '2026-09-21T01:00:00Z',
+    content: '图片回复测试帖子。',
+    nickname: 'NOBI 漫友',
+    avatar_url: 'http://127.0.0.1:4173/images/nobi-avatar.svg',
+    parent_id: null
+  };
+  await mockRuntime(page, {
+    posts: [post],
+    sessionUser: { id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670', email: 'local@example.com' }
+  });
+  await page.goto('/community.html');
+  const postCard = page.locator('#posts-list .post-card').first();
+  await expect(postCard).toBeVisible({ timeout: 15_000 });
+  await postCard.locator('.reply-action-btn').click();
+  const fileInput = postCard.locator('.reply-image-input');
+  await fileInput.setInputFiles({
+    name: 'reply.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z4S0AAAAASUVORK5CYII=',
+      'base64'
+    )
+  });
+  await expect(postCard.locator('.reply-image-preview')).toBeVisible();
+  await expect(postCard.locator('.reply-image-preview__meta')).toContainText('reply.png');
+
+  await postCard.locator('.reply-image-preview button').click();
+  await expect(postCard.locator('.reply-image-preview')).toBeHidden();
+  await fileInput.setInputFiles({
+    name: 'reply.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z4S0AAAAASUVORK5CYII=',
+      'base64'
+    )
+  });
+  await postCard.locator('.reply-input').fill('图文回复');
+  await postCard.locator('.reply-submit').dblclick();
+
+  await expect(postCard.locator('.reply-item')).toHaveCount(1);
+  await expect(postCard.locator('.reply-image')).toBeVisible();
+  const state = await page.evaluate(() => ({
+    uploads: window.__replyUploads,
+    inserts: window.__postInserts
+  }));
+  expect(state.uploads).toHaveLength(1);
+  expect(state.inserts).toHaveLength(1);
+  expect(state.inserts[0].image_path).toMatch(
+    /^community-replies\/ad132ad0-10f7-4b05-9737-a6bd6ba76670\/[0-9a-f-]+\.png$/
+  );
+  expect(await postCard.locator('.reply-image').evaluate((image) => getComputedStyle(image).maxWidth)).toBe('320px');
+
+  await fileInput.setInputFiles({
+    name: 'image-only.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9])
+  });
+  await postCard.locator('.reply-submit').click();
+  await expect(postCard.locator('.reply-item')).toHaveCount(2);
+  const imageOnlyState = await page.evaluate(() => ({
+    uploads: window.__replyUploads,
+    inserts: window.__postInserts
+  }));
+  expect(imageOnlyState.uploads).toHaveLength(2);
+  expect(imageOnlyState.inserts[1].content).toBe('');
+  expect(imageOnlyState.inserts[1].image_path).toMatch(/\.jpg$/);
+});
+
+test('community cleans uploaded reply images after an insert failure', async ({ page }) => {
+  const post = {
+    id: 42,
+    user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+    created_at: '2026-09-21T01:00:00Z',
+    content: '失败清理测试帖子。',
+    nickname: 'NOBI 漫友',
+    parent_id: null
+  };
+  await mockRuntime(page, {
+    posts: [post],
+    sessionUser: { id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670', email: 'local@example.com' },
+    replyInsertError: true
+  });
+  await page.goto('/community.html');
+  const postCard = page.locator('#posts-list .post-card').first();
+  await postCard.locator('.reply-action-btn').click();
+  await postCard.locator('.reply-image-input').setInputFiles({
+    name: 'reply.webp',
+    mimeType: 'image/webp',
+    buffer: Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==', 'base64')
+  });
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await postCard.locator('.reply-submit').click();
+  await expect.poll(() => page.evaluate(() => window.__replyRemovals.length)).toBe(1);
+  expect(await page.evaluate(() => window.__replyUploads[0].path)).toBe(
+    await page.evaluate(() => window.__replyRemovals[0].paths[0])
+  );
+  await expect(postCard.locator('.reply-item')).toHaveCount(0);
+});
+
+test('unauthenticated community users cannot upload reply images', async ({ page }) => {
+  const post = {
+    id: 42,
+    user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+    created_at: '2026-09-21T01:00:00Z',
+    content: '未登录上传测试帖子。',
+    nickname: 'NOBI 漫友',
+    parent_id: null
+  };
+  await mockRuntime(page, { posts: [post] });
+  await page.goto('/community.html');
+  const postCard = page.locator('#posts-list .post-card').first();
+  await postCard.locator('.reply-action-btn').click();
+  await postCard.locator('.reply-image-input').setInputFiles({
+    name: 'reply.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from([0xff, 0xd8, 0xff, 0xd9])
+  });
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await postCard.locator('.reply-submit').click();
+  expect(await page.evaluate(() => window.__replyUploads)).toHaveLength(0);
+});
+
+test('captures Phase 4.4 reply image UI at desktop and narrow widths', async ({ page }) => {
+  const mainPost = {
+    id: 42,
+    user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+    created_at: '2026-09-21T01:00:00Z',
+    content: '分享今天刚看完的新番，这一幕真的很美。',
+    nickname: 'NOBI 漫友',
+    avatar_url: 'http://127.0.0.1:4173/images/nobi-avatar.svg',
+    title: '今日新番讨论',
+    category: '新番',
+    parent_id: null
+  };
+  const publishedReply = {
+    id: 43,
+    user_id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670',
+    created_at: '2026-09-21T01:05:00Z',
+    content: '同感，这张画面特别适合收藏。',
+    nickname: 'local',
+    avatar_url: 'http://127.0.0.1:4173/images/nobi-avatar.svg',
+    parent_id: 42,
+    image_path: 'community-replies/ad132ad0-10f7-4b05-9737-a6bd6ba76670/published.webp'
+  };
+  await mockRuntime(page, {
+    posts: [mainPost, publishedReply],
+    sessionUser: { id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670', email: 'local@example.com' }
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/community.html');
+  const postCard = page.locator('#posts-list .post-card').first();
+  await expect(postCard).toBeVisible({ timeout: 15_000 });
+  await postCard.locator('.reply-action-btn').click();
+  await postCard.locator('.reply-image-input').setInputFiles('public/images/IMG_4873.webp');
+  await expect(postCard.locator('.reply-image-preview')).toBeVisible();
+  await expect(postCard.locator('.reply-image')).toBeVisible();
+  await postCard.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/phase44-web-desktop-1440x900.png' });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await postCard.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'test-results/phase44-web-narrow-390x844.png' });
 });
 
 test('detail images expose persistent overlay likes and still open in the accessible preview', async ({ page }) => {
