@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useToastStore } from '../stores/toast';
+import { safeInternalPath } from '../router/safe-navigation';
 const auth = useAuthStore();
 const toast = useToastStore();
 const route = useRoute();
@@ -13,8 +14,7 @@ const confirmPassword = ref('');
 const localError = ref('');
 const confirmation = ref(false);
 function destination(): string {
-  const value = String(route.query.redirect || '/profile');
-  return value.startsWith('/') && !value.startsWith('//') ? value : '/profile';
+  return safeInternalPath(route.query.redirect, '/profile');
 }
 async function submit(): Promise<void> {
   localError.value = '';

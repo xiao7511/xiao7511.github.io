@@ -27,10 +27,17 @@ function formatTime(value: string): string {
       <p>{{ post.content }}</p>
     </RouterLink>
     <footer>
-      <button type="button" :disabled="pending" :aria-pressed="post.liked" @click="$emit('like', post)">
+      <button
+        type="button"
+        :disabled="pending"
+        :aria-label="`${post.liked ? '取消点赞' : '点赞'}，当前 ${post.likeCount} 个赞`"
+        :aria-pressed="post.liked"
+        @click="$emit('like', post)"
+      >
         {{ post.liked ? '♥' : '♡' }} {{ post.likeCount }}</button
-      ><RouterLink :to="`/community/${post.id}`">评论 {{ post.replyCount }}</RouterLink
-      ><button type="button" @click="$emit('share', post)">分享</button>
+      ><RouterLink :to="`/community/${post.id}`" :aria-label="`查看 ${post.replyCount} 条评论`"
+        >评论 {{ post.replyCount }}</RouterLink
+      ><button type="button" aria-label="分享这条动态" @click="$emit('share', post)">分享</button>
     </footer>
   </article>
 </template>

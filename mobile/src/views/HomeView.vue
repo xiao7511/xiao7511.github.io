@@ -46,15 +46,6 @@ onMounted(() => {
     <section class="content-section">
       <div class="section-heading">
         <div>
-          <span class="eyebrow">SEASON</span>
-          <h2>本季热门</h2>
-        </div>
-      </div>
-      <p class="state-message">生产 API 暂未提供独立热门榜单。</p>
-    </section>
-    <section class="content-section">
-      <div class="section-heading">
-        <div>
           <span class="eyebrow">ANIME</span>
           <h2>新番推荐</h2>
         </div>

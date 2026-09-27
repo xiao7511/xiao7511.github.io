@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/auth';
 import { hideSplash, initNative } from './services/native';
 import './style.css';
 import './style-phase2.css';
+import './style-ios.css';
 
 const app = createApp(App);
 const pinia = createPinia();

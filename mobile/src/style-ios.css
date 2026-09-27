@@ -1,0 +1,143 @@
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#app,
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+html {
+  background: #10131b;
+  scroll-padding-top: env(safe-area-inset-top);
+  scroll-padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+.app-shell {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+.page {
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-left: max(18px, env(safe-area-inset-left));
+}
+
+.tab-bar {
+  padding-right: max(10px, env(safe-area-inset-right));
+  padding-left: max(10px, env(safe-area-inset-left));
+}
+
+.offline-bar {
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
+.tab-bar__item {
+  min-width: 44px;
+  min-height: 50px;
+}
+
+button,
+[role='button'],
+.primary-button,
+.secondary-button,
+.text-button,
+.header-action {
+  min-height: 44px;
+}
+
+.primary-button,
+.secondary-button,
+.text-button,
+.header-action {
+  min-width: 44px;
+}
+
+.hero {
+  height: clamp(205px, 55vw, 248px);
+}
+
+.back-button {
+  width: 44px;
+  height: 44px;
+}
+
+.detail-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.detail-hero__content {
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-left: max(18px, env(safe-area-inset-left));
+}
+
+.auth-page {
+  min-height: calc(100vh - 76px);
+  min-height: calc(100dvh - 76px);
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  padding-left: max(18px, env(safe-area-inset-left));
+}
+
+input,
+select,
+textarea {
+  min-height: 44px;
+  font-size: 16px;
+}
+
+input,
+select,
+textarea,
+button,
+a {
+  touch-action: manipulation;
+}
+
+.compose-form,
+.reply-form,
+.auth-card {
+  scroll-margin-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.post-card footer > *,
+.pagination button {
+  min-height: 44px;
+}
+
+@media (max-width: 380px) {
+  .page {
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-left: max(14px, env(safe-area-inset-left));
+  }
+
+  .home-header {
+    gap: 7px;
+  }
+
+  .hero__content {
+    padding: 18px;
+  }
+
+  .auth-card {
+    padding: 21px;
+  }
+}
+
+@media (max-height: 700px) {
+  .auth-page {
+    place-items: start center;
+  }
+
+  .auth-logo {
+    margin-bottom: 22px;
+  }
+}
