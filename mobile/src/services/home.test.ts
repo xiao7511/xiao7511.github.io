@@ -5,6 +5,7 @@ import {
   buildHomeData,
   contentRoute,
   fetchHomeData,
+  mapSocialLinks,
   mapWebBanners,
   storageImageKey,
   WEB_HOME_BANNER_SLOTS
@@ -61,14 +62,29 @@ describe('Web-aligned mobile home data', () => {
   test('uses Web image-like keys for card counts and ranking', () => {
     const anime = item('anime', 0, '动漫');
     const manga = item('manga', 0, '漫画');
-    const mangaKey = storageImageKey(manga.detail_urls?.[0]);
+    const mangaKey = storageImageKey(manga.cover_url);
     const data = buildHomeData([], [anime, manga], new Map(mangaKey ? [[mangaKey, 9]] : []));
     expect(data.ranking[0]).toMatchObject({ id: manga.id, likeCount: 9 });
   });
 
+  test('hides disabled or empty social links and follows the shared configured order', () => {
+    const links = mapSocialLinks({
+      weibo: 'https://weibo.com/nobi',
+      instagram: 'https://instagram.com/nobi',
+      twitter: '',
+      _enabled: { weibo: false, instagram: true },
+      _order: ['instagram', 'weibo', 'twitter']
+    });
+    expect(links.map((link) => link.key)).toEqual(['instagram']);
+  });
+
   test('queries the same content tables on every load', async () => {
     const bannerOrder = vi.fn().mockResolvedValue({ data: banners, error: null });
-    const bannerEq = vi.fn(() => ({ order: bannerOrder }));
+    const bannerQuery: { eq: ReturnType<typeof vi.fn>; order: typeof bannerOrder } = {
+      eq: vi.fn(),
+      order: bannerOrder
+    };
+    bannerQuery.eq.mockReturnValue(bannerQuery);
     const socialSingle = vi.fn().mockResolvedValue({ data: { url: '{}' }, error: null });
     const socialEq = vi.fn(() => ({ maybeSingle: socialSingle }));
     let contentCall = 0;
@@ -76,9 +92,7 @@ describe('Web-aligned mobile home data', () => {
       select: vi.fn(() => {
         if (table === 'site_config') return { eq: socialEq };
         contentCall += 1;
-        return contentCall === 1
-          ? { eq: bannerEq }
-          : Promise.resolve({ data: [item('anime', 0, '实时内容')], error: null });
+        return contentCall === 1 ? bannerQuery : Promise.resolve({ data: [item('anime', 0, '实时内容')], error: null });
       })
     }));
     const rpc = vi.fn().mockResolvedValue({ data: [], error: null });
@@ -87,7 +101,8 @@ describe('Web-aligned mobile home data', () => {
     const result = await fetchHomeData(client);
     expect(result.banners).toHaveLength(3);
     expect(result.banners[0]).toMatchObject({ title: '第一张' });
-    expect(bannerEq).toHaveBeenCalledWith('category', 'banner');
+    expect(bannerQuery.eq).toHaveBeenCalledWith('category', 'banner');
+    expect(bannerQuery.eq).toHaveBeenCalledWith('is_active', true);
     expect(bannerOrder).toHaveBeenCalledWith('slot_index', { ascending: true });
     expect(from).toHaveBeenCalledWith('site_config');
   });

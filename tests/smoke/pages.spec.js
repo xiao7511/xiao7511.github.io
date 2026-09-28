@@ -219,7 +219,10 @@ for (const [path, selector] of pages) {
 test('home renders all six configured enriched cards per section', async ({ page }) => {
   const messages = [];
   page.on('console', (message) => messages.push(`${message.type()}: ${message.text()}`));
-  await mockRuntime(page, { features: true });
+  await mockRuntime(page, {
+    features: true,
+    sessionUser: { id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a', email: 'user@nobi.test' }
+  });
   await page.goto('/index.html');
   await expect(page.locator('.logo')).toContainText('NOBI');
   await expect(page.locator('.logo')).toContainText('动漫');
@@ -228,10 +231,10 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#manga-container .card')).toHaveCount(6);
   await expect(page.locator('#anime-container .card__type').first()).toHaveText('冒险');
   await expect(page.locator('#anime-container .card__year').first()).toHaveText('2024');
-  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('4');
+  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('0');
   await expect(page.locator('#updates-container .update-card')).toHaveCount(6);
   await expect(page.locator('#ranking-container .ranking-item')).toHaveCount(5);
-  await expect(page.locator('#ranking-container .ranking-item').first()).toContainText('♡ 4');
+  await expect(page.locator('#ranking-container .ranking-item').first()).toContainText('♡ 0');
   await page.getByRole('tab', { name: '本周' }).click();
   await expect(page.getByRole('tab', { name: '本周' })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', { name: '本月' }).click();
@@ -239,14 +242,14 @@ test('home renders all six configured enriched cards per section', async ({ page
   await expect(page.locator('#news-container .news-item')).toHaveCount(4);
   await expect(page.locator('#anime-container .image-like-button--inline').first()).toHaveAttribute(
     'data-image-like-summary-keys',
-    JSON.stringify([imageKey, secondDetailImageKey])
+    JSON.stringify([imageKey])
   );
   await expect(page.locator('#anime-container .image-like-button--overlay')).toHaveCount(0);
   const inlineLike = page.locator('#anime-container .image-like-button--inline').first();
   await expect(inlineLike).toBeVisible();
   await inlineLike.click();
   await expect(inlineLike).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('5');
+  await expect(page.locator('#anime-container .card__like-count').first()).toHaveText('1');
   const [mediaBounds, likeBounds] = await Promise.all([
     page.locator('#anime-container .card__media').first().boundingBox(),
     inlineLike.boundingBox()
@@ -563,7 +566,10 @@ test('captures Phase 4.4 reply image UI at desktop and narrow widths', async ({ 
 });
 
 test('detail images expose persistent overlay likes and still open in the accessible preview', async ({ page }) => {
-  await mockRuntime(page, { features: true });
+  await mockRuntime(page, {
+    features: true,
+    sessionUser: { id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a', email: 'user@nobi.test' }
+  });
   await page.goto('/detail.html?category=anime&slot=0');
   const image = page.locator('.gallery-item img').first();
   await expect(image).toBeVisible({ timeout: 15_000 });
@@ -575,6 +581,15 @@ test('detail images expose persistent overlay likes and still open in the access
   await expect(page.locator('#image-lightbox')).toBeVisible();
   await expect(page.locator('.image-lightbox__image')).toBeVisible();
   await expect(page.locator('.image-lightbox .image-like-button')).toContainText('已点赞 1');
+});
+
+test('signed-out image likes open the existing login flow without calling the toggle RPC', async ({ page }) => {
+  await mockRuntime(page, { features: true });
+  await page.goto('/detail.html?category=anime&slot=0');
+  const likeButton = page.locator('.gallery-item .image-like-button--overlay').first();
+  await expect(likeButton).toBeVisible({ timeout: 15_000 });
+  await likeButton.click();
+  await expect(page).toHaveURL(/index\.html\?auth=login$/);
 });
 
 for (const viewport of [

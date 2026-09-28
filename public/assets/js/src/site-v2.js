@@ -29,6 +29,7 @@ const SOCIAL_ICONS = {
 
 let client;
 let features = { analytics: false, imageLikes: false };
+let currentUser = null;
 let likeRefreshTimer;
 let lastLikeTargetSignature = '';
 
@@ -62,8 +63,15 @@ function renderSocialLinks(config) {
   document.querySelector('.footer-social')?.remove();
   const footerSlot = document.querySelector('.footer-social-slot');
   if (footerSlot) footerSlot.hidden = true;
-  const links = Object.entries(SOCIAL_LABELS)
-    .map(([key, label]) => ({ key, label, href: safeExternalUrl(config[key]) }))
+  const enabled = config?._enabled && typeof config._enabled === 'object' ? config._enabled : {};
+  const configuredOrder = Array.isArray(config?._order) ? [...new Set(config._order)] : [];
+  const keys = [
+    ...configuredOrder.filter((key) => Object.hasOwn(SOCIAL_LABELS, key)),
+    ...Object.keys(SOCIAL_LABELS).filter((key) => !configuredOrder.includes(key))
+  ];
+  const links = keys
+    .map((key) => ({ key, label: SOCIAL_LABELS[key], href: safeExternalUrl(config[key]) }))
+    .filter((item) => enabled[item.key] !== false)
     .filter((item) => item.href);
   if (!links.length) return;
 
@@ -146,6 +154,7 @@ function renderAccountControl(user, profile) {
 async function syncAccount() {
   const { data } = await client.auth.getSession();
   const user = data.session?.user || null;
+  currentUser = user;
   renderAccountControl(user, await fetchProfile(user));
 }
 
@@ -218,6 +227,10 @@ function applyLikeState(image, count, liked) {
 async function toggleImageLike(image, button) {
   const target = getImageTarget(image);
   if (!features.imageLikes || !target || button.disabled) return;
+  if (!currentUser) {
+    window.location.assign('index.html?auth=login');
+    return;
+  }
   button.disabled = true;
   try {
     const { data, error } = await client.rpc('toggle_image_like', {
@@ -225,7 +238,7 @@ async function toggleImageLike(image, button) {
       p_image_kind: target.kind,
       p_image_index: target.index,
       p_image_key: target.imageKey,
-      p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
+      p_anonymous_id: null
     });
     if (error) throw error;
     const result = data?.[0];
@@ -267,7 +280,7 @@ async function refreshLikeSummaries() {
   try {
     const { data, error } = await client.rpc('get_image_like_summary', {
       p_image_keys: imageKeys,
-      p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
+      p_anonymous_id: null
     });
     if (error) throw error;
     const summaries = mapImageLikeSummaries(data || []);
@@ -383,6 +396,10 @@ async function openLightbox(sourceImage) {
   };
   updateButton();
   likeButton.onclick = async () => {
+    if (!currentUser) {
+      window.location.assign('index.html?auth=login');
+      return;
+    }
     likeButton.disabled = true;
     try {
       const { data, error } = await client.rpc('toggle_image_like', {
@@ -390,7 +407,7 @@ async function openLightbox(sourceImage) {
         p_image_kind: target.kind,
         p_image_index: target.index,
         p_image_key: target.imageKey,
-        p_anonymous_id: createUuid(localStorage, 'nobi_anon_id')
+        p_anonymous_id: null
       });
       if (error) throw error;
       const result = data?.[0];

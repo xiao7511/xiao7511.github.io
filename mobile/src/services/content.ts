@@ -5,7 +5,7 @@ import { isContentItem, type ContentItem } from '../types/content';
 export async function fetchContent(path: 'recommend' | 'manga'): Promise<ContentItem[]> {
   const payload = await fetchJson(`${apiOrigin()}/api/${path}`);
   if (!Array.isArray(payload)) throw new ApiError('INVALID_RESPONSE', '内容格式无效');
-  return payload.filter(isContentItem);
+  return payload.filter(isContentItem).filter((item) => item.is_active !== false);
 }
 
 export async function fetchContentDetail(category: 'anime' | 'manga' | 'banner', slot: number): Promise<ContentItem> {

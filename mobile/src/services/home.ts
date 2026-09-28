@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 import { isContentItem, type ContentItem } from '../types/content';
+import { parseSocialSettings, type SocialKey } from './social-links';
 
 export const WEB_HOME_BANNER_SLOTS = 3;
 
@@ -9,7 +10,7 @@ export interface HomeContentItem extends ContentItem {
 }
 
 export interface SocialLink {
-  key: 'xiaohongshu' | 'weibo' | 'twitter' | 'instagram';
+  key: SocialKey;
   label: string;
   href: string;
 }
@@ -23,13 +24,6 @@ export interface HomeData {
   news: HomeContentItem[];
   socialLinks: SocialLink[];
 }
-
-const socialLabels: Record<SocialLink['key'], string> = {
-  xiaohongshu: '小红书',
-  weibo: '微博',
-  twitter: 'X / Twitter',
-  instagram: 'Instagram'
-};
 
 export function contentTimestamp(item: ContentItem): number {
   for (const field of ['updated_at', 'published_at', 'release_date', 'publish_date', 'created_at'] as const) {
@@ -81,30 +75,25 @@ export function mapWebBanners(rows: unknown): ContentItem[] {
     .filter(isContentItem)
     .filter(
       (item) =>
-        item.category === 'banner' && item.slot_index >= 0 && item.slot_index < WEB_HOME_BANNER_SLOTS
+        item.category === 'banner' &&
+        item.is_active !== false &&
+        item.slot_index >= 0 &&
+        item.slot_index < WEB_HOME_BANNER_SLOTS
     )
     .sort((a, b) => a.slot_index - b.slot_index)
     .slice(0, WEB_HOME_BANNER_SLOTS);
 }
 
 export function mapSocialLinks(value: unknown): SocialLink[] {
-  try {
-    const parsed = typeof value === 'string' ? (JSON.parse(value) as unknown) : value;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
-    return (Object.keys(socialLabels) as SocialLink['key'][]).flatMap((key) => {
-      const raw = (parsed as Record<string, unknown>)[key];
-      if (typeof raw !== 'string') return [];
-      try {
-        const url = new URL(raw);
-        if (!['https:', 'http:'].includes(url.protocol)) return [];
-        return [{ key, label: socialLabels[key], href: url.href }];
-      } catch {
-        return [];
-      }
-    });
-  } catch {
-    return [];
-  }
+  return parseSocialSettings(value).flatMap((item) => {
+    if (!item.enabled || !item.url) return [];
+    try {
+      const url = new URL(item.url);
+      return ['https:', 'http:'].includes(url.protocol) ? [{ key: item.key, label: item.label, href: url.href }] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export function buildHomeData(
@@ -113,14 +102,14 @@ export function buildHomeData(
   likeCounts: ReadonlyMap<string, number> = new Map(),
   socialConfig?: unknown
 ): HomeData {
-  const records = Array.isArray(catalogRows) ? catalogRows.filter(isContentItem) : [];
+  const records = Array.isArray(catalogRows)
+    ? catalogRows.filter(isContentItem).filter((item) => item.is_active !== false)
+    : [];
   const anime = records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index);
   const manga = records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index);
   const catalog = [...anime, ...manga].map((item) => ({
     ...item,
-    likeCount: [
-      ...new Set((item.detail_urls ?? []).map(storageImageKey).filter((key): key is string => Boolean(key)))
-    ].reduce((total, key) => total + (likeCounts.get(key) ?? 0), 0)
+    likeCount: likeCounts.get(storageImageKey(item.cover_url) ?? '') ?? 0
   }));
   const byNewest = (a: HomeContentItem, b: HomeContentItem) => contentTimestamp(b) - contentTimestamp(a);
   return {
@@ -142,8 +131,7 @@ async function fetchLikeCounts(client: SupabaseClient, rows: unknown): Promise<M
     ...new Set(
       rows
         .filter(isContentItem)
-        .flatMap((item) => item.detail_urls ?? [])
-        .map(storageImageKey)
+        .map((item) => storageImageKey(item.cover_url))
         .filter((key): key is string => Boolean(key))
     )
   ].slice(0, 100);
@@ -163,31 +151,30 @@ async function fetchLikeCounts(client: SupabaseClient, rows: unknown): Promise<M
   );
 }
 
-export async function fetchItemLikeCounts(
-  rows: ContentItem[],
-  client?: SupabaseClient
-): Promise<Map<string, number>> {
+export async function fetchItemLikeCounts(rows: ContentItem[], client?: SupabaseClient): Promise<Map<string, number>> {
   const counts = await fetchLikeCounts(client ?? (await getSupabase()), rows);
-  return new Map(
-    rows.map((item) => [
-      item.id,
-      [...new Set((item.detail_urls ?? []).map(storageImageKey).filter((key): key is string => Boolean(key)))].reduce(
-        (total, key) => total + (counts.get(key) ?? 0),
-        0
-      )
-    ])
-  );
+  return new Map(rows.map((item) => [item.id, counts.get(storageImageKey(item.cover_url) ?? '') ?? 0]));
 }
 
 export async function fetchHomeData(client?: SupabaseClient): Promise<HomeData> {
   const supabase = client ?? (await getSupabase());
   const [bannerResult, catalogResult, socialResult] = await Promise.all([
-    supabase.from('content_management').select('*').eq('category', 'banner').order('slot_index', { ascending: true }),
+    supabase
+      .from('content_management')
+      .select('*')
+      .eq('category', 'banner')
+      .eq('is_active', true)
+      .order('slot_index', { ascending: true }),
     supabase.from('content_management').select('*'),
     supabase.from('site_config').select('url').eq('section', 'social_links').maybeSingle()
   ]);
   if (bannerResult.error) throw bannerResult.error;
   if (catalogResult.error) throw catalogResult.error;
   const likeCounts = await fetchLikeCounts(supabase, catalogResult.data);
-  return buildHomeData(bannerResult.data, catalogResult.data, likeCounts, socialResult.error ? undefined : socialResult.data?.url);
+  return buildHomeData(
+    bannerResult.data,
+    catalogResult.data,
+    likeCounts,
+    socialResult.error ? undefined : socialResult.data?.url
+  );
 }

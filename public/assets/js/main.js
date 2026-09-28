@@ -1944,9 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return timestamp ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(timestamp) : '';
     };
 
-    const detailLikeKeys = (item) => [
-      ...new Set((Array.isArray(item?.detail_urls) ? item.detail_urls : []).map((url) => getImageKey(url)).filter(Boolean))
-    ];
+    const coverLikeKeys = (item) => [getImageKey(item?.cover_url)].filter(Boolean);
 
     const renderCategory = (container, slots, emptyMessage) => {
       if (!container) return;
@@ -1960,7 +1958,7 @@ document.addEventListener('DOMContentLoaded', () => {
       slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
-        const detailImageKeys = detailLikeKeys(slot);
+        const detailImageKeys = coverLikeKeys(slot);
         const image = element('img', {
           attributes: {
             alt: slot.title ? `${slot.title}封面` : '作品封面',
@@ -2004,7 +2002,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       type: 'button',
                       'data-image-like': '',
                       'data-image-like-summary-keys': JSON.stringify(detailImageKeys),
-                      'aria-label': '点赞该主题，数字为详情图片总点赞量',
+                      'aria-label': '点赞该作品',
                       'aria-pressed': 'false'
                     }
                   }, [
@@ -2054,7 +2052,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const image = element('img', { attributes: { alt: '', loading: 'lazy', decoding: 'async', width: '96', height: '128' } });
         markImageOrientation(image);
         setImageSource(image, item.cover_url, ANIME_FALLBACK);
-        return element('li', { className: 'ranking-item', attributes: { 'data-ranking-like-keys': JSON.stringify(detailLikeKeys(item)), 'data-ranking-order': index } }, [
+        return element('li', { className: 'ranking-item', attributes: { 'data-ranking-like-keys': JSON.stringify(coverLikeKeys(item)), 'data-ranking-order': index } }, [
           element('span', { className: `ranking-item__number ranking-item__number--${index + 1}`, text: index + 1 }),
           element('a', { className: 'ranking-item__media', attributes: { href: createDetailUrl(item), 'aria-label': `查看${item.title || '作品'}详情` } }, [image]),
           element('div', { className: 'ranking-item__body' }, [element('a', { className: 'ranking-item__title', text: item.title || '未命名作品', attributes: { href: createDetailUrl(item) } }), element('span', { className: 'ranking-item__tag', text: getCategoryLabel(item) }), element('span', { className: 'ranking-item__likes', text: '♡ 0', attributes: { 'data-ranking-like-count': '' } })])
@@ -2093,7 +2091,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data: managementData, error } = await window.supabaseClient.from('content_management').select('*');
       if (error) throw error;
 
-      const records = Array.isArray(managementData) ? managementData : [];
+      const records = Array.isArray(managementData)
+        ? managementData.filter((item) => item.is_active !== false)
+        : [];
       const animeRecords = records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index);
       const mangaRecords = records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index);
       const catalogRecords = [...animeRecords, ...mangaRecords];

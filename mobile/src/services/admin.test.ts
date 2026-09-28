@@ -1,0 +1,93 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, test, vi } from 'vitest';
+import {
+  deleteAdminHomeContent,
+  fetchAdminHomeContent,
+  fetchAdminStatus,
+  reviewReport,
+  saveAdminHomeContent,
+  setAdminState
+} from './admin';
+import type { ContentItem } from '../types/content';
+
+describe('mobile admin security services', () => {
+  test('gets administrator state from is_admin RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
+    await expect(fetchAdminStatus({ rpc } as unknown as SupabaseClient)).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith('is_admin');
+  });
+
+  test('uses the existing secure admin RPCs for mutations', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const client = { rpc } as unknown as SupabaseClient;
+    await setAdminState(client, 'user-b', true);
+    await reviewReport(client, 9, 'hide', ' confirmed ');
+    expect(rpc).toHaveBeenNthCalledWith(1, 'set_user_admin', { p_user_id: 'user-b', p_is_admin: true });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'review_post_report', {
+      p_report_id: 9,
+      p_action: 'hide',
+      p_note: 'confirmed'
+    });
+  });
+
+  test('does not hide rejected administrator RPC calls', async () => {
+    const error = new Error('Administrator access required');
+    const client = { rpc: vi.fn().mockResolvedValue({ data: null, error }) } as unknown as SupabaseClient;
+    await expect(setAdminState(client, 'user-b', true)).rejects.toBe(error);
+    await expect(reviewReport(client, 9, 'dismiss')).rejects.toBe(error);
+  });
+
+  test('saves one complete ordered home section through the administrator RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const rows = [
+      { id: 'a', category: 'anime', slot_index: 4, title: 'A', is_active: true },
+      { id: 'b', category: 'anime', slot_index: 2, title: 'B', is_active: false }
+    ] as ContentItem[];
+    await saveAdminHomeContent({ rpc } as unknown as SupabaseClient, 'anime', rows);
+    expect(rpc).toHaveBeenCalledWith('save_home_content_order', {
+      p_category: 'anime',
+      p_items: [
+        { id: 'a', slot_index: 0, is_active: true },
+        { id: 'b', slot_index: 1, is_active: false }
+      ]
+    });
+  });
+
+  test('blocks more than six active home items before any database call', async () => {
+    const rpc = vi.fn();
+    const rows = Array.from({ length: 7 }, (_, index) => ({
+      id: String(index),
+      category: 'anime',
+      slot_index: index,
+      title: String(index),
+      is_active: true
+    })) as ContentItem[];
+    await expect(saveAdminHomeContent({ rpc } as unknown as SupabaseClient, 'anime', rows)).rejects.toThrow(
+      'ACTIVE_CONTENT_LIMIT'
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  test('loads ordered category rows and deletes only inside the selected category', async () => {
+    const rows = [
+      { id: 'b', category: 'anime', slot_index: 1, title: 'B' },
+      { id: 'a', category: 'anime', slot_index: 0, title: 'A' }
+    ];
+    const order = vi.fn().mockResolvedValue({ data: rows, error: null });
+    const selectEq = vi.fn(() => ({ order }));
+    const deleteResult = Promise.resolve({ data: null, error: null });
+    const deleteCategoryEq = vi.fn(() => deleteResult);
+    const deleteIdEq = vi.fn(() => ({ eq: deleteCategoryEq }));
+    const from = vi.fn(() => ({
+      select: vi.fn(() => ({ eq: selectEq })),
+      delete: vi.fn(() => ({ eq: deleteIdEq }))
+    }));
+    const client = { from } as unknown as SupabaseClient;
+    await expect(fetchAdminHomeContent(client, 'anime')).resolves.toEqual([rows[1], rows[0]]);
+    await deleteAdminHomeContent(client, 'anime', 'a');
+    expect(selectEq).toHaveBeenCalledWith('category', 'anime');
+    expect(order).toHaveBeenCalledWith('slot_index');
+    expect(deleteIdEq).toHaveBeenCalledWith('id', 'a');
+    expect(deleteCategoryEq).toHaveBeenCalledWith('category', 'anime');
+  });
+});

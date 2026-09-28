@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { authErrorMessage, restoreAuthSession } from '../services/auth';
+import { fetchAdminStatus } from '../services/admin';
 import { getSupabase } from '../services/supabase';
 import type { Profile } from '../types/community';
 
@@ -11,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null);
   const user = ref<User | null>(null);
   const profile = ref<Profile | null>(null);
+  const isAdmin = ref(false);
   const error = ref<string | null>(null);
   let initializePromise: Promise<void> | null = null;
   let listening = false;
@@ -30,11 +32,29 @@ export const useAuthStore = defineStore('auth', () => {
     profile.value = result.data as Profile | null;
   }
 
+  function setProfileAvatar(avatarUrl: string): void {
+    if (!user.value) return;
+    profile.value = {
+      id: user.value.id,
+      nickname: profile.value?.nickname ?? null,
+      created_at: profile.value?.created_at,
+      avatar_url: avatarUrl
+    };
+  }
+
   async function applySession(next: Session | null, loadUserProfile = true): Promise<void> {
     session.value = next;
     user.value = next?.user ?? null;
-    if (!next) profile.value = null;
-    else if (loadUserProfile) await loadProfile();
+    if (!next) {
+      profile.value = null;
+      isAdmin.value = false;
+    } else if (loadUserProfile) {
+      isAdmin.value = false;
+      const client = await getSupabase();
+      const [profileResult, adminResult] = await Promise.allSettled([loadProfile(), fetchAdminStatus(client)]);
+      if (profileResult.status === 'rejected') throw profileResult.reason;
+      isAdmin.value = adminResult.status === 'fulfilled' ? adminResult.value : false;
+    }
   }
 
   async function handleAuthChange(_event: AuthChangeEvent, next: Session | null): Promise<void> {
@@ -146,6 +166,7 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     user,
     profile,
+    isAdmin,
     error,
     initialize,
     signIn,
@@ -153,6 +174,7 @@ export const useAuthStore = defineStore('auth', () => {
     signOut,
     refreshSession,
     loadProfile,
+    setProfileAvatar,
     resume
   };
 });

@@ -16,6 +16,7 @@ export interface ContentItem {
   status?: string | null;
   region?: string | null;
   description?: string | null;
+  is_active?: boolean;
 }
 
 export function isContentItem(value: unknown): value is ContentItem {
