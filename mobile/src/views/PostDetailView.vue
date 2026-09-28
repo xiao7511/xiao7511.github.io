@@ -69,7 +69,8 @@ async function submitReply(): Promise<void> {
   sending.value = true;
   let uploaded: { path: string; url: string } | null = null;
   try {
-    if (replyImage.value) uploaded = await uploadReplyImage(await getSupabase(), auth.session.user.id, replyImage.value);
+    if (replyImage.value)
+      uploaded = await uploadReplyImage(await getSupabase(), auth.session.user.id, replyImage.value);
     await community.reply(postId.value, content, auth.session, auth.profile, uploaded?.path ?? null);
     replyText.value = '';
     clearReplyImage();
@@ -93,7 +94,10 @@ function chooseReplyImage(event: unknown): void {
     replyPreview.value = globalThis.URL.createObjectURL(file);
   } catch (cause) {
     input.value = '';
-    toast.show(cause instanceof Error && cause.message === 'INVALID_IMAGE_SIZE' ? '图片不能超过 5MB' : '仅支持 JPEG、PNG、WebP', 'error');
+    toast.show(
+      cause instanceof Error && cause.message === 'INVALID_IMAGE_SIZE' ? '图片不能超过 5MB' : '仅支持 JPEG、PNG、WebP',
+      'error'
+    );
   }
 }
 function clearReplyImage(): void {
@@ -152,16 +156,28 @@ function formatTime(value: string): string {
       <section class="reply-section">
         <h2>评论 {{ community.replies.length }}</h2>
         <form class="reply-form" @submit.prevent="submitReply">
-          <textarea v-model="replyText" maxlength="500" placeholder="写下你的回复" aria-label="回复内容"></textarea
-          ><div v-if="replyPreview" class="reply-image-preview"><img :src="replyPreview" alt="待上传图片预览" /><button type="button" aria-label="移除图片" @click="clearReplyImage">×</button></div>
-          <div class="reply-form__actions"><label class="secondary-button reply-image-picker">添加图片<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseReplyImage" /></label>
-          <button class="primary-button" type="submit" :disabled="sending || (!replyText.trim() && !replyImage)">
-            {{ sending ? '发送中…' : '发送回复' }}
-          </button></div>
+          <textarea v-model="replyText" maxlength="500" placeholder="写下你的回复" aria-label="回复内容"></textarea>
+          <div v-if="replyPreview" class="reply-image-preview">
+            <img :src="replyPreview" alt="待上传图片预览" /><button
+              type="button"
+              aria-label="移除图片"
+              @click="clearReplyImage"
+            >
+              ×
+            </button>
+          </div>
+          <div class="reply-form__actions">
+            <label class="secondary-button reply-image-picker"
+              >添加图片<input type="file" accept="image/jpeg,image/png,image/webp" @change="chooseReplyImage"
+            /></label>
+            <button class="primary-button" type="submit" :disabled="sending || (!replyText.trim() && !replyImage)">
+              {{ sending ? '发送中…' : '发送回复' }}
+            </button>
+          </div>
         </form>
         <div v-if="community.replies.length" class="reply-list">
           <article v-for="reply in community.replies" :key="reply.id">
-            <AppAvatar :src="reply.avatar_url" :name="reply.nickname || '社区用户'" />
+            <AppAvatar :src="reply.avatar_url" :user-id="reply.user_id" :name="reply.nickname || '社区用户'" />
             <div>
               <header>
                 <strong>{{ reply.nickname || '社区用户' }}</strong

@@ -15,8 +15,10 @@ import AppSkeleton from '../components/AppSkeleton.vue';
 import AppAvatar from '../components/AppAvatar.vue';
 import SocialIcon from '../components/SocialIcon.vue';
 import { useAuthStore } from '../stores/auth';
+import { useImageLikesStore } from '../stores/image-likes';
 
 const auth = useAuthStore();
+const imageLikes = useImageLikesStore();
 const data = ref<HomeData | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -26,6 +28,9 @@ async function load(): Promise<void> {
   error.value = null;
   try {
     data.value = await fetchHomeData();
+    await imageLikes
+      .load([...(data.value?.popular ?? []), ...(data.value?.recommendations ?? [])])
+      .catch(() => undefined);
   } catch {
     error.value = '首页内容加载失败，请检查网络后重试。';
   } finally {
@@ -50,6 +55,7 @@ onMounted(load);
       <RouterLink to="/profile" class="home-account" aria-label="我的账号">
         <AppAvatar
           :src="auth.profile?.avatar_url"
+          :user-id="auth.user?.id"
           :name="auth.user ? auth.profile?.nickname || auth.user.email?.split('@')[0] || 'NOBI' : 'NOBI'"
         />
       </RouterLink>
@@ -163,12 +169,7 @@ onMounted(load);
         <h2>关注 NOBI</h2>
       </div>
       <nav aria-label="NOBI 社交媒体">
-        <a
-          v-for="link in data.socialLinks"
-          :key="link.key"
-          :href="link.href"
-          target="_blank"
-          rel="noopener noreferrer"
+        <a v-for="link in data.socialLinks" :key="link.key" :href="link.href" target="_blank" rel="noopener noreferrer"
           ><SocialIcon :name="link.key" /><span>{{ link.label }}</span></a
         >
       </nav>

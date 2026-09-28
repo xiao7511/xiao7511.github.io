@@ -16,7 +16,7 @@ function formatTime(value: string): string {
   <article class="post-card">
     <RouterLink :to="`/community/${post.id}`" class="post-card__main">
       <header>
-        <AppAvatar :src="post.avatar_url" :name="post.nickname || '社区用户'" />
+        <AppAvatar :src="post.avatar_url" :user-id="post.user_id" :name="post.nickname || '社区用户'" />
         <div>
           <strong>{{ post.nickname || '社区用户' }}</strong
           ><time :datetime="post.created_at">{{ formatTime(post.created_at) }}</time>

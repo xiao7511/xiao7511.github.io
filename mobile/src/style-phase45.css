@@ -1,0 +1,365 @@
+.profile-avatar-editor {
+  position: relative;
+  z-index: 1;
+  min-width: 88px;
+  min-height: 88px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.profile-avatar-editor > span:last-child {
+  position: absolute;
+  right: -2px;
+  bottom: 1px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 2px solid var(--nobi-bg);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--nobi-pink);
+  font-size: 15px;
+}
+
+.profile-avatar-label {
+  min-height: 44px;
+  margin-top: -5px;
+  padding: 0 12px;
+  border: 0;
+  color: var(--nobi-pink);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-menu a {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  align-items: center;
+  color: var(--nobi-text);
+}
+
+.profile-menu a > span {
+  color: var(--nobi-pink);
+  font-size: 18px;
+}
+
+.profile-menu a > b {
+  color: var(--nobi-text-secondary);
+  text-align: right;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.profile-menu .profile-admin-link {
+  margin-top: 8px;
+  border-bottom: 1px solid var(--nobi-border);
+  color: #fff;
+}
+
+.avatar-file-input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.sheet-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 18px max(14px, env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.action-sheet,
+.avatar-preview-sheet {
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--nobi-border);
+  border-radius: 18px;
+  background: #161616;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+}
+
+.sheet-handle {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 99px;
+  background: #4b4b4b;
+}
+
+.action-sheet h2,
+.avatar-preview-sheet h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  text-align: center;
+}
+
+.action-sheet button {
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: #242424;
+  font-size: 15px;
+}
+
+.action-sheet .sheet-cancel {
+  margin-top: 8px;
+  color: var(--nobi-text-secondary);
+  background: transparent;
+}
+
+.avatar-preview-backdrop {
+  align-items: center;
+}
+
+.avatar-preview-sheet {
+  padding: 22px;
+}
+
+.avatar-preview-sheet > p {
+  overflow: hidden;
+  color: var(--nobi-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-crop-preview {
+  width: min(68vw, 260px);
+  margin: 0 auto;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border: 2px solid rgba(242, 140, 148, 0.7);
+  border-radius: 50%;
+  background: #0a0a0a;
+}
+
+.avatar-crop-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-page {
+  min-height: 100dvh;
+  padding-top: calc(14px + env(safe-area-inset-top));
+  padding-bottom: 24px;
+  color: #f8f8f8;
+  background: #090909;
+}
+
+.admin-topbar {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.admin-topbar h1 {
+  margin: 0;
+  font-size: 18px;
+  text-align: center;
+}
+
+.admin-identity {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1c171a, #111);
+}
+
+.admin-identity span,
+.admin-identity small {
+  color: #a8a8a8;
+  font-size: 12px;
+}
+
+.admin-identity strong {
+  color: var(--nobi-pink);
+  font-size: 22px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-stats div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #161616;
+}
+
+.admin-stats strong {
+  color: var(--nobi-pink);
+  font-size: 21px;
+}
+
+.admin-stats span {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.admin-module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-module-grid a {
+  display: grid;
+  min-height: 142px;
+  align-content: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  color: #fff;
+  background: #161616;
+}
+
+.admin-module-grid a > span {
+  color: var(--nobi-pink);
+  font-size: 28px;
+}
+
+.admin-module-grid small {
+  color: #979797;
+  line-height: 1.45;
+}
+
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-user-card,
+.admin-report-card,
+.admin-banner-card {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 15px;
+  background: #161616;
+}
+
+.admin-user-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-user-card > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.admin-user-card span,
+.admin-user-card small,
+.admin-report-card small,
+.admin-card-heading time {
+  overflow: hidden;
+  color: #999;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-card > button {
+  min-height: 44px;
+  grid-column: 1 / -1;
+  border: 1px solid rgba(242, 140, 148, 0.35);
+  border-radius: 11px;
+  color: var(--nobi-pink);
+  background: rgba(242, 140, 148, 0.08);
+}
+
+.admin-card-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-report-card p {
+  line-height: 1.55;
+}
+
+.admin-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-actions button,
+.admin-banner-card > button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: #292329;
+}
+
+.admin-empty {
+  padding: 32px 16px;
+  border-radius: 15px;
+  color: #aaa;
+  background: #161616;
+  text-align: center;
+}
+
+.admin-banner-card {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-banner-card .content-image {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+}
+
+.admin-banner-card label {
+  display: grid;
+  gap: 5px;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.admin-banner-card input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #343434;
+  border-radius: 10px;
+  color: #fff;
+  background: #101010;
+}
+
+@media (max-width: 374px) {
+  .admin-module-grid {
+    grid-template-columns: 1fr;
+  }
+}

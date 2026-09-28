@@ -1,5 +1,7 @@
 import { isValidSocialUrl } from './src/config/social.js';
 
+let loadedSocialConfig = {};
+
 function setText(id, value) {
   const node = document.getElementById(id);
   if (node) node.textContent = String(value ?? '—');
@@ -66,6 +68,7 @@ async function loadSocialConfig(client) {
   } catch (_) {
     config = {};
   }
+  loadedSocialConfig = config;
   ['xiaohongshu', 'weibo', 'twitter', 'instagram'].forEach((key) => {
     const input = document.getElementById(`social-${key}`);
     if (input) input.value = config[key] || '';
@@ -78,7 +81,15 @@ function initSocialForm(client) {
   if (!form) return;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const config = {};
+    const config = {
+      _enabled:
+        loadedSocialConfig._enabled && typeof loadedSocialConfig._enabled === 'object'
+          ? loadedSocialConfig._enabled
+          : {},
+      _order: Array.isArray(loadedSocialConfig._order)
+        ? loadedSocialConfig._order
+        : ['xiaohongshu', 'weibo', 'twitter', 'instagram']
+    };
     for (const key of ['xiaohongshu', 'weibo', 'twitter', 'instagram']) {
       const value = document.getElementById(`social-${key}`).value.trim();
       if (!isValidSocialUrl(value)) {
@@ -93,6 +104,7 @@ function initSocialForm(client) {
     feedback.textContent = '正在保存社交链接…';
     const { error } = await client.from('site_config').upsert({ section: 'social_links', url: JSON.stringify(config) });
     submit.disabled = false;
+    if (!error) loadedSocialConfig = config;
     feedback.textContent = error ? `保存失败：${error.message}` : '社交链接已保存，前台刷新后生效。';
   });
 }
