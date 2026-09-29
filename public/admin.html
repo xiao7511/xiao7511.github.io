@@ -493,8 +493,12 @@
           if (!session) return;
 
           showStatus('✨ 通信链路已就绪。欢迎回来，管理员！', 'info');
-          activateUploadListener(supabaseUrl);
-          await refreshLiveDashboard(supabaseUrl);
+          const legacyInput = document.getElementById('file-input');
+          const legacyUpload = document.getElementById('upload-btn');
+          if (legacyInput) legacyInput.disabled = true;
+          if (legacyUpload) legacyUpload.disabled = true;
+          const wrapper = document.getElementById('sections-wrapper');
+          if (wrapper) wrapper.textContent = '正在加载 canonical 内容管理…';
           window.dispatchEvent(new CustomEvent('nobi:admin-ready', { detail: { supabaseUrl } }));
         } catch (error) {
           console.error(error);

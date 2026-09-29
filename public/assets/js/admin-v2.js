@@ -1,4 +1,5 @@
 import { isValidSocialUrl } from './src/config/social.js';
+import { createCanonicalContentEditor, disableLegacyAdminWrites } from './src/admin/content-editor.js';
 
 let loadedSocialConfig = {};
 
@@ -179,6 +180,22 @@ function initContentTools(client, supabaseUrl) {
 window.addEventListener('nobi:admin-ready', async (event) => {
   const client = window.supabaseClient;
   if (!client) return;
+  disableLegacyAdminWrites();
+  const wrapper = document.getElementById('sections-wrapper');
+  const canonicalEditor = wrapper
+    ? createCanonicalContentEditor(client, wrapper, (message, kind) => {
+        const status = document.getElementById('upload-status');
+        if (status) {
+          status.textContent = message;
+          status.dataset.kind = kind;
+        }
+      })
+    : null;
+  try {
+    await canonicalEditor?.load();
+  } catch (error) {
+    if (wrapper) wrapper.textContent = `Canonical 内容管理加载失败：${error.message}`;
+  }
   await Promise.all([loadStats(client), loadSocialConfig(client)]);
   initSocialForm(client);
   initContentTools(client, event.detail?.supabaseUrl);
