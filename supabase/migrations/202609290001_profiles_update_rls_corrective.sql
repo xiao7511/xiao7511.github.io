@@ -6,16 +6,24 @@ begin
   if pg_catalog.to_regclass('public.profiles') is null then
     raise exception 'Phase 4.5.2 requires public.profiles';
   end if;
-  if not exists (
+  if exists (
     select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'profiles'
-      and column_name in ('id', 'nickname', 'avatar_url', 'avatar')
-    group by table_schema, table_name
-    having count(*) = 4
+    from (
+      values
+        ('id', 'uuid', 'NO'),
+        ('created_at', 'timestamp with time zone', 'NO'),
+        ('nickname', 'character varying', 'YES'),
+        ('avatar_url', 'character varying', 'YES')
+    ) as expected(column_name, data_type, is_nullable)
+    left join information_schema.columns as actual
+      on actual.table_schema = 'public'
+      and actual.table_name = 'profiles'
+      and actual.column_name = expected.column_name
+    where actual.column_name is null
+      or actual.data_type <> expected.data_type
+      or actual.is_nullable <> expected.is_nullable
   ) then
-    raise exception 'public.profiles is missing a required editable profile column';
+    raise exception 'public.profiles does not match the required Phase 4.5.2 schema';
   end if;
 end
 $preflight$;
@@ -40,7 +48,7 @@ begin
   end if;
 end
 $revoke_columns$;
-grant update (nickname, avatar_url, avatar) on table public.profiles to authenticated;
+grant update (nickname, avatar_url) on table public.profiles to authenticated;
 
 -- Replace only UPDATE policies. Existing SELECT and INSERT policies are preserved.
 do $drop_update_policies$
@@ -92,14 +100,29 @@ begin
   ) then
     raise exception 'profiles own update policy is missing or unsafe';
   end if;
-  if pg_catalog.has_table_privilege('anon', 'public.profiles', 'UPDATE')
+  if exists (
+      select 1
+      from information_schema.table_privileges
+      where table_schema = 'public'
+        and table_name = 'profiles'
+        and grantee in ('PUBLIC', 'anon')
+        and privilege_type = 'UPDATE'
+    )
+    or exists (
+      select 1
+      from information_schema.column_privileges
+      where table_schema = 'public'
+        and table_name = 'profiles'
+        and grantee in ('PUBLIC', 'anon')
+        and privilege_type = 'UPDATE'
+    )
+    or pg_catalog.has_table_privilege('anon', 'public.profiles', 'UPDATE')
     or pg_catalog.has_any_column_privilege('anon', 'public.profiles', 'UPDATE')
     or pg_catalog.has_table_privilege('authenticated', 'public.profiles', 'UPDATE')
     or not pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'nickname', 'UPDATE')
     or not pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'avatar_url', 'UPDATE')
-    or not pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'avatar', 'UPDATE')
     or pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'id', 'UPDATE')
-    or pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'is_admin', 'UPDATE')
+    or pg_catalog.has_column_privilege('authenticated', 'public.profiles', 'created_at', 'UPDATE')
   then
     raise exception 'public.profiles UPDATE privileges are unsafe';
   end if;

@@ -15,8 +15,21 @@ describe('Phase 4.5.2 profile owner UPDATE boundary', () => {
   test('binds both UPDATE expressions to auth.uid and limits editable columns', async () => {
     const sql = (await readFile(migrationUrl, 'utf8')).toLowerCase();
     expect(sql).toContain('to authenticated\nusing (auth.uid() = id)\nwith check (auth.uid() = id)');
-    expect(sql).toContain('grant update (nickname, avatar_url, avatar) on table public.profiles to authenticated');
-    expect(sql).toContain("has_column_privilege('authenticated', 'public.profiles', 'is_admin', 'update')");
+    expect(sql).toContain('grant update (nickname, avatar_url) on table public.profiles to authenticated');
+    expect(sql).toContain("has_column_privilege('authenticated', 'public.profiles', 'id', 'update')");
+    expect(sql).toContain("has_column_privilege('authenticated', 'public.profiles', 'created_at', 'update')");
+    expect(sql).not.toMatch(/'avatar'|'is_admin'/);
+  });
+
+  test('matches the real production profile schema and revokes every prior UPDATE grant', async () => {
+    const sql = (await readFile(migrationUrl, 'utf8')).toLowerCase();
+    for (const column of ['id', 'created_at', 'nickname', 'avatar_url']) {
+      expect(sql).toContain(`'${column}'`);
+    }
+    expect(sql).toContain('revoke update on table public.profiles from public, anon, authenticated');
+    expect(sql).toContain("'revoke update (%s) on table public.profiles from public, anon, authenticated'");
+    expect(sql).toMatch(/^--[^\n]*\nbegin;/);
+    expect(sql.trimEnd()).toMatch(/commit;$/);
   });
 
   test('ships a read-only verification for policy and privilege drift', async () => {
@@ -24,6 +37,9 @@ describe('Phase 4.5.2 profile owner UPDATE boundary', () => {
     expect(sql).toContain("qual = '(auth.uid() = id)'");
     expect(sql).toContain("with_check = '(auth.uid() = id)'");
     expect(sql).toContain("has_any_column_privilege('anon', 'public.profiles', 'update')");
+    expect(sql).toContain("has_column_privilege('authenticated', 'public.profiles', 'created_at', 'update')");
+    expect(sql).toContain("grantee in ('public', 'anon')");
+    expect(sql).not.toMatch(/'avatar'|'is_admin'/);
     expect(sql).not.toMatch(/\b(?:insert|update|delete|drop|alter|grant|revoke|create)\b\s+(?:on|into|table|policy)/);
   });
 });
