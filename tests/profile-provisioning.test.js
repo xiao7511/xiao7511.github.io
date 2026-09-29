@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, test, vi } from 'vitest';
-import { updateProvisionedProfile } from '../public/assets/js/src/auth/profile.js';
+import { updateProvisionedNickname, waitForProvisionedProfile } from '../public/assets/js/src/auth/profile.js';
 
 const migrationUrl = new URL('../supabase/migrations/202609290003_unified_profile_provisioning.sql', import.meta.url);
 const verifierUrl = new URL('../supabase/verify_profile_provisioning.sql', import.meta.url);
@@ -124,32 +124,31 @@ describe('Unified public profile provisioning', () => {
     expect(phase452).toContain('using (auth.uid() = id)\nwith check (auth.uid() = id)');
   });
 
-  test('Web registration updates the database-provisioned row without inserting a duplicate', async () => {
+  test('Web registration updates only nickname on the database-provisioned row without inserting a duplicate', async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'user-1' }, error: null });
     const select = vi.fn(() => ({ maybeSingle }));
     const eq = vi.fn(() => ({ select }));
     const update = vi.fn(() => ({ eq }));
     const client = { from: vi.fn(() => ({ update })) };
-    await updateProvisionedProfile(client, 'user-1', { nickname: 'NOBI', avatarUrl: 'https://example.test/a.webp' });
+    await updateProvisionedNickname(client, 'user-1', 'NOBI');
     expect(client.from).toHaveBeenCalledWith('profiles');
-    expect(update).toHaveBeenCalledWith({ nickname: 'NOBI', avatar_url: 'https://example.test/a.webp' });
+    expect(update).toHaveBeenCalledWith({ nickname: 'NOBI' });
     expect(eq).toHaveBeenCalledWith('id', 'user-1');
     const source = await readFile(webRegistrationUrl, 'utf8');
-    expect(source).toContain('updateProvisionedProfile(window.supabaseClient');
+    expect(source).toContain('registerUser(window.supabaseClient');
     expect(source).not.toMatch(/\.from\(['"]profiles['"]\)\s*\.insert/);
   });
 
-  test('Web profile metadata update fails closed when database provisioning is missing', async () => {
+  test('Web profile confirmation fails closed when database provisioning is missing', async () => {
     const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
     const client = {
       from: vi.fn(() => ({
-        update: vi.fn(() => ({
-          eq: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle })) }))
-        }))
+        select: vi.fn(() => ({ eq: vi.fn(() => ({ maybeSingle })) }))
       }))
     };
-    await expect(updateProvisionedProfile(client, 'user-1', { nickname: 'NOBI', avatarUrl: null })).rejects.toThrow(
-      'PROFILE_NOT_PROVISIONED'
-    );
+    await expect(
+      waitForProvisionedProfile(client, 'user-1', { attempts: 2, delayMs: 0, sleep: vi.fn() })
+    ).rejects.toThrow('PROFILE_NOT_PROVISIONED');
+    expect(maybeSingle).toHaveBeenCalledTimes(2);
   });
 });

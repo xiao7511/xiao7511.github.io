@@ -7,7 +7,9 @@ import { initSiteHeader, updateCopyrightYear } from './src/components/header.js'
 import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
 import { applyBannerCtaTargets, resolveBannerItems } from './src/home/banners.js';
-import { updateProvisionedProfile } from './src/auth/profile.js';
+import { updateAvatar, validateAvatar } from './src/auth/avatar.js';
+import { fetchProfile } from './src/auth/profile.js';
+import { registerUser } from './src/auth/registration.js';
 
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.supabaseClient = null;
@@ -579,15 +581,17 @@ document.addEventListener('DOMContentLoaded', () => {
     avatarFileInput.addEventListener('change', () => {
       if (avatarFileInput.files && avatarFileInput.files[0]) {
         const file = avatarFileInput.files[0];
-        // 限制文件大小在 2MB 内
-        if (file.size > 2 * 1024 * 1024) {
-          alert('头像文件不能超过 2MB 喵！');
+        try {
+          validateAvatar(file);
+        } catch (error) {
+          alert(error.message === 'INVALID_AVATAR_SIZE' ? '头像图片不能超过 5MB。' : '请选择 JPEG、PNG 或 WebP 图片。');
           avatarFileInput.value = '';
+          if (avatarFileHint) avatarFileHint.textContent = '';
           return;
         }
         // 取消所有预设的选中样式
         avatarOptions.forEach(b => b.classList.remove('is-selected'));
-        avatarFileHint.textContent = `已选择: ${file.name}`;
+        if (avatarFileHint) avatarFileHint.textContent = `已选择: ${file.name}`;
       }
     });
   }
@@ -640,81 +644,60 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!window.supabaseClient) return;
       const email = document.getElementById('reg-email').value.trim();
       const password = document.getElementById('reg-password').value;
-      const nickname = document.getElementById('reg-nickname').value.trim() || '新漫友';
+      const nickname = document.getElementById('reg-nickname').value.trim();
+      const avatarFile = avatarFileInput?.files?.[0] || null;
       const submitBtn = regForm.querySelector('button[type="submit"]');
 
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
       submitBtn.textContent = '⏱️ 正在创建角色...';
+      let accountCreated = false;
 
       try {
-        // 1. 先调用 Supabase Auth 注册新账号
-        const { data, error } = await window.supabaseClient.auth.signUp({
-          email, password, options: { redirectTo: REDIRECT_URL }
-        });
-        // 修改后（打印完整错误对象到控制台）
-        console.error("注册详细错误：", error);
-        //alert(`注册或验证失败: ${err.message || JSON.stringify(error)}`);
-
-        if (error) throw error;
-
-        if (data.user) {
-          // 预设一个基础头像地址（如果用户没选本地文件，则沿用 DiceBear 默认值）
-          let finalAvatarUrl = selectedAvatar;
-
-          // 2. ✨ 核心修改：在这里检测是否有自定义头像文件需要上传
-          if (avatarFileInput && avatarFileInput.files && avatarFileInput.files[0]) {
-            const file = avatarFileInput.files[0];
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            // 用用户真实的唯一 ID 命名，确保一个用户永远只有一张最新的头像，避免污染存储空间
-            const filePath = `${data.user.id}.${fileExt}`;
-
-            submitBtn.textContent = '⏱️ 正在上传自定义头像...';
-
-            // 上传至 Supabase 存储空间里的 'avatars' 存储桶
-            const { error: uploadError } = await window.supabaseClient.storage
-              .from('avatars')
-              .upload(filePath, file, {
-                upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
-              })
-              .then(res => console.log('上传结果:', res))
-              .catch(err => console.error('捕获错误:', err));
-
-            if (uploadError) {
-              // 🎯 拒绝静默失败，抛出异常让开发者和用户能直接看到原因
-              throw new Error(`头像物理上传失败: ${uploadError.message} (请检查存储桶 avatars 是否已创建)`);
-            }
-
-            // 上传无误后，实时捕获该图片的外部公开访问 URL
-            const { data: publicUrlData } = window.supabaseClient.storage
-              .from('avatars')
-              .getPublicUrl(filePath);
-
-            // 拼接最新的公共 URL 路径，并加上防缓存时间戳
-            finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
+        const registration = await registerUser(window.supabaseClient, {
+          email,
+          password,
+          redirectTo: REDIRECT_URL,
+          nickname,
+          avatarFile,
+          onStage(stage) {
+            const labels = {
+              signing_up: '⏱️ 正在创建角色...',
+              confirmation_required: '⏱️ 等待邮箱验证...',
+              completing_profile: '⏱️ 正在确认账户资料...',
+              saving_nickname: '⏱️ 正在保存昵称...',
+              uploading_avatar: '⏱️ 正在上传头像...'
+            };
+            submitBtn.textContent = labels[stage] || originalText;
           }
+        });
+        accountCreated = registration.accountCreated;
+        const { completion } = registration;
 
-          submitBtn.textContent = '⏱️ 正在写入账户资料卡...';
-
-          // 3. ✨ 核心修改：时序调整到最后！将最终获取到的自定义 finalAvatarUrl 地址持久化写入 profiles 表
-          // The database trigger provisions the row first; the client only applies optional profile metadata.
-          await updateProvisionedProfile(window.supabaseClient, data.user.id, {
-            nickname,
-            avatarUrl: finalAvatarUrl
-          });
+        if (completion.status === 'confirmation_required') {
+          alert('账户已创建。请先完成邮箱验证，登录后可在个人中心设置昵称和头像。');
+        } else if (completion.status === 'avatar_deferred') {
+          alert('账户已创建，头像暂未保存。你可以继续使用账户，并稍后在个人中心重新上传头像。');
+        } else {
+          alert('注册成功！账户资料已保存。');
         }
-
-        alert('注册成功！请检查邮箱激活邮件喵~');
         closeModal();
 
-        // 注册完毕后刷新或重载，让新用户的状态对齐
         if (typeof initApp === 'function') {
           initApp();
         } else {
           window.location.reload();
         }
       } catch (err) {
-        alert(`注册或绑定失败: ${err.message}`);
+        if (!accountCreated && !err.accountCreated) {
+          alert(`注册失败: ${err.message}`);
+        } else if (err.code === 'PROFILE_NOT_PROVISIONED') {
+          alert('账户已创建，但资料尚未完成初始化（PROFILE_NOT_PROVISIONED）。请稍后登录重试。');
+        } else if (err.code === 'NICKNAME_UPDATE_FAILED') {
+          alert('账户已创建，但昵称暂未保存。请登录后在个人中心重试。');
+        } else {
+          alert('账户已创建，但资料完成失败。请登录后在个人中心重试。');
+        }
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -741,13 +724,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🛒 模块一：用户个人中心（已登录状态）- 修改头像
   // =========================================================================
   if (userProfileForm) {
-    // 1. 头像本地选择提示与 2MB 大小防跨界限拦截（平级放置，无需嵌套）
     if (editAvatarFileInput && editAvatarHint) {
       editAvatarFileInput.addEventListener('change', () => {
         if (editAvatarFileInput.files && editAvatarFileInput.files[0]) {
           const file = editAvatarFileInput.files[0];
-          if (file.size > 20 * 1024 * 1024) {
-            alert('新头像文件不能超过 2MB 喵！');
+          try {
+            validateAvatar(file);
+          } catch (error) {
+            alert(error.message === 'INVALID_AVATAR_SIZE' ? '头像图片不能超过 5MB。' : '请选择 JPEG、PNG 或 WebP 图片。');
             editAvatarFileInput.value = '';
             editAvatarHint.textContent = '';
             return;
@@ -757,12 +741,10 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 2. 提交头像修改
     userProfileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!window.supabaseClient) return;
 
-      // 获取当前在线用户态
       const { data: { session } } = await window.supabaseClient.auth.getSession();
       const user = session?.user;
       if (!user) {
@@ -782,83 +764,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const file = editAvatarFileInput.files[0];
-        const fileExt = file.name.split('.').pop().toLowerCase();
-        const filePath = `${user.id}.${fileExt}`; // 用 uid 命名，upsert 自动覆盖存储桶已有资源
-
-        // 覆盖推送到存储桶
-     /*   const { error: uploadError } = await window.supabaseClient.storage
-          .from('avatars')
-          .upload(filePath, file, {
-            upsert: true // 显式设置 upsert 为 false，避免携带 x-upsert header
-          })
-          .then(res => console.log('上传结果:', res))
-          .catch(err => console.error('捕获错误:', err));
-
-        if (uploadError) throw new Error(`存储桶同步失败: ${uploadError.message}`);
-
-        const { data: publicUrlData } = window.supabaseClient.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-        // 拼接强刷时间戳
-        const finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
-
-        // 写入 profiles 关系表
-        //const { error: profileError } = await window.supabaseClient
-        //  .from('profiles')
-        //  .update({ avatar_url: finalAvatarUrl })
-        //  .eq('id', user.id);
-        // 修改后（增加容错处理，防止因返回 undefined 导致页面崩溃）
-        const updateRes = await window.supabaseClient
-          .from('profiles')
-          .update({ avatar_url: finalAvatarUrl })
-          .eq('id', user.id);
-
-        const profileError = updateRes ? updateRes.error : null;
-
-        if (profileError) {
-          throw new Error(`更新头像失败: ${profileError.message}`);
-        }
-        if (profileError) throw new Error(`关联资料表失败: ${profileError.message}`);
-        */
-        // 1. 覆盖推送到存储桶（移除会导致返回值变 undefined 的 .then 和 .catch 链式混用）
-        const uploadResult = await window.supabaseClient.storage
-          .from('avatars')
-          .upload(filePath, file, {
-            upsert: true // 允许覆盖
-          });
-
-        // 安全地从上传结果中提取 error
-        const uploadError = uploadResult ? uploadResult.error : null;
-
-        if (uploadError) {
-          throw new Error(`存储桶同步失败: ${uploadError.message}`);
-        }
-
-        const { data: publicUrlData } = window.supabaseClient.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-        // 拼接强刷时间戳
-        const finalAvatarUrl = `${publicUrlData.publicUrl}?v=20260920`;
-
-        // 2. 写入 profiles 关系表（增加容错处理，防止因返回 undefined 导致页面崩溃）
-        const updateRes = await window.supabaseClient
-          .from('profiles')
-          .update({ avatar_url: finalAvatarUrl })
-          .eq('id', user.id);
-
-        const profileError = updateRes ? updateRes.error : null;
-
-        // 合并并精简重复的错误校验
-        if (profileError) {
-          throw new Error(`更新头像/关联资料表失败: ${profileError.message}`);
-        }
-
-
-        // 本地同步更新缓存
+        const currentProfile = await fetchProfile(window.supabaseClient, user.id);
+        if (!currentProfile) throw new Error('PROFILE_NOT_PROVISIONED');
+        const finalAvatarUrl = await updateAvatar(
+          window.supabaseClient,
+          user.id,
+          currentProfile.avatar_url,
+          file
+        );
         localStorage.setItem('user_avatar', finalAvatarUrl);
-        // 如果您页面上还有全局的 profile 变量，也一并更新：
         if (typeof profile !== 'undefined' && profile) {
           profile.avatar_url = finalAvatarUrl;
         }
@@ -869,7 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof closeModal === 'function') closeModal();
         window.location.reload();
-
       } catch (err) {
         alert(`更换头像遇到异常: ${err.message}`);
       } finally {
@@ -1101,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('id', user.id)
         .maybeSingle();
 
-      const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
+      const finalAvatar = profile?.avatar_url || localStorage.getItem('user_avatar') || selectedAvatar;
       const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
 
       const { error } = await window.supabaseClient.from('posts').insert([
@@ -1518,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('id', user.id)
         .maybeSingle();
 
-      const finalAvatar = profile?.avatar_url || profile?.avatar || localStorage.getItem('user_avatar') || selectedAvatar;
+      const finalAvatar = profile?.avatar_url || localStorage.getItem('user_avatar') || selectedAvatar;
       const finalNickname = profile?.nickname || localStorage.getItem('user_nickname') || user.email?.split('@')[0] || '匿名用户';
 
       const uploaded = await createReplyWithOptionalImage(window.supabaseClient, {
