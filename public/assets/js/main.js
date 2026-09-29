@@ -7,6 +7,7 @@ import { initSiteHeader, updateCopyrightYear } from './src/components/header.js'
 import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
 import { applyBannerCtaTargets, resolveBannerItems } from './src/home/banners.js';
+import { updateProvisionedProfile } from './src/auth/profile.js';
 
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.supabaseClient = null;
@@ -631,31 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /*if (regForm) {
-    regForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!window.supabaseClient) return;
-      const email = document.getElementById('reg-email').value.trim();
-      const password = document.getElementById('reg-password').value;
-      const nickname = document.getElementById('reg-nickname').value.trim() || '新漫友';
-      const submitBtn = regForm.querySelector('button[type="submit"]');
-
-      submitBtn.disabled = true;
-      const { data, error } = await window.supabaseClient.auth.signUp({
-        email, password, options: { redirectTo: REDIRECT_URL }
-      });
-
-      if (error) { alert(`注册失败: ${error.message}`); submitBtn.disabled = false; return; }
-
-      if (data.user) {
-        await window.supabaseClient.from('profiles').insert([
-          { id: data.user.id, nickname, avatar_url: selectedAvatar }
-        ]);
-      }
-      alert('注册成功！请检查邮箱激活邮件。');
-      closeModal();
-    });
-  }*/
   // 寻找 if (regForm) { regForm.addEventListener('submit', ... ) } 块，替换为以下优化版：
   // 🔍 寻找 main.js 中约第 314 行的 if (regForm) 逻辑，用以下代码进行完整替换：
   if (regForm) {
@@ -721,15 +697,11 @@ document.addEventListener('DOMContentLoaded', () => {
           submitBtn.textContent = '⏱️ 正在写入账户资料卡...';
 
           // 3. ✨ 核心修改：时序调整到最后！将最终获取到的自定义 finalAvatarUrl 地址持久化写入 profiles 表
-          const { error: profileError } = await window.supabaseClient
-            .from('profiles')
-            .insert([
-              { id: data.user.id, nickname, avatar_url: finalAvatarUrl }
-            ]);
-
-          if (profileError) {
-            throw new Error(`资料卡绑定失败: ${profileError.message} (请检查 profiles 表的 RLS 策略)`);
-          }
+          // The database trigger provisions the row first; the client only applies optional profile metadata.
+          await updateProvisionedProfile(window.supabaseClient, data.user.id, {
+            nickname,
+            avatarUrl: finalAvatarUrl
+          });
         }
 
         alert('注册成功！请检查邮箱激活邮件喵~');
