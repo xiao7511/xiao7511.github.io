@@ -44,7 +44,15 @@ describe('Web-aligned mobile home data', () => {
     ]);
   });
 
-  test('keeps the clicked banner bound to its own detail object', () => {
+  test('routes a linked banner through the canonical category and id', () => {
+    const anime = item('anime', 7, '关联动画');
+    const linked = buildHomeData([{ ...banners[1], linked_content_id: anime.id }], [anime]).banners[0];
+    expect(contentRoute(linked)).toBe('/anime/anime-7');
+    expect(linked.cover_url).toBe(banners[1].cover_url);
+    expect(linked.linkedContent?.cover_url).toBe(anime.cover_url);
+  });
+
+  test('keeps the legacy banner detail fallback when no valid topic is linked', () => {
     expect(contentRoute(mapWebBanners(banners)[0])).toBe('/banner/0/banner-0');
   });
 

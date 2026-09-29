@@ -17,6 +17,7 @@ export interface ContentItem {
   region?: string | null;
   description?: string | null;
   is_active?: boolean;
+  linked_content_id?: string | null;
 }
 
 export function isContentItem(value: unknown): value is ContentItem {

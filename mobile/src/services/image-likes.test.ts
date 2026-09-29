@@ -1,7 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, test, vi } from 'vitest';
 import type { ContentItem } from '../types/content';
-import { contentCoverLikeTarget, fetchImageLikeSummaries, toggleContentImageLike } from './image-likes';
+import {
+  contentCoverLikeTarget,
+  contentDetailLikeTargets,
+  fetchImageLikeSummaries,
+  fetchImageLikeTargetSummaries,
+  toggleContentImageLike
+} from './image-likes';
 
 const item: ContentItem = {
   id: '80ad5b9d-a442-4fe5-b156-f8c79310aa11',
@@ -12,6 +18,35 @@ const item: ContentItem = {
 };
 
 describe('content image likes', () => {
+  test('uses each gallery Storage object and original detail_urls index as an independent target', () => {
+    const targets = contentDetailLikeTargets({
+      ...item,
+      detail_urls: [
+        'https://api.nobistudio.com/storage/v1/object/public/images/detail-a.webp?cache=1',
+        'https://example.com/not-storage.webp',
+        'https://api.nobistudio.com/storage/v1/object/public/images/detail-c.webp'
+      ]
+    });
+    expect(targets).toEqual([
+      { contentId: item.id, imageKey: 'images/detail-a.webp', kind: 'detail', index: 0 },
+      { contentId: item.id, imageKey: 'images/detail-c.webp', kind: 'detail', index: 2 }
+    ]);
+  });
+
+  test('loads gallery summaries through the existing batched RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ image_key: 'images/detail-a.webp', like_count: 3, liked: true }],
+      error: null
+    });
+    const result = await fetchImageLikeTargetSummaries({ rpc } as unknown as SupabaseClient, [
+      { contentId: item.id, imageKey: 'images/detail-a.webp', kind: 'detail', index: 0 }
+    ]);
+    expect(rpc).toHaveBeenCalledWith('get_image_like_summary', {
+      p_image_keys: ['images/detail-a.webp'],
+      p_anonymous_id: null
+    });
+    expect(result.get('images/detail-a.webp')).toEqual({ count: 3, liked: true });
+  });
   test('uses one stable cover key across Home, List and Detail', () => {
     expect(contentCoverLikeTarget(item)).toEqual({
       contentId: item.id,

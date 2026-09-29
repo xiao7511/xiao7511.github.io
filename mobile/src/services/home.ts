@@ -9,6 +9,10 @@ export interface HomeContentItem extends ContentItem {
   likeCount: number;
 }
 
+export interface HomeBannerItem extends ContentItem {
+  linkedContent?: ContentItem;
+}
+
 export interface SocialLink {
   key: SocialKey;
   label: string;
@@ -16,7 +20,7 @@ export interface SocialLink {
 }
 
 export interface HomeData {
-  banners: ContentItem[];
+  banners: HomeBannerItem[];
   popular: HomeContentItem[];
   recommendations: HomeContentItem[];
   updates: HomeContentItem[];
@@ -50,9 +54,13 @@ export function contentLabel(item: ContentItem): string {
   return tags.join(' · ') || (item.category === 'manga' ? '漫画' : '动漫');
 }
 
-export function contentRoute(item: ContentItem): string {
+export function contentRoute(item: ContentItem | HomeBannerItem): string {
   if (!['anime', 'manga', 'banner'].includes(item.category)) return '';
-  if (item.category === 'banner') return `/banner/${item.slot_index}/${item.id}`;
+  if (item.category === 'banner') {
+    const linked = (item as HomeBannerItem).linkedContent;
+    if (linked && ['anime', 'manga'].includes(linked.category)) return `/${linked.category}/${linked.id}`;
+    return `/banner/${item.slot_index}/${item.id}`;
+  }
   return `/${item.category}/${item.id}`;
 }
 
@@ -113,7 +121,12 @@ export function buildHomeData(
   }));
   const byNewest = (a: HomeContentItem, b: HomeContentItem) => contentTimestamp(b) - contentTimestamp(a);
   return {
-    banners: mapWebBanners(bannerRows),
+    banners: mapWebBanners(bannerRows).map((banner) => {
+      const linkedContent = records.find(
+        (item) => item.id === banner.linked_content_id && ['anime', 'manga'].includes(item.category)
+      );
+      return linkedContent ? { ...banner, linkedContent } : banner;
+    }),
     popular: catalog.filter((item) => item.category === 'anime').slice(0, 6),
     recommendations: catalog.filter((item) => item.category === 'manga').slice(0, 6),
     updates: [...catalog].sort(byNewest).slice(0, 6),

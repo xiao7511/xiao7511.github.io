@@ -99,10 +99,21 @@ export async function fetchAdminBanners(client: SupabaseClient): Promise<Content
 export async function updateAdminBanner(
   client: SupabaseClient,
   id: string,
-  changes: Pick<ContentItem, 'title' | 'subtitle' | 'slot_index'>
+  changes: Pick<ContentItem, 'title' | 'subtitle' | 'slot_index'> & { linked_content_id?: string | null }
 ): Promise<void> {
-  const result = await client.from('content_management').update(changes).eq('id', id);
+  const result = await client.from('content_management').update(changes).eq('id', id).eq('category', 'banner');
   if (result.error) throw result.error;
+}
+
+export async function fetchAdminLinkableContent(client: SupabaseClient): Promise<ContentItem[]> {
+  const result = await client
+    .from('content_management')
+    .select('*')
+    .in('category', ['anime', 'manga'])
+    .order('category')
+    .order('slot_index');
+  if (result.error) throw result.error;
+  return (result.data ?? []) as ContentItem[];
 }
 
 export async function fetchAdminStats(client: SupabaseClient): Promise<Record<string, unknown>> {

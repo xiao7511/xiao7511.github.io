@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppError from '../components/AppError.vue';
 import AppLoading from '../components/AppLoading.vue';
+import AdminContentImageEditor from '../components/AdminContentImageEditor.vue';
 import ContentImage from '../components/ContentImage.vue';
 import {
   deleteAdminHomeContent,
@@ -20,14 +21,31 @@ const toast = useToastStore();
 const items = ref<ContentItem[]>([]);
 const loading = ref(true);
 const saving = ref(false);
+const editingId = ref('');
+const editorBusy = ref(false);
 const error = ref('');
 const category = computed<HomeContentCategory>(() => (route.params.category === 'manga' ? 'manga' : 'anime'));
 const title = computed(() => (category.value === 'anime' ? '本季热门' : '新番推荐'));
 const activeCount = computed(() => items.value.filter((item) => item.is_active !== false).length);
+const busy = computed(() => saving.value || editorBusy.value);
+
+function toggleEditor(item: ContentItem): void {
+  if (editingId.value === item.id) {
+    editingId.value = '';
+    return;
+  }
+  editingId.value = item.id;
+}
+
+function updateItem(updated: ContentItem): void {
+  const index = items.value.findIndex((item) => item.id === updated.id);
+  if (index >= 0) items.value[index] = updated;
+}
 
 async function load(): Promise<void> {
   loading.value = true;
   error.value = '';
+  editingId.value = '';
   try {
     items.value = await fetchAdminHomeContent(await getSupabase(), category.value);
   } catch {
@@ -52,7 +70,7 @@ function toggle(item: ContentItem): void {
 }
 
 async function save(): Promise<void> {
-  if (saving.value) return;
+  if (busy.value) return;
   saving.value = true;
   try {
     await saveAdminHomeContent(await getSupabase(), category.value, items.value);
@@ -92,22 +110,40 @@ onMounted(load);
     <AppError v-else-if="error" :message="error" @retry="load" />
     <div v-else class="admin-list">
       <article v-for="(item, index) in items" :key="item.id" class="admin-content-card">
-        <ContentImage :src="item.cover_url" :alt="item.title" />
+        <div class="admin-image-preview admin-image-preview--cover">
+          <ContentImage :src="item.cover_url" :alt="item.title" />
+        </div>
         <div>
           <strong>{{ item.title }}</strong>
           <small>排序 {{ index + 1 }} · {{ item.is_active === false ? '已停用' : '展示中' }}</small>
         </div>
+        <button type="button" class="admin-edit-content-button" :disabled="busy" @click="toggleEditor(item)">
+          {{ editingId === item.id ? '收起内容管理' : '编辑内容' }}
+        </button>
+        <AdminContentImageEditor
+          v-if="editingId === item.id"
+          :item="item"
+          @updated="updateItem"
+          @busy="editorBusy = $event"
+        />
         <div class="admin-content-actions">
-          <button type="button" :disabled="index === 0" aria-label="上移" @click="move(index, -1)">↑</button>
-          <button type="button" :disabled="index === items.length - 1" aria-label="下移" @click="move(index, 1)">
+          <button type="button" :disabled="index === 0 || busy" aria-label="上移" @click="move(index, -1)">↑</button>
+          <button
+            type="button"
+            :disabled="index === items.length - 1 || busy"
+            aria-label="下移"
+            @click="move(index, 1)"
+          >
             ↓
           </button>
-          <button type="button" @click="toggle(item)">{{ item.is_active === false ? '加入展示' : '停用' }}</button>
-          <button type="button" class="danger" @click="remove(item)">删除</button>
+          <button type="button" :disabled="busy" @click="toggle(item)">
+            {{ item.is_active === false ? '加入展示' : '停用' }}
+          </button>
+          <button type="button" class="danger" :disabled="busy" @click="remove(item)">删除</button>
         </div>
       </article>
       <p v-if="!items.length" class="admin-empty">当前没有可管理内容，请先通过现有 Web 内容后台创建作品。</p>
-      <button type="button" class="admin-save-button" :disabled="saving" @click="save">
+      <button type="button" class="admin-save-button" :disabled="busy" @click="save">
         {{ saving ? '保存中…' : '保存排序与状态' }}
       </button>
     </div>

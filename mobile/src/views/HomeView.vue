@@ -169,9 +169,17 @@ onMounted(load);
         <h2>关注 NOBI</h2>
       </div>
       <nav aria-label="NOBI 社交媒体">
-        <a v-for="link in data.socialLinks" :key="link.key" :href="link.href" target="_blank" rel="noopener noreferrer"
-          ><SocialIcon :name="link.key" /><span>{{ link.label }}</span></a
-        >
+        <a
+          v-for="link in data.socialLinks"
+          :key="link.key"
+          :href="link.href"
+          :class="`home-social__link--${link.key}`"
+          :aria-label="link.label"
+          :title="link.label"
+          target="_blank"
+          rel="noopener noreferrer"
+          ><SocialIcon :name="link.key"
+        /></a>
       </nav>
     </section>
   </div>

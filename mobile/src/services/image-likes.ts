@@ -5,8 +5,15 @@ import { storageImageKey } from './home';
 export interface ImageLikeTarget {
   contentId: string;
   imageKey: string;
-  kind: 'banner' | 'cover';
-  index: 0;
+  kind: 'banner' | 'cover' | 'detail';
+  index: number;
+}
+
+export function contentDetailLikeTargets(item: ContentItem): ImageLikeTarget[] {
+  return (item.detail_urls ?? []).flatMap((url, index) => {
+    const imageKey = storageImageKey(url);
+    return imageKey ? [{ contentId: item.id, imageKey, kind: 'detail' as const, index }] : [];
+  });
 }
 
 export interface ImageLikeSummary {
@@ -29,14 +36,17 @@ export async function fetchImageLikeSummaries(
   client: SupabaseClient,
   items: ContentItem[]
 ): Promise<Map<string, ImageLikeSummary>> {
-  const keys = [
-    ...new Set(
-      items
-        .map(contentCoverLikeTarget)
-        .filter((target): target is ImageLikeTarget => Boolean(target))
-        .map((target) => target.imageKey)
-    )
-  ].slice(0, 100);
+  return fetchImageLikeTargetSummaries(
+    client,
+    items.map(contentCoverLikeTarget).filter((target): target is ImageLikeTarget => Boolean(target))
+  );
+}
+
+export async function fetchImageLikeTargetSummaries(
+  client: SupabaseClient,
+  targets: ImageLikeTarget[]
+): Promise<Map<string, ImageLikeSummary>> {
+  const keys = [...new Set(targets.map((target) => target.imageKey))].slice(0, 100);
   if (!keys.length) return new Map();
   const result = await client.rpc('get_image_like_summary', { p_image_keys: keys, p_anonymous_id: null });
   if (result.error) throw result.error;

@@ -283,27 +283,56 @@
 }
 
 .home-social a {
-  display: inline-flex;
+  display: grid;
+  width: 46px;
   min-height: 44px;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 13px;
+  place-items: center;
+  padding: 9px;
   border: 1px solid #35465a;
   border-radius: 999px;
   background: rgba(30, 49, 69, 0.72);
   color: #d6e4f2;
   font-size: 11px;
   font-weight: 700;
+  transition:
+    filter 160ms ease,
+    transform 160ms ease;
+}
+
+.home-social a:hover {
+  filter: brightness(1.18) saturate(1.08);
+  transform: translateY(-2px);
+}
+
+.home-social a:active {
+  filter: brightness(1.08) saturate(1.04);
+  transform: scale(0.94);
+}
+
+.home-social__link--xiaohongshu {
+  color: #ff2442;
+}
+
+.home-social__link--weibo {
+  color: #e6162d;
+}
+
+.home-social__link--twitter {
+  color: #fff;
+}
+
+.home-social__link--instagram {
+  color: #e1306c;
+}
+
+.home-social__link--instagram svg {
+  fill: url('#nobi-instagram-gradient');
 }
 
 .home-social svg {
-  width: 17px;
-  height: 17px;
+  width: 21px;
+  height: 21px;
   fill: currentColor;
-}
-
-.home-social .social-icon__cut {
-  fill: #1e3145;
 }
 
 @media (max-width: 420px) {
