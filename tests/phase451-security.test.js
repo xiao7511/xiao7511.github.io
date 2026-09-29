@@ -53,10 +53,11 @@ describe('Phase 4.5.1 database security', () => {
   test('keeps Web likes on the cover identity and sends signed-out users to login', async () => {
     const site = await readFile(new URL('../public/assets/js/src/site-v2.js', import.meta.url), 'utf8');
     const home = await readFile(new URL('../public/assets/js/main.js', import.meta.url), 'utf8');
+    const homeContent = await readFile(new URL('../public/assets/js/src/home/content.js', import.meta.url), 'utf8');
     expect(site).toContain('if (!currentUser)');
     expect(site).toContain("window.location.assign('index.html?auth=login')");
     expect(site).toContain('p_anonymous_id: null');
     expect(home).toContain('const coverLikeKeys');
-    expect(home).toContain('item.is_active !== false');
+    expect(homeContent).toContain('item.is_active !== false');
   });
 });

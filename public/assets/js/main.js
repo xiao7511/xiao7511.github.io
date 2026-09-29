@@ -7,6 +7,7 @@ import { initSiteHeader, updateCopyrightYear } from './src/components/header.js'
 import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
 import { applyBannerCtaTargets, resolveBannerItems } from './src/home/banners.js';
+import { createHomeDetailUrl, homeContentLabel, homeContentYear, selectHomeContent } from './src/home/content.js';
 import { updateAvatar, validateAvatar } from './src/auth/avatar.js';
 import { fetchProfile } from './src/auth/profile.js';
 import { registerUser } from './src/auth/registration.js';
@@ -1819,29 +1820,9 @@ document.addEventListener('DOMContentLoaded', () => {
       image.addEventListener('load', update, { once: true });
       if (image.complete) update();
     };
-    const createDetailUrl = (item) => {
-      const category = String(item?.category || '');
-      const slot = String(item?.slot_index ?? '');
-      if (!['anime', 'manga'].includes(category) || !/^\d{1,3}$/.test(slot)) return '';
-      return `detail.html?${new URLSearchParams({ category, slot })}`;
-    };
-
-    const getPublishYear = (item) => {
-      const explicitYear = String(item?.year ?? '').trim();
-      if (/^(?:19|20)\d{2}$/.test(explicitYear)) return explicitYear;
-      for (const field of ['published_at', 'release_date', 'publish_date', 'created_at']) {
-        const value = item?.[field];
-        if (!value) continue;
-        const year = new Date(value).getUTCFullYear();
-        if (Number.isInteger(year) && year >= 1900 && year <= 2100) return String(year);
-      }
-      return '--';
-    };
-
-    const getCategoryLabel = (item) => {
-      const tags = Array.isArray(item?.theme_tags) ? item.theme_tags.filter(Boolean).slice(0, 2) : [];
-      return tags.join(' · ') || (item?.category === 'manga' ? '漫画' : '动漫');
-    };
+    const createDetailUrl = createHomeDetailUrl;
+    const getPublishYear = homeContentYear;
+    const getCategoryLabel = homeContentLabel;
 
     const getTimestamp = (item) => {
       for (const field of ['updated_at', 'published_at', 'release_date', 'publish_date', 'created_at']) {
@@ -1866,7 +1847,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      let renderedCount = 0;
       slots.slice(0, 6).forEach((slot) => {
         const detailUrl = createDetailUrl(slot);
         if (!detailUrl) return;
@@ -1905,7 +1885,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
                 element('div', { className: 'card__meta' }, [
                   element('span', { className: 'card__meta-group' }, [
-                    element('span', { className: 'card__year', text: getPublishYear(slot) }),
+                    getPublishYear(slot)
+                      ? element('span', { className: 'card__year', text: getPublishYear(slot) })
+                      : null,
                     element('span', { className: 'card__type', text: getCategoryLabel(slot) })
                   ]),
                   element('button', {
@@ -1927,12 +1909,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
           )
         );
-        renderedCount += 1;
       });
-
-      for (let index = renderedCount; index < 6; index += 1) {
-        container.append(element('div', { className: 'card card--empty', attributes: { 'aria-hidden': 'true' } }));
-      }
     };
 
     const renderUpdates = (container, records) => {
@@ -2003,11 +1980,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data: managementData, error } = await window.supabaseClient.from('content_management').select('*');
       if (error) throw error;
 
-      const records = Array.isArray(managementData)
-        ? managementData.filter((item) => item.is_active !== false)
-        : [];
-      const animeRecords = records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index);
-      const mangaRecords = records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index);
+      const records = Array.isArray(managementData) ? managementData : [];
+      const animeRecords = selectHomeContent(records, 'anime', Number.MAX_SAFE_INTEGER);
+      const mangaRecords = selectHomeContent(records, 'manga', Number.MAX_SAFE_INTEGER);
       const catalogRecords = [...animeRecords, ...mangaRecords];
       renderCategory(
         animeContainer,

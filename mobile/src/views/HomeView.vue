@@ -77,7 +77,7 @@ onMounted(load);
       <AppSkeleton v-if="loading" />
       <div v-else-if="data?.popular.length" class="card-grid home-card-grid">
         <ContentCard
-          v-for="item in data.popular.slice(0, 4)"
+          v-for="item in data.popular"
           :key="item.id"
           :item="item"
           :year="contentYear(item)"
@@ -96,7 +96,7 @@ onMounted(load);
       <AppSkeleton v-if="loading" />
       <div v-else-if="data?.recommendations.length" class="card-grid home-card-grid">
         <ContentCard
-          v-for="item in data.recommendations.slice(0, 4)"
+          v-for="item in data.recommendations"
           :key="item.id"
           :item="item"
           :year="contentYear(item)"

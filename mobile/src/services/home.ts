@@ -4,6 +4,7 @@ import { isContentItem, type ContentItem } from '../types/content';
 import { parseSocialSettings, type SocialKey } from './social-links';
 
 export const WEB_HOME_BANNER_SLOTS = 3;
+export const MOBILE_HOME_SECTION_LIMIT = 4;
 
 export interface HomeContentItem extends ContentItem {
   likeCount: number;
@@ -50,8 +51,40 @@ export function contentYear(item: ContentItem): string {
 }
 
 export function contentLabel(item: ContentItem): string {
-  const tags = (item.theme_tags ?? []).filter(Boolean).slice(0, 2);
+  const tags = Array.isArray(item.theme_tags)
+    ? item.theme_tags.filter((tag) => typeof tag === 'string' && tag.trim()).slice(0, 2)
+    : [];
   return tags.join(' · ') || (item.category === 'manga' ? '漫画' : '动漫');
+}
+
+export function isCanonicalHomeContent(item: unknown, category: 'anime' | 'manga'): item is ContentItem {
+  return Boolean(
+    isContentItem(item) &&
+      item.category === category &&
+      item.is_active !== false &&
+      item.id.trim() &&
+      item.title.trim() &&
+      item.slot_index >= 0 &&
+      item.slot_index <= 999
+  );
+}
+
+export function selectHomeContent(
+  rows: unknown,
+  category: 'anime' | 'manga',
+  limit = MOBILE_HOME_SECTION_LIMIT
+): ContentItem[] {
+  if (!Array.isArray(rows)) return [];
+  const seen = new Set<string>();
+  return rows
+    .filter((item): item is ContentItem => isCanonicalHomeContent(item, category))
+    .sort((a, b) => a.slot_index - b.slot_index || a.id.localeCompare(b.id))
+    .filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    })
+    .slice(0, Math.max(0, Number.isInteger(limit) ? limit : MOBILE_HOME_SECTION_LIMIT));
 }
 
 export function contentRoute(item: ContentItem | HomeBannerItem): string {
@@ -61,6 +94,8 @@ export function contentRoute(item: ContentItem | HomeBannerItem): string {
     if (linked && ['anime', 'manga'].includes(linked.category)) return `/${linked.category}/${linked.id}`;
     return `/banner/${item.slot_index}/${item.id}`;
   }
+  if (item.category !== 'anime' && item.category !== 'manga') return '';
+  if (!isCanonicalHomeContent(item, item.category)) return '';
   return `/${item.category}/${item.id}`;
 }
 
@@ -88,7 +123,7 @@ export function mapWebBanners(rows: unknown): ContentItem[] {
         item.slot_index >= 0 &&
         item.slot_index < WEB_HOME_BANNER_SLOTS
     )
-    .sort((a, b) => a.slot_index - b.slot_index)
+    .sort((a, b) => a.slot_index - b.slot_index || a.id.localeCompare(b.id))
     .slice(0, WEB_HOME_BANNER_SLOTS);
 }
 
@@ -110,25 +145,25 @@ export function buildHomeData(
   likeCounts: ReadonlyMap<string, number> = new Map(),
   socialConfig?: unknown
 ): HomeData {
-  const records = Array.isArray(catalogRows)
-    ? catalogRows.filter(isContentItem).filter((item) => item.is_active !== false)
-    : [];
-  const anime = records.filter((item) => item.category === 'anime').sort((a, b) => a.slot_index - b.slot_index);
-  const manga = records.filter((item) => item.category === 'manga').sort((a, b) => a.slot_index - b.slot_index);
-  const catalog = [...anime, ...manga].map((item) => ({
+  const records = Array.isArray(catalogRows) ? catalogRows : [];
+  const anime = selectHomeContent(records, 'anime', Number.MAX_SAFE_INTEGER);
+  const manga = selectHomeContent(records, 'manga', Number.MAX_SAFE_INTEGER);
+  const canonicalCatalog = [...anime, ...manga];
+  const catalog = canonicalCatalog.map((item) => ({
     ...item,
-    likeCount: likeCounts.get(storageImageKey(item.cover_url) ?? '') ?? 0
+    likeCount: (() => {
+      const value = Number(likeCounts.get(storageImageKey(item.cover_url) ?? '') ?? 0);
+      return Number.isFinite(value) && value >= 0 ? value : 0;
+    })()
   }));
   const byNewest = (a: HomeContentItem, b: HomeContentItem) => contentTimestamp(b) - contentTimestamp(a);
   return {
     banners: mapWebBanners(bannerRows).map((banner) => {
-      const linkedContent = records.find(
-        (item) => item.id === banner.linked_content_id && ['anime', 'manga'].includes(item.category)
-      );
+      const linkedContent = canonicalCatalog.find((item) => item.id === banner.linked_content_id);
       return linkedContent ? { ...banner, linkedContent } : banner;
     }),
-    popular: catalog.filter((item) => item.category === 'anime').slice(0, 6),
-    recommendations: catalog.filter((item) => item.category === 'manga').slice(0, 6),
+    popular: catalog.filter((item) => item.category === 'anime').slice(0, MOBILE_HOME_SECTION_LIMIT),
+    recommendations: catalog.filter((item) => item.category === 'manga').slice(0, MOBILE_HOME_SECTION_LIMIT),
     updates: [...catalog].sort(byNewest).slice(0, 6),
     ranking: [...catalog]
       .sort((a, b) => b.likeCount - a.likeCount || catalog.indexOf(a) - catalog.indexOf(b))
@@ -176,7 +211,6 @@ export async function fetchHomeData(client?: SupabaseClient): Promise<HomeData> 
       .from('content_management')
       .select('*')
       .eq('category', 'banner')
-      .eq('is_active', true)
       .order('slot_index', { ascending: true }),
     supabase.from('content_management').select('*'),
     supabase.from('site_config').select('url').eq('section', 'social_links').maybeSingle()

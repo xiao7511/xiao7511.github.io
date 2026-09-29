@@ -3,10 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, test, vi } from 'vitest';
 import {
   buildHomeData,
+  contentLabel,
   contentRoute,
+  contentYear,
   fetchHomeData,
+  MOBILE_HOME_SECTION_LIMIT,
   mapSocialLinks,
   mapWebBanners,
+  selectHomeContent,
   storageImageKey,
   WEB_HOME_BANNER_SLOTS
 } from './home';
@@ -75,6 +79,55 @@ describe('Web-aligned mobile home data', () => {
     expect(data.ranking[0]).toMatchObject({ id: manga.id, likeCount: 9 });
   });
 
+  test('uses canonical active, category, slot, duplicate and deterministic-order rules', () => {
+    const duplicate = item('anime', 3, 'Duplicate');
+    duplicate.id = 'anime-a';
+    const rows: unknown[] = [
+      { ...item('anime', 1, 'Z'), id: 'anime-z' },
+      { ...item('anime', 0, 'B'), id: 'anime-b' },
+      { ...item('anime', 0, 'A'), id: 'anime-a', is_active: null },
+      duplicate,
+      { ...item('anime', 2, 'Disabled'), is_active: false },
+      item('manga', 0, 'Wrong category'),
+      { ...item('anime', -1, 'Invalid slot') },
+      { ...item('anime', 4, 'Missing title'), title: '' }
+    ];
+    expect(selectHomeContent(rows, 'anime', 10).map((entry) => entry.id)).toEqual([
+      'anime-a',
+      'anime-b',
+      'anime-z'
+    ]);
+  });
+
+  test('keeps the accepted four-card Mobile presentation limit', () => {
+    const rows = Array.from({ length: 7 }, (_, index) => item('anime', index, `Anime ${index}`));
+    const data = buildHomeData([], rows);
+    expect(MOBILE_HOME_SECTION_LIMIT).toBe(4);
+    expect(data.popular.map((entry) => entry.slot_index)).toEqual([0, 1, 2, 3]);
+  });
+
+  test('keeps Anime and Manga navigation valid and rejects malformed content routes', () => {
+    expect(contentRoute(item('anime', 2, 'Anime'))).toBe('/anime/anime-2');
+    expect(contentRoute(item('manga', 5, 'Manga'))).toBe('/manga/manga-5');
+    expect(contentRoute({ ...item('anime', -1, 'Invalid') })).toBe('');
+    expect(contentRoute({ ...item('other', 1, 'Unsupported') })).toBe('');
+  });
+
+  test('normalizes absent likes and malformed metadata safely', () => {
+    const anime = { ...item('anime', 0, 'Anime'), year: null, theme_tags: 'bad-data' } as unknown as ContentItem;
+    const key = storageImageKey(anime.cover_url);
+    const data = buildHomeData([], [anime], new Map(key ? [[key, Number.NaN]] : []));
+    expect(data.popular[0].likeCount).toBe(0);
+    expect(contentLabel(anime)).not.toContain('[object Object]');
+    expect(contentYear(anime)).toBe('--');
+  });
+
+  test('returns safe empty sections when every record is malformed or inactive', () => {
+    const data = buildHomeData([], [null, {}, { ...item('anime', 0, 'Off'), is_active: false }]);
+    expect(data.popular).toEqual([]);
+    expect(data.recommendations).toEqual([]);
+  });
+
   test('hides disabled or empty social links and follows the shared configured order', () => {
     const links = mapSocialLinks({
       weibo: 'https://weibo.com/nobi',
@@ -110,7 +163,7 @@ describe('Web-aligned mobile home data', () => {
     expect(result.banners).toHaveLength(3);
     expect(result.banners[0]).toMatchObject({ title: '第一张' });
     expect(bannerQuery.eq).toHaveBeenCalledWith('category', 'banner');
-    expect(bannerQuery.eq).toHaveBeenCalledWith('is_active', true);
+    expect(bannerQuery.eq).not.toHaveBeenCalledWith('is_active', true);
     expect(bannerOrder).toHaveBeenCalledWith('slot_index', { ascending: true });
     expect(from).toHaveBeenCalledWith('site_config');
   });

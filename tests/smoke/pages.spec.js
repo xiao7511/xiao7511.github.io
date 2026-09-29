@@ -41,6 +41,7 @@ async function mockRuntime(
     features = false,
     socialLinks = false,
     contentCount = 6,
+    contentChanges = {},
     banners = [bannerRecord(0)],
     sessionUser = null,
     replyInsertError = false
@@ -56,12 +57,14 @@ async function mockRuntime(
     : null;
   const animeRecords = Array.from({ length: contentCount }, (_, index) => ({
     ...contentRecord,
+    ...contentChanges,
     id: `d9428888-122b-4f20-9f6c-25789ab0a12${index}`,
     slot_index: index,
     title: `测试动漫 ${index + 1}`
   }));
   const mangaRecords = Array.from({ length: contentCount }, (_, index) => ({
     ...contentRecord,
+    ...contentChanges,
     id: `8d99585e-379d-46d0-99c1-0eb2a32a3aa${index}`,
     category: 'manga',
     slot_index: index,
@@ -271,15 +274,31 @@ test('home renders all six configured enriched cards per section', async ({ page
   expect(likeBounds.y).toBeGreaterThanOrEqual(mediaBounds.y + mediaBounds.height);
 });
 
-test('home keeps six grid positions when fewer than six items are configured', async ({ page }) => {
+test('home renders only configured cards when fewer than six items are available', async ({ page }) => {
   await mockRuntime(page, { features: true, contentCount: 4 });
   await page.goto('/index.html');
-  await expect(page.locator('#anime-container .card')).toHaveCount(6);
-  await expect(page.locator('#anime-container .card:not(.card--empty)')).toHaveCount(4);
-  await expect(page.locator('#anime-container .card--empty')).toHaveCount(2);
-  await expect(page.locator('#manga-container .card')).toHaveCount(6);
-  await expect(page.locator('#manga-container .card:not(.card--empty)')).toHaveCount(4);
-  await expect(page.locator('#manga-container .card--empty')).toHaveCount(2);
+  await expect(page.locator('#anime-container .card')).toHaveCount(4);
+  await expect(page.locator('#anime-container .card--empty')).toHaveCount(0);
+  await expect(page.locator('#manga-container .card')).toHaveCount(4);
+  await expect(page.locator('#manga-container .card--empty')).toHaveCount(0);
+});
+
+test('home renders safe empty states without fake cards', async ({ page }) => {
+  await mockRuntime(page, { features: true, contentCount: 0 });
+  await page.goto('/index.html');
+  await expect(page.locator('#anime-container .card')).toHaveCount(0);
+  await expect(page.locator('#manga-container .card')).toHaveCount(0);
+  await expect(page.locator('#anime-container .content-state')).toBeVisible();
+  await expect(page.locator('#manga-container .content-state')).toBeVisible();
+});
+
+test('home replaces a missing cover with the established local fallback', async ({ page }) => {
+  await mockRuntime(page, { features: true, contentCount: 1, contentChanges: { cover_url: '' } });
+  await page.goto('/index.html');
+  await expect(page.locator('#anime-container .card img')).toHaveAttribute(
+    'src',
+    /\/images\/nobi-anime-placeholder\.svg$/
+  );
 });
 
 test('home cover opens its matching detail page directly', async ({ page }) => {
