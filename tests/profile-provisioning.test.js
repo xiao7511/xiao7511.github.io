@@ -67,6 +67,41 @@ describe('Unified public profile provisioning', () => {
     expect(verifier).not.toMatch(/^\s*(insert|update|delete|alter|drop|create|truncate|grant|revoke)\b/im);
   });
 
+  test('normalizes information_schema domains before profile schema comparisons', async () => {
+    const verifier = await sql(verifierUrl);
+    expect(verifier).toContain('array_agg(columns.column_name::text order by columns.column_name::text) as names');
+    expect(verifier).not.toMatch(/array_agg\(columns\.column_name\s+order by columns\.column_name\)/);
+    for (const value of ['table_schema', 'table_name', 'column_name', 'data_type', 'is_nullable']) {
+      expect(verifier).toContain(`${value}::text`);
+    }
+    expect(verifier).toContain("is distinct from array['avatar_url', 'created_at', 'id', 'nickname']::text[]");
+  });
+
+  test('preserves the complete read-only provisioning verifier contract', async () => {
+    const verifier = await sql(verifierUrl);
+    for (const finding of [
+      'handle_new_user_missing',
+      'handle_new_user_security_configuration',
+      'handle_new_user_profile_provisioning',
+      'auth_user_trigger_missing',
+      'auth_user_trigger_wrong_function',
+      'profiles_schema_mismatch',
+      'profiles_created_at_default_missing',
+      'auth_users_missing_public_profiles',
+      'handle_new_user_browser_execute'
+    ]) {
+      expect(verifier).toContain(finding);
+    }
+    expect(verifier).toContain('prosecdef');
+    expect(verifier).toContain("proconfig = array['search_path=pg_catalog']");
+    expect(verifier).toContain("trigger_row.tgname = 'on_auth_user_created'");
+    expect(verifier).toContain("definition ilike '%after insert%'");
+    for (const target of ['game.profiles', 'public.users', 'public.profiles']) {
+      expect(verifier).toContain(`insert into ${target}`);
+    }
+    expect(verifier).toContain('on conflict (id) do nothing');
+  });
+
   test('keeps handle_new_user SECURITY DEFINER with a hardened search_path', async () => {
     const migration = await sql(migrationUrl);
     expect(migration).toContain('security definer\nset search_path = pg_catalog');

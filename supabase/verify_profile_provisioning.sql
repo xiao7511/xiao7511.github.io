@@ -18,9 +18,9 @@ with function_state as (
     and trigger_row.tgname = 'on_auth_user_created'
     and not trigger_row.tgisinternal
 ), profile_columns as (
-  select array_agg(columns.column_name order by columns.column_name) as names
+  select array_agg(columns.column_name::text order by columns.column_name::text) as names
   from information_schema.columns as columns
-  where columns.table_schema = 'public' and columns.table_name = 'profiles'
+  where columns.table_schema::text = 'public' and columns.table_name::text = 'profiles'
 ), findings as (
   select 'HANDLE_NEW_USER_MISSING'::text as code
   where not exists (select 1 from function_state)
@@ -66,20 +66,20 @@ with function_state as (
           ('avatar_url', 'character varying', 'YES')
       ) as expected(column_name, data_type, is_nullable)
       left join information_schema.columns as actual
-        on actual.table_schema = 'public'
-        and actual.table_name = 'profiles'
-        and actual.column_name = expected.column_name
+        on actual.table_schema::text = 'public'
+        and actual.table_name::text = 'profiles'
+        and actual.column_name::text = expected.column_name
       where actual.column_name is null
-        or actual.data_type <> expected.data_type
-        or actual.is_nullable <> expected.is_nullable
+        or actual.data_type::text <> expected.data_type
+        or actual.is_nullable::text <> expected.is_nullable
     )
   union all
   select 'PROFILES_CREATED_AT_DEFAULT_MISSING'
   where not exists (
     select 1 from information_schema.columns
-    where table_schema = 'public'
-      and table_name = 'profiles'
-      and column_name = 'created_at'
+    where table_schema::text = 'public'
+      and table_name::text = 'profiles'
+      and column_name::text = 'created_at'
       and column_default is not null
   )
   union all
