@@ -1,28 +1,36 @@
 import { fetchApiJson } from '../api/content.js';
 import { element, setContentState, setImageSource, setLoadingState } from '../components/dom.js';
 import { initSiteHeader, updateCopyrightYear } from '../components/header.js';
+import {
+  createRecommendDetailUrl,
+  filterRecommendItems,
+  readSearchQuery,
+  updateSearchSummary
+} from '../search/content.js';
 
 export async function initRecommendPage() {
   initSiteHeader();
   updateCopyrightYear();
   const container = document.getElementById('dynamic-recommend-container');
   if (!container) return;
+  const query = readSearchQuery(window.location.search);
+  const summary = document.getElementById('recommend-search-summary');
   setLoadingState(container, { count: 4, variant: 'card', label: '正在加载动漫推荐' });
 
   try {
-    const data = await fetchApiJson('api/recommend');
+    const data = filterRecommendItems(await fetchApiJson('api/recommend'), query);
     container.setAttribute('aria-busy', 'false');
     container.replaceChildren();
-    if (!Array.isArray(data) || !data.length) {
-      setContentState(container, { message: '暂时没有动漫推荐，稍后再来看看吧。' });
+    updateSearchSummary(summary, query, data.length);
+    if (!data.length) {
+      setContentState(container, {
+        message: query ? `没有找到与“${query}”匹配的动漫。` : '暂时没有动漫推荐，稍后再来看看吧。'
+      });
       return;
     }
 
     data.forEach((item) => {
-      const params = new URLSearchParams({
-        category: String(item.category || ''),
-        slot: String(item.slot_index ?? '')
-      });
+      const detailUrl = createRecommendDetailUrl(item);
       const image = element('img', {
         attributes: {
           alt: item.title ? `${item.title}封面` : '作品封面',
@@ -41,7 +49,7 @@ export async function initRecommendPage() {
           'a',
           {
             className: 'card',
-            attributes: { href: `detail.html?${params}`, 'aria-label': `查看《${item.title || '未命名作品'}》详情` }
+            attributes: { href: detailUrl, 'aria-label': `查看《${item.title || '未命名作品'}》详情` }
           },
           [
             image,

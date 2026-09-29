@@ -29,11 +29,18 @@ export async function searchAll(query: string, client?: SupabaseClient): Promise
   const includes = (...values: unknown[]): boolean =>
     values
       .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .some((value) => String(value ?? '').toLocaleLowerCase('zh-CN').includes(needle));
+      .some((value) =>
+        String(value ?? '')
+          .toLocaleLowerCase('zh-CN')
+          .includes(needle)
+      );
   return {
     content: (contentResult.data ?? [])
       .filter(isContentItem)
-      .filter((item) => includes(item.title, item.subtitle, item.theme_tags)),
+      .filter((item) => ['anime', 'manga'].includes(item.category) && item.is_active !== false)
+      .filter((item) =>
+        includes(item.title, item.subtitle, item.theme_tags, item.year, item.status, item.region, item.description)
+      ),
     posts: (postsResult.data ?? [])
       .filter((post) => includes(post.title, post.content, post.nickname))
       .map((post) => ({ ...post, likeCount: 0, replyCount: 0, liked: false })) as CommunityPost[],

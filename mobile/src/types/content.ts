@@ -16,7 +16,7 @@ export interface ContentItem {
   status?: string | null;
   region?: string | null;
   description?: string | null;
-  is_active?: boolean;
+  is_active?: boolean | null;
   linked_content_id?: string | null;
 }
 
