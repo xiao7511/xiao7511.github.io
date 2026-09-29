@@ -6,6 +6,7 @@ import { element, setContentState, setImageSource, setLoadingState } from './src
 import { initSiteHeader, updateCopyrightYear } from './src/components/header.js';
 import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
+import { applyBannerCtaTargets, resolveBannerItems } from './src/home/banners.js';
 
 // 🌟 1. 全局配置与安全业务实例声明 (收拢为唯一入口)
 window.supabaseClient = null;
@@ -21,8 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 获取所有基础 DOM 元素
-  const carouselSlides = Array.from(document.querySelectorAll('.hero__slide'));
-  const carouselIndicators = Array.from(document.querySelectorAll('.hero__pagination span'));
+  const carouselSlideSlots = Array.from(document.querySelectorAll('.hero__slide'));
+  const carouselIndicatorSlots = Array.from(document.querySelectorAll('.hero__pagination span'));
+  let carouselSlides = [...carouselSlideSlots];
+  let carouselIndicators = [...carouselIndicatorSlots];
   const carouselCounter = document.querySelector('.hero__pagination b');
   const carouselPrevious = document.querySelector('.hero__control--prev');
   const carouselNext = document.querySelector('.hero__control--next');
@@ -30,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const heroTitle = document.querySelector('[data-hero-title]');
   const heroDescription = document.querySelector('[data-hero-description]');
   const heroTags = document.querySelector('[data-hero-tags]');
+  const heroPrimary = document.querySelector('[data-hero-primary]');
   const heroDetail = document.querySelector('[data-hero-detail]');
   const heroFallback = {
     eyebrow: heroEyebrow?.textContent || '',
@@ -105,7 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
       heroTags.replaceChildren(...tags.map((tag) => element('span', { text: tag })));
       heroTags.hidden = !tags.length;
     }
-    if (heroDetail) heroDetail.href = activeSlide.dataset.detailUrl || 'recommend.html';
+    const detailUrl = activeSlide.dataset.detailUrl || 'recommend.html';
+    applyBannerCtaTargets([heroPrimary, heroDetail], detailUrl);
     currentSlideIndex = index;
   }
 
@@ -172,37 +177,58 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     try {
-      let liveUrls = [];
+      let bannerItems = null;
       if (window.supabaseClient) {
-        const { data, error } = await window.supabaseClient
-          .from('content_management')
-          .select('*')
-          .eq('category', 'banner')
-          .order('slot_index', { ascending: true });
+        const [bannerResult, catalogResult] = await Promise.all([
+          window.supabaseClient
+            .from('content_management')
+            .select('*')
+            .eq('category', 'banner')
+            .order('slot_index', { ascending: true }),
+          window.supabaseClient.from('content_management').select('*')
+        ]);
 
-        if (!error && Array.isArray(data)) {
-          data.forEach((item) => {
-            if (Number.isInteger(item.slot_index) && item.cover_url) liveUrls[item.slot_index] = item.cover_url;
-          });
-          renderAdminBannerList(liveUrls);
+        if (!bannerResult.error && !catalogResult.error) {
+          bannerItems = resolveBannerItems(bannerResult.data, catalogResult.data);
+          renderAdminBannerList(bannerItems.map((item) => item.cover_url).filter(Boolean));
         }
       }
 
       // 🎯 核心修复：提取全局的时间戳参数，如果没有，默认生成一个普通的，确保每次返回都是最新的
       const buster = window.forceCacheBuster || '?v=20260920';
 
+      if (bannerItems) {
+        carouselSlideSlots.forEach((slide, index) => {
+          slide.hidden = index >= bannerItems.length;
+        });
+        carouselIndicatorSlots.forEach((indicator, index) => {
+          indicator.hidden = index >= bannerItems.length;
+        });
+        carouselSlides = carouselSlideSlots.slice(0, bannerItems.length);
+        carouselIndicators = carouselIndicatorSlots.slice(0, bannerItems.length);
+        currentSlideIndex = Math.min(currentSlideIndex, Math.max(0, carouselSlides.length - 1));
+        if (heroSection) heroSection.hidden = bannerItems.length === 0;
+        if (!bannerItems.length) {
+          stopCarousel();
+          return;
+        }
+      }
+
       carouselSlides.forEach((slide, index) => {
         const imgElement = slide.querySelector('img');
         if (imgElement) {
-          if (liveUrls && liveUrls[index]) {
-            // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
-            const rawUrl = liveUrls[index];
-            const source = rawUrl.includes('?') ? `${rawUrl}&v=20260920` : rawUrl + buster;
-            imgElement.removeAttribute('srcset');
-            imgElement.removeAttribute('sizes');
+          const record = bannerItems?.[index];
+          if (record) {
+            let source = fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg';
+            if (record.cover_url) {
+              // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
+              const rawUrl = record.cover_url;
+              source = rawUrl.includes('?') ? `${rawUrl}&v=20260920` : rawUrl + buster;
+              imgElement.removeAttribute('srcset');
+              imgElement.removeAttribute('sizes');
+            }
             setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg');
-            const record = data.find((item) => item.slot_index === index);
-            if (record?.id) {
+            if (record.id) {
               imgElement.dataset.contentId = record.id;
               imgElement.dataset.imageKind = 'banner';
               imgElement.dataset.imageIndex = '0';
@@ -214,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             slide.dataset.title = record?.title || '';
             slide.dataset.description = record?.subtitle || '';
             slide.dataset.tags = JSON.stringify(tags);
+            slide.dataset.detailUrl = record.detailUrl;
           } else {
             setImageSource(imgElement, fallbackImages.section_banner[index] || imgElement.src);
           }
