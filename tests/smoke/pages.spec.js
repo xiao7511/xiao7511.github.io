@@ -17,6 +17,23 @@ const contentRecord = {
   detail_urls: [imageUrl, secondDetailImageUrl]
 };
 
+function animeId(index) {
+  return `d9428888-122b-4f20-9f6c-25789ab0a12${index}`;
+}
+
+function bannerRecord(slot, changes = {}) {
+  return {
+    ...contentRecord,
+    id: `5a0f1c6f-3c6e-4e71-a65d-6a5504945b8${slot}`,
+    category: 'banner',
+    slot_index: slot,
+    title: `Banner ${slot + 1}`,
+    is_active: true,
+    linked_content_id: animeId(slot),
+    ...changes
+  };
+}
+
 async function mockRuntime(
   page,
   {
@@ -24,6 +41,7 @@ async function mockRuntime(
     features = false,
     socialLinks = false,
     contentCount = 6,
+    banners = [bannerRecord(0)],
     sessionUser = null,
     replyInsertError = false
   } = {}
@@ -49,11 +67,7 @@ async function mockRuntime(
     slot_index: index,
     title: `测试漫画 ${index + 1}`
   }));
-  const records = [
-    ...animeRecords,
-    ...mangaRecords,
-    { ...contentRecord, id: '5a0f1c6f-3c6e-4e71-a65d-6a5504945b82', category: 'banner' }
-  ];
+  const records = [...animeRecords, ...mangaRecords, ...banners];
   await page.route('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4', (route) =>
     route.fulfill({
       contentType: 'application/javascript',
@@ -180,7 +194,7 @@ async function mockRuntime(
     if (url.pathname === '/rest/v1/content_management') {
       const category = url.searchParams.get('category');
       const rows = category?.includes('banner')
-        ? [{ ...contentRecord, category: 'banner' }]
+        ? banners
         : [contentRecord, { ...contentRecord, id: '8d99585e-379d-46d0-99c1-0eb2a32a3aa7', category: 'manga' }];
       return route.fulfill({ json: rows });
     }
@@ -278,6 +292,62 @@ test('home cover opens its matching detail page directly', async ({ page }) => {
   await expect(page.locator('#detail-title')).toContainText('测试动漫');
 });
 
+test('home hero advances across three active Banners and keeps pagination and CTA aligned', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockRuntime(page, { banners: [bannerRecord(0), bannerRecord(1), bannerRecord(2)] });
+  await page.goto('/index.html');
+
+  const visibleSlides = page.locator('.hero__slide:not([hidden])');
+  await expect(visibleSlides).toHaveCount(3);
+  await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(3);
+  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 03');
+  await expect(visibleSlides.nth(0)).toHaveClass(/is-active/);
+  await expect(page.locator('[data-hero-primary]')).toHaveAttribute('href', 'detail.html?category=anime&slot=0');
+
+  await page.locator('.hero__control--next').click();
+  await expect(visibleSlides.nth(1)).toHaveClass(/is-active/);
+  await expect(visibleSlides.nth(0)).not.toHaveClass(/is-active/);
+  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 03');
+  await expect(page.locator('[data-hero-primary]')).toHaveAttribute('href', 'detail.html?category=anime&slot=1');
+});
+
+test('home hero skips a disabled middle Banner instead of navigating a hidden raw slot', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const lastActive = bannerRecord(2);
+  await mockRuntime(page, {
+    banners: [bannerRecord(0), bannerRecord(1, { is_active: false }), lastActive]
+  });
+  await page.goto('/index.html');
+
+  const visibleSlides = page.locator('.hero__slide:not([hidden])');
+  await expect(visibleSlides).toHaveCount(2);
+  await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(2);
+  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 02');
+  await page.locator('.hero__control--next').click();
+  await expect(visibleSlides.nth(1)).toHaveClass(/is-active/);
+  await expect(visibleSlides.nth(1).locator('img')).toHaveAttribute('data-content-id', lastActive.id);
+  await expect(page.locator('.hero__slide').nth(2)).toBeHidden();
+  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 02');
+  await expect(page.locator('[data-hero-detail]')).toHaveAttribute('href', 'detail.html?category=anime&slot=2');
+});
+
+test('home hero keeps single-Banner navigation safe and reports one visible page', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const onlyBanner = bannerRecord(0);
+  await mockRuntime(page, { banners: [onlyBanner] });
+  await page.goto('/index.html');
+
+  const activeSlide = page.locator('.hero__slide.is-active:not([hidden])');
+  await expect(page.locator('.hero__slide:not([hidden])')).toHaveCount(1);
+  await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(1);
+  await expect(activeSlide.locator('img')).toHaveAttribute('data-content-id', onlyBanner.id);
+  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
+  await page.locator('.hero__control--next').click();
+  await expect(activeSlide).toHaveCount(1);
+  await expect(activeSlide.locator('img')).toHaveAttribute('data-content-id', onlyBanner.id);
+  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
+});
+
 test('home hero aligns with the content rail and configured social icons render in the footer social column', async ({
   page
 }) => {
@@ -290,9 +360,8 @@ test('home hero aligns with the content rail and configured social icons render 
   });
   expect(bounds.left).toBe(32);
   expect(bounds.right).toBe(1334);
-  await page.locator('.hero__control--next').click();
-  await expect(page.locator('.hero__slide').nth(1)).toHaveClass(/is-active/);
-  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 03');
+  await expect(page.locator('.hero__slide:not([hidden])')).toHaveCount(1);
+  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
   const social = page.locator('.footer-social');
   await expect(social.locator('.footer-social__link')).toHaveCount(4);
   await expect(social).toBeVisible();
