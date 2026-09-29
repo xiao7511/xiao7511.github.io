@@ -1,4 +1,10 @@
 import { initializeSupabase } from './src/api/supabase.js';
+import {
+  ModerationAccessError,
+  initializeModeration,
+  loadAuthorizedReports,
+  reviewModerationReport
+} from './src/moderation/service.js';
 
 const statusNode = document.getElementById('moderation-status');
 const listNode = document.getElementById('moderation-list');
@@ -20,12 +26,7 @@ function element(tag, text, className) {
 async function review(reportId, action, note, button) {
   button.disabled = true;
   try {
-    const { error } = await client.rpc('review_post_report', {
-      p_report_id: reportId,
-      p_action: action,
-      p_note: note.trim() || null
-    });
-    if (error) throw error;
+    await reviewModerationReport(client, reportId, action, note);
     setStatus('审核操作已保存。', 'success');
     await loadReports();
   } catch {
@@ -73,13 +74,7 @@ async function loadReports() {
   listNode.replaceChildren();
   setStatus('正在加载待处理举报…');
   try {
-    const { data, error } = await client
-      .from('post_reports')
-      .select('id,post_id,reason,details,status,created_at,post:posts(content,nickname,user_id,moderation_status)')
-      .in('status', ['pending', 'reviewing'])
-      .order('created_at', { ascending: true })
-      .limit(100);
-    if (error) throw error;
+    const data = await loadAuthorizedReports(client);
     if (!data?.length) {
       setStatus('当前没有待处理举报。', 'success');
       return;
@@ -94,23 +89,33 @@ async function loadReports() {
 }
 
 async function initialize() {
+  refreshButton.disabled = true;
+  listNode.replaceChildren();
   try {
-    client = await initializeSupabase();
-    const { data } = await client.auth.getSession();
-    const user = data.session?.user;
-    if (!user) {
-      setStatus('请先在 NOBI 首页登录管理员账号，再返回此页面。', 'error');
-      return;
-    }
-    const { data: profile, error } = await client.from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
-    if (error || profile?.is_admin !== true) {
-      setStatus('当前账号没有内容审核权限。', 'error');
-      return;
-    }
+    const initialized = await initializeModeration(initializeSupabase);
+    client = initialized.client;
     refreshButton.addEventListener('click', () => void loadReports());
-    await loadReports();
-  } catch {
-    setStatus('审核页面初始化失败。', 'error');
+    listNode.replaceChildren();
+    if (!initialized.reports.length) {
+      setStatus('当前没有待处理举报。', 'success');
+    } else {
+      for (const report of initialized.reports) listNode.append(renderReport(report));
+      setStatus(`待处理举报：${initialized.reports.length} 条。`);
+    }
+    refreshButton.disabled = false;
+  } catch (error) {
+    client = undefined;
+    listNode.replaceChildren();
+    refreshButton.disabled = true;
+    if (error instanceof ModerationAccessError && error.code === 'UNAUTHENTICATED') {
+      setStatus('请先在 NOBI 首页登录管理员账号，再返回此页面。', 'error');
+    } else if (error instanceof ModerationAccessError && error.code === 'UNAUTHORIZED') {
+      setStatus('当前账号没有内容审核权限。', 'error');
+    } else if (error instanceof ModerationAccessError) {
+      setStatus('无法验证管理员权限，已安全拒绝访问。', 'error');
+    } else {
+      setStatus('审核页面配置或网络连接不可用，请稍后重试。', 'error');
+    }
   }
 }
 

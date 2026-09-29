@@ -9,6 +9,7 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="assets/css/main.css" />
     <link rel="stylesheet" href="assets/css/moderation.css" />
+    <script src="assets/js/site-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4" defer></script>
     <script type="module" src="assets/js/moderation.js"></script>
   </head>
@@ -26,7 +27,7 @@
           <p>TRUST &amp; SAFETY</p>
           <h1>社区举报队列</h1>
         </div>
-        <button id="refresh-reports" type="button">刷新</button>
+        <button id="refresh-reports" type="button" disabled>刷新</button>
       </div>
       <p id="moderation-status" class="moderation-status" role="status">正在检查管理员会话…</p>
       <div id="moderation-list" class="moderation-list" aria-live="polite"></div>
