@@ -184,7 +184,7 @@ function getImageTarget(image) {
 }
 
 function getImageLikeButton(image) {
-  const scope = image.closest('.card, .gallery-item') || image.parentElement;
+  const scope = image.closest('.card, .manga-item, .gallery-item') || image.parentElement;
   return scope?.querySelector('[data-image-like]') || null;
 }
 
@@ -427,7 +427,7 @@ function initImagePreview() {
     (event) => {
       const likeButton = event.target.closest('[data-image-like]');
       if (likeButton) {
-        const scope = likeButton.closest('.card, .gallery-item') || likeButton.parentElement;
+        const scope = likeButton.closest('.card, .manga-item, .gallery-item') || likeButton.parentElement;
         const image = scope?.querySelector('img[data-content-id][data-image-kind]');
         if (!image) return;
         event.preventDefault();

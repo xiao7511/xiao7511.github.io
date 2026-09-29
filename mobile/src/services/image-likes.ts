@@ -21,6 +21,11 @@ export interface ImageLikeSummary {
   liked: boolean;
 }
 
+function safeLikeCount(value: unknown): number {
+  const count = Number(value);
+  return Number.isFinite(count) && count >= 0 ? count : 0;
+}
+
 export function contentCoverLikeTarget(item: ContentItem): ImageLikeTarget | null {
   const imageKey = storageImageKey(item.cover_url);
   if (!imageKey) return null;
@@ -56,7 +61,7 @@ export async function fetchImageLikeTargetSummaries(
       if (!row || typeof row !== 'object') return [];
       const value = row as Record<string, unknown>;
       if (typeof value.image_key !== 'string') return [];
-      return [[value.image_key, { count: Number(value.like_count) || 0, liked: value.liked === true }] as const];
+      return [[value.image_key, { count: safeLikeCount(value.like_count), liked: value.liked === true }] as const];
     })
   );
 }
@@ -76,5 +81,5 @@ export async function toggleContentImageLike(
   const row = Array.isArray(result.data) ? result.data[0] : result.data;
   if (!row || typeof row !== 'object') throw new Error('INVALID_IMAGE_LIKE_RESPONSE');
   const value = row as Record<string, unknown>;
-  return { count: Number(value.like_count) || 0, liked: value.liked === true };
+  return { count: safeLikeCount(value.like_count), liked: value.liked === true };
 }

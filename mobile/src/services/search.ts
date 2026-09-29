@@ -1,7 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import { isContentItem, type ContentItem } from '../types/content';
+import type { ContentItem } from '../types/content';
 import type { CommunityPost, Profile } from '../types/community';
+import { selectCanonicalContent } from './home';
+import { normalizeLibraryText } from './library';
 
 export interface SearchResults {
   content: ContentItem[];
@@ -10,7 +12,7 @@ export interface SearchResults {
 }
 
 export async function searchAll(query: string, client?: SupabaseClient): Promise<SearchResults> {
-  const needle = query.trim().toLocaleLowerCase('zh-CN');
+  const needle = normalizeLibraryText(query);
   if (needle.length < 2) return { content: [], posts: [], users: [] };
   const supabase = client ?? (await getSupabase());
   const [contentResult, postsResult, profilesResult] = await Promise.all([
@@ -30,17 +32,16 @@ export async function searchAll(query: string, client?: SupabaseClient): Promise
     values
       .flatMap((value) => (Array.isArray(value) ? value : [value]))
       .some((value) =>
-        String(value ?? '')
-          .toLocaleLowerCase('zh-CN')
-          .includes(needle)
+        normalizeLibraryText(value).includes(needle)
       );
+  const contentRows = [
+    ...selectCanonicalContent(contentResult.data ?? [], 'anime'),
+    ...selectCanonicalContent(contentResult.data ?? [], 'manga')
+  ];
   return {
-    content: (contentResult.data ?? [])
-      .filter(isContentItem)
-      .filter((item) => ['anime', 'manga'].includes(item.category) && item.is_active !== false)
-      .filter((item) =>
-        includes(item.title, item.subtitle, item.theme_tags, item.year, item.status, item.region, item.description)
-      ),
+    content: contentRows.filter((item) =>
+      includes(item.title, item.subtitle, item.theme_tags, item.year, item.status, item.region, item.description)
+    ),
     posts: (postsResult.data ?? [])
       .filter((post) => includes(post.title, post.content, post.nickname))
       .map((post) => ({ ...post, likeCount: 0, replyCount: 0, liked: false })) as CommunityPost[],

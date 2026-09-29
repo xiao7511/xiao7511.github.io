@@ -2090,6 +2090,14 @@ main {
   color: var(--color-muted);
 }
 
+.manga-actions {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .read-btn {
   align-self: flex-start;
 }
@@ -2200,6 +2208,26 @@ main {
   color: #ff91a4;
   background: rgba(255, 91, 126, 0.12);
   border-color: rgba(255, 145, 164, 0.28);
+}
+
+.library-like-button {
+  position: static;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  color: #d9e7f4;
+  background: rgba(101, 184, 255, 0.08);
+  border: 1px solid rgba(101, 184, 255, 0.18);
+  box-shadow: none;
+}
+
+.library-like-button.is-liked {
+  color: #ff91a4;
+  background: rgba(255, 91, 126, 0.12);
 }
 
 .admin-image-item {

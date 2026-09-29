@@ -1,5 +1,7 @@
 import { fetchApiJson } from '../api/content.js';
 import { element, setContentState, setImageSource, setLoadingState } from '../components/dom.js';
+import { createCoverLikeButton } from '../components/content-like.js';
+import { libraryItemModel } from '../content/library.js';
 import { initSiteHeader, updateCopyrightYear } from '../components/header.js';
 import {
   createRecommendDetailUrl,
@@ -31,6 +33,7 @@ export async function initRecommendPage() {
 
     data.forEach((item) => {
       const detailUrl = createRecommendDetailUrl(item);
+      const metadata = libraryItemModel(item);
       const image = element('img', {
         attributes: {
           alt: item.title ? `${item.title}封面` : '作品封面',
@@ -40,28 +43,37 @@ export async function initRecommendPage() {
           'data-image-kind': 'cover',
           'data-image-index': '0',
           'data-image-url': item.cover_url,
-          'data-preview-image': ''
+          'data-preview-image': '',
+          'data-detail-url': detailUrl
         }
       });
       setImageSource(image, item.cover_url, 'images/IMG_4893.webp');
       container.append(
-        element(
-          'a',
-          {
-            className: 'card',
-            attributes: { href: detailUrl, 'aria-label': `查看《${item.title || '未命名作品'}》详情` }
-          },
-          [
-            image,
-            element('div', { className: 'card__body' }, [
-              element('h2', { className: 'card__title', text: item.title || '未命名作品' }),
-              element('p', {
-                className: 'card__tag',
-                text: (Array.isArray(item.theme_tags) ? item.theme_tags.join(' / ') : '') || item.subtitle || '精品推荐'
-              })
+        element('article', { className: 'card' }, [
+          element(
+            'a',
+            {
+              className: 'card__media',
+              attributes: { href: detailUrl, 'aria-label': `查看《${item.title}》详情` }
+            },
+            [image]
+          ),
+          element('div', { className: 'card__body' }, [
+            element('h2', { className: 'card__title' }, [
+              element('a', { text: item.title, attributes: { href: detailUrl } })
+            ]),
+            element('div', { className: 'card__meta' }, [
+              element('span', { className: 'card__meta-group' }, [
+                metadata.year ? element('span', { className: 'card__year', text: metadata.year }) : null,
+                element('span', {
+                  className: 'card__type',
+                  text: metadata.tags.join(' / ') || item.subtitle || '精品推荐'
+                })
+              ]),
+              createCoverLikeButton(item)
             ])
-          ]
-        )
+          ])
+        ])
       );
     });
   } catch (error) {

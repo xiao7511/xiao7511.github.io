@@ -6,7 +6,7 @@ function validSlot(value) {
   return Number.isInteger(value) && value >= 0 && value <= 999;
 }
 
-export function isCanonicalHomeContent(item, category) {
+export function isCanonicalContent(item, category) {
   return Boolean(
     item &&
     typeof item === 'object' &&
@@ -21,23 +21,46 @@ export function isCanonicalHomeContent(item, category) {
   );
 }
 
-export function selectHomeContent(rows, category, limit = WEB_HOME_SECTION_LIMIT) {
+export const isCanonicalHomeContent = isCanonicalContent;
+
+export function selectCanonicalContent(rows, category) {
   if (!Array.isArray(rows) || !SUPPORTED_CATEGORIES.has(category)) return [];
   const seen = new Set();
   return rows
-    .filter((item) => isCanonicalHomeContent(item, category))
+    .filter((item) => isCanonicalContent(item, category))
     .sort((a, b) => a.slot_index - b.slot_index || String(a.id).localeCompare(String(b.id)))
     .filter((item) => {
       if (seen.has(item.id)) return false;
       seen.add(item.id);
       return true;
-    })
-    .slice(0, Math.max(0, Number.isInteger(limit) ? limit : WEB_HOME_SECTION_LIMIT));
+    });
+}
+
+export function selectHomeContent(rows, category, limit = WEB_HOME_SECTION_LIMIT) {
+  return selectCanonicalContent(rows, category).slice(
+    0,
+    Math.max(0, Number.isInteger(limit) ? limit : WEB_HOME_SECTION_LIMIT)
+  );
 }
 
 export function createHomeDetailUrl(item) {
-  if (!isCanonicalHomeContent(item, item?.category)) return '';
+  if (!isCanonicalContent(item, item?.category)) return '';
   return `detail.html?${new URLSearchParams({ category: item.category, slot: String(item.slot_index) })}`;
+}
+
+export function normalizeContentTags(item, limit = 2) {
+  if (!Array.isArray(item?.theme_tags)) return [];
+  const seen = new Set();
+  return item.theme_tags
+    .filter((tag) => typeof tag === 'string' && tag.trim())
+    .map((tag) => tag.trim())
+    .filter((tag) => {
+      const key = tag.normalize('NFKC').toLocaleLowerCase('zh-CN');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, Math.max(0, Number.isInteger(limit) ? limit : 2));
 }
 
 export function homeContentYear(item) {
@@ -53,8 +76,6 @@ export function homeContentYear(item) {
 }
 
 export function homeContentLabel(item) {
-  const tags = Array.isArray(item?.theme_tags)
-    ? item.theme_tags.filter((tag) => typeof tag === 'string' && tag.trim()).slice(0, 2)
-    : [];
+  const tags = normalizeContentTags(item);
   return tags.join(' · ') || (item?.category === 'manga' ? '漫画' : '动漫');
 }

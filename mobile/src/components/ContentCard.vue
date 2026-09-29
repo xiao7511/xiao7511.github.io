@@ -13,9 +13,13 @@ const toast = useToastStore();
 const route = useRoute();
 const router = useRouter();
 const target = computed(() => contentCoverLikeTarget(props.item));
+const fallbackLikeCount = computed(() => {
+  const count = Number(props.likeCount ?? 0);
+  return Number.isFinite(count) && count >= 0 ? count : 0;
+});
 const summary = computed(() => {
   const key = target.value?.imageKey;
-  return (key && likes.summaries[key]) || { count: props.likeCount ?? 0, liked: false };
+  return (key && likes.summaries[key]) || { count: fallbackLikeCount.value, liked: false };
 });
 
 async function toggleLike(): Promise<void> {

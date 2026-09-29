@@ -5,7 +5,8 @@ import ContentCard from '../components/ContentCard.vue';
 import AppSkeleton from '../components/AppSkeleton.vue';
 import AppError from '../components/AppError.vue';
 import AppEmpty from '../components/AppEmpty.vue';
-import { contentYear } from '../services/home';
+import { contentLabel, contentYear } from '../services/home';
+import { filterLibraryItems, libraryRegions, libraryTags, libraryYears } from '../services/library';
 import { useImageLikesStore } from '../stores/image-likes';
 const anime = useAnimeStore();
 const imageLikes = useImageLikesStore();
@@ -14,31 +15,18 @@ const tag = ref('');
 const state = ref('all');
 const year = ref('');
 const region = ref('');
-const sort = ref('slot');
-const tags = computed(() => [...new Set(anime.items.flatMap((item) => item.theme_tags ?? []))].slice(0, 12));
-const years = computed(() =>
-  [...new Set(anime.items.map(contentYear).filter((value) => value !== '--'))].sort().reverse()
+const sort = ref<'slot' | 'year'>('slot');
+const tags = computed(() => libraryTags(anime.items));
+const years = computed(() => libraryYears(anime.items));
+const regions = computed(() => libraryRegions(anime.items));
+const filtered = computed(() =>
+  filterLibraryItems(
+    anime.items,
+    'anime',
+    { search: search.value, tag: tag.value, state: state.value, year: year.value, region: region.value, sort: sort.value },
+    (item) => imageLikes.get(item).count
+  )
 );
-const regions = computed(() => [...new Set(anime.items.map((item) => item.region).filter(Boolean))] as string[]);
-const filtered = computed(() => {
-  const rows = anime.items.filter((item) => {
-    const needle = search.value.trim().toLowerCase();
-    const matchesText =
-      !needle ||
-      `${item.title} ${item.subtitle ?? ''} ${(item.theme_tags ?? []).join(' ')}`.toLowerCase().includes(needle);
-    const text = `${item.status ?? ''} ${(item.theme_tags ?? []).join(' ')}`;
-    const matchesState = state.value === 'all' || (state.value === 'hot' ? true : text.includes(state.value));
-    return (
-      matchesText &&
-      matchesState &&
-      (!tag.value || item.theme_tags?.includes(tag.value)) &&
-      (!year.value || contentYear(item) === year.value) &&
-      (!region.value || item.region === region.value)
-    );
-  });
-  if (state.value === 'hot') return [...rows].sort((a, b) => imageLikes.get(b).count - imageLikes.get(a).count);
-  return sort.value === 'year' ? [...rows].sort((a, b) => contentYear(b).localeCompare(contentYear(a))) : rows;
-});
 onMounted(async () => {
   if (!anime.items.length) await anime.load();
   await imageLikes.load(anime.items).catch(() => undefined);
@@ -94,6 +82,7 @@ onMounted(async () => {
         :key="item.id"
         :item="item"
         :year="contentYear(item)"
+        :label="contentLabel(item)"
         :like-count="imageLikes.get(item).count"
       />
     </div>

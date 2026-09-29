@@ -51,13 +51,26 @@ export function contentYear(item: ContentItem): string {
 }
 
 export function contentLabel(item: ContentItem): string {
-  const tags = Array.isArray(item.theme_tags)
-    ? item.theme_tags.filter((tag) => typeof tag === 'string' && tag.trim()).slice(0, 2)
-    : [];
+  const tags = normalizeContentTags(item);
   return tags.join(' · ') || (item.category === 'manga' ? '漫画' : '动漫');
 }
 
-export function isCanonicalHomeContent(item: unknown, category: 'anime' | 'manga'): item is ContentItem {
+export function normalizeContentTags(item: ContentItem, limit = 2): string[] {
+  if (!Array.isArray(item.theme_tags)) return [];
+  const seen = new Set<string>();
+  return item.theme_tags
+    .filter((tag) => typeof tag === 'string' && tag.trim())
+    .map((tag) => tag.trim())
+    .filter((tag) => {
+      const key = tag.normalize('NFKC').toLocaleLowerCase('zh-CN');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, Math.max(0, Number.isInteger(limit) ? limit : 2));
+}
+
+export function isCanonicalContent(item: unknown, category: 'anime' | 'manga'): item is ContentItem {
   return Boolean(
     isContentItem(item) &&
       item.category === category &&
@@ -69,22 +82,30 @@ export function isCanonicalHomeContent(item: unknown, category: 'anime' | 'manga
   );
 }
 
-export function selectHomeContent(
-  rows: unknown,
-  category: 'anime' | 'manga',
-  limit = MOBILE_HOME_SECTION_LIMIT
-): ContentItem[] {
+export const isCanonicalHomeContent = isCanonicalContent;
+
+export function selectCanonicalContent(rows: unknown, category: 'anime' | 'manga'): ContentItem[] {
   if (!Array.isArray(rows)) return [];
   const seen = new Set<string>();
   return rows
-    .filter((item): item is ContentItem => isCanonicalHomeContent(item, category))
+    .filter((item): item is ContentItem => isCanonicalContent(item, category))
     .sort((a, b) => a.slot_index - b.slot_index || a.id.localeCompare(b.id))
     .filter((item) => {
       if (seen.has(item.id)) return false;
       seen.add(item.id);
       return true;
-    })
-    .slice(0, Math.max(0, Number.isInteger(limit) ? limit : MOBILE_HOME_SECTION_LIMIT));
+    });
+}
+
+export function selectHomeContent(
+  rows: unknown,
+  category: 'anime' | 'manga',
+  limit = MOBILE_HOME_SECTION_LIMIT
+): ContentItem[] {
+  return selectCanonicalContent(rows, category).slice(
+    0,
+    Math.max(0, Number.isInteger(limit) ? limit : MOBILE_HOME_SECTION_LIMIT)
+  );
 }
 
 export function contentRoute(item: ContentItem | HomeBannerItem): string {
@@ -95,7 +116,7 @@ export function contentRoute(item: ContentItem | HomeBannerItem): string {
     return `/banner/${item.slot_index}/${item.id}`;
   }
   if (item.category !== 'anime' && item.category !== 'manga') return '';
-  if (!isCanonicalHomeContent(item, item.category)) return '';
+  if (!isCanonicalContent(item, item.category)) return '';
   return `/${item.category}/${item.id}`;
 }
 

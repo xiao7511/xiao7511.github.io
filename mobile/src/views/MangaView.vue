@@ -5,7 +5,8 @@ import ContentCard from '../components/ContentCard.vue';
 import AppSkeleton from '../components/AppSkeleton.vue';
 import AppError from '../components/AppError.vue';
 import AppEmpty from '../components/AppEmpty.vue';
-import { contentYear } from '../services/home';
+import { contentLabel, contentYear } from '../services/home';
+import { filterLibraryItems, libraryTags, libraryYears } from '../services/library';
 import { useImageLikesStore } from '../stores/image-likes';
 const manga = useMangaStore();
 const imageLikes = useImageLikesStore();
@@ -13,29 +14,17 @@ const search = ref('');
 const tag = ref('');
 const state = ref('all');
 const year = ref('');
-const sort = ref('slot');
-const tags = computed(() => [...new Set(manga.items.flatMap((item) => item.theme_tags ?? []))].slice(0, 12));
-const years = computed(() =>
-  [...new Set(manga.items.map(contentYear).filter((value) => value !== '--'))].sort().reverse()
+const sort = ref<'slot' | 'year'>('slot');
+const tags = computed(() => libraryTags(manga.items));
+const years = computed(() => libraryYears(manga.items));
+const filtered = computed(() =>
+  filterLibraryItems(
+    manga.items,
+    'manga',
+    { search: search.value, tag: tag.value, state: state.value, year: year.value, sort: sort.value },
+    (item) => imageLikes.get(item).count
+  )
 );
-const filtered = computed(() => {
-  const rows = manga.items.filter((item) => {
-    const needle = search.value.trim().toLowerCase();
-    const matchesText =
-      !needle ||
-      `${item.title} ${item.subtitle ?? ''} ${(item.theme_tags ?? []).join(' ')}`.toLowerCase().includes(needle);
-    const text = `${item.status ?? ''} ${(item.theme_tags ?? []).join(' ')}`;
-    const matchesState = state.value === 'all' || (state.value === 'hot' ? true : text.includes(state.value));
-    return (
-      matchesText &&
-      matchesState &&
-      (!tag.value || item.theme_tags?.includes(tag.value)) &&
-      (!year.value || contentYear(item) === year.value)
-    );
-  });
-  if (state.value === 'hot') return [...rows].sort((a, b) => imageLikes.get(b).count - imageLikes.get(a).count);
-  return sort.value === 'year' ? [...rows].sort((a, b) => contentYear(b).localeCompare(contentYear(a))) : rows;
-});
 onMounted(async () => {
   if (!manga.items.length) await manga.load();
   await imageLikes.load(manga.items).catch(() => undefined);
@@ -87,6 +76,7 @@ onMounted(async () => {
         :key="item.id"
         :item="item"
         :year="contentYear(item)"
+        :label="contentLabel(item)"
         :like-count="imageLikes.get(item).count"
       />
     </div>

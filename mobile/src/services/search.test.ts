@@ -57,6 +57,20 @@ describe('Mobile search content consistency', () => {
     expect(result.content).toEqual([]);
   });
 
+  test('reuses canonical identity, ordering, deduplication and NFKC matching', async () => {
+    const result = await searchAll(
+      'search match',
+      clientWith([
+        { ...item('z', 'anime', true), slot_index: 1, title: 'ＳＥＡＲＣＨ ＭＡＴＣＨ' },
+        { ...item('a', 'anime', null), slot_index: 0 },
+        { ...item('a', 'anime', true), slot_index: 3 },
+        { ...item('', 'anime', true) },
+        { ...item('bad-slot', 'anime', true), slot_index: -1 }
+      ])
+    );
+    expect(result.content.map(({ id }) => id)).toEqual(['a', 'z']);
+  });
+
   test('does not apply content active-state filtering to posts or users', async () => {
     const result = await searchAll(
       'search',

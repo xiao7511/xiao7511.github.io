@@ -191,8 +191,8 @@ async function mockRuntime(
       return route.fulfill({ json: { SUPABASE_URL: 'https://api.nobistudio.com', ANON_KEY: 'test-anon-key' } });
     }
     if (url.pathname === '/api/detail') return route.fulfill({ json: contentRecord });
-    if (url.pathname === '/api/recommend') return route.fulfill({ json: [contentRecord] });
-    if (url.pathname === '/api/manga') return route.fulfill({ json: [{ ...contentRecord, category: 'manga' }] });
+    if (url.pathname === '/api/recommend') return route.fulfill({ json: animeRecords });
+    if (url.pathname === '/api/manga') return route.fulfill({ json: mangaRecords });
     if (url.pathname === '/rest/v1/site_config') return route.fulfill({ json: [] });
     if (url.pathname === '/rest/v1/content_management') {
       const category = url.searchParams.get('category');
@@ -309,6 +309,54 @@ test('home cover opens its matching detail page directly', async ({ page }) => {
   await cover.click();
   await expect(page).toHaveURL(/detail\.html\?category=anime&slot=0$/);
   await expect(page.locator('#detail-title')).toContainText('测试动漫');
+});
+
+test('Anime and Manga libraries render canonical metadata, likes and detail routes', async ({ page }) => {
+  await mockRuntime(page, {
+    features: true,
+    contentCount: 3,
+    sessionUser: { id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a', email: 'user@nobi.test' }
+  });
+
+  await page.goto('/recommend.html');
+  await expect(page.locator('#dynamic-recommend-container .card')).toHaveCount(3);
+  await expect(page.locator('#dynamic-recommend-container .card__year').first()).toHaveText('2024');
+  await expect(page.locator('#dynamic-recommend-container .card__type').first()).toHaveText('冒险');
+  const animeLike = page.locator('#dynamic-recommend-container .library-like-button').first();
+  await expect(animeLike).toContainText('0');
+  await animeLike.click();
+  await expect(animeLike).toContainText('1');
+  await expect(page.locator('#dynamic-recommend-container .card__media').first()).toHaveAttribute(
+    'href',
+    'detail.html?category=anime&slot=0'
+  );
+
+  await page.goto('/manga.html');
+  await expect(page.locator('#dynamic-manga-container .manga-item')).toHaveCount(3);
+  await expect(page.locator('#dynamic-manga-container .manga-update').first()).toContainText('2024');
+  await expect(page.locator('#dynamic-manga-container .manga-update').first()).toContainText('冒险');
+  await expect(page.locator('#dynamic-manga-container .manga-cover-box').first()).toHaveAttribute(
+    'href',
+    'detail.html?category=manga&slot=0'
+  );
+  const mangaLike = page.locator('#dynamic-manga-container .library-like-button').first();
+  await expect(mangaLike).toContainText('0');
+  await mangaLike.click();
+  await expect(mangaLike).toContainText('1');
+});
+
+test('Anime and Manga libraries show empty states and use local cover fallback', async ({ page }) => {
+  await mockRuntime(page, { features: true, contentCount: 0 });
+  await page.goto('/recommend.html');
+  await expect(page.locator('#dynamic-recommend-container .content-state')).toBeVisible();
+  await page.goto('/manga.html');
+  await expect(page.locator('#dynamic-manga-container .content-state')).toBeVisible();
+
+  await mockRuntime(page, { features: true, contentCount: 1, contentChanges: { cover_url: '' } });
+  await page.goto('/recommend.html');
+  await expect(page.locator('#dynamic-recommend-container img')).toHaveAttribute('src', /\/images\/IMG_4893\.webp$/);
+  await page.goto('/manga.html');
+  await expect(page.locator('#dynamic-manga-container img')).toHaveAttribute('src', /\/images\/IMG_4893\.webp$/);
 });
 
 test('home hero advances across three active Banners and keeps pagination and CTA aligned', async ({ page }) => {

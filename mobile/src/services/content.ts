@@ -1,11 +1,12 @@
 import { apiOrigin } from './config';
 import { ApiError, fetchJson } from './http';
 import { isContentItem, type ContentItem } from '../types/content';
+import { selectCanonicalContent } from './home';
 
 export async function fetchContent(path: 'recommend' | 'manga'): Promise<ContentItem[]> {
   const payload = await fetchJson(`${apiOrigin()}/api/${path}`);
   if (!Array.isArray(payload)) throw new ApiError('INVALID_RESPONSE', '内容格式无效');
-  return payload.filter(isContentItem).filter((item) => item.is_active !== false);
+  return selectCanonicalContent(payload, path === 'recommend' ? 'anime' : 'manga');
 }
 
 export async function fetchContentDetail(category: 'anime' | 'manga' | 'banner', slot: number): Promise<ContentItem> {

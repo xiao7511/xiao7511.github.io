@@ -1,3 +1,6 @@
+import { normalizeLibraryText, selectLibraryItems } from '../content/library.js';
+import { createHomeDetailUrl } from '../home/content.js';
+
 const MAX_QUERY_LENGTH = 200;
 
 export function readSearchQuery(search = '') {
@@ -11,27 +14,15 @@ export function readSearchQuery(search = '') {
 }
 
 export function normalizeSearchText(value) {
-  return String(value ?? '')
-    .normalize('NFKC')
-    .trim()
-    .toLocaleLowerCase('zh-CN');
+  return normalizeLibraryText(value);
 }
 
 export function createRecommendDetailUrl(item) {
-  if (!item || item.category !== 'anime' || !Number.isInteger(item.slot_index) || item.slot_index < 0) return '';
-  return `detail.html?${new URLSearchParams({ category: 'anime', slot: String(item.slot_index) })}`;
+  return item?.category === 'anime' ? createHomeDetailUrl(item) : '';
 }
 
 export function filterRecommendItems(rows, query = '') {
-  if (!Array.isArray(rows)) return [];
-  const needle = normalizeSearchText(query);
-  return rows.filter((item) => {
-    if (!createRecommendDetailUrl(item) || item.is_active === false) return false;
-    if (!needle) return true;
-    return [item.title, item.name, item.theme_tags, item.year]
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .some((value) => normalizeSearchText(value).includes(needle));
-  });
+  return selectLibraryItems(rows, 'anime', query);
 }
 
 export function updateSearchSummary(node, query, count) {

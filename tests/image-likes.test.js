@@ -51,6 +51,15 @@ describe('image engagement helpers', () => {
     expect(row?.liked || false).toBe(false);
   });
 
+  test('normalizes malformed and NaN-like summary counts to zero', () => {
+    const summary = mapImageLikeSummaries([
+      { image_key: 'images/malformed.webp', like_count: 'not-a-number', liked: false },
+      { image_key: 'images/missing.webp', liked: false }
+    ]);
+    expect(summary.get('images/malformed.webp')?.count).toBe(0);
+    expect(summary.get('images/missing.webp')?.count).toBe(0);
+  });
+
   test('sums unique detail-image likes for one homepage theme', () => {
     const summary = mapImageLikeSummaries([
       { image_key: 'images/detail-1.webp', like_count: 2, liked: false },
