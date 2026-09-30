@@ -46,7 +46,7 @@
 .home-carousel__content {
   position: absolute;
   right: 18px;
-  bottom: 30px;
+  bottom: 52px;
   left: 18px;
   z-index: 1;
 }
@@ -91,28 +91,43 @@
 .home-carousel__dots {
   position: absolute;
   right: 14px;
-  bottom: 11px;
+  bottom: 0;
   left: 14px;
   z-index: 2;
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 7px;
 }
 
 .home-carousel__dots button {
-  width: 7px;
-  min-width: 7px;
-  height: 7px;
-  min-height: 7px;
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
+  background: transparent;
 }
 
-.home-carousel__dots button.is-active {
+.home-carousel__dots button::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  content: '';
+}
+
+.home-carousel__dots button.is-active::before {
   width: 20px;
   background: #f6b96b;
+}
+
+.home-carousel__dots button:focus-visible {
+  outline: 2px solid #f6b96b;
+  outline-offset: -5px;
 }
 
 .home-card-grid {

@@ -207,6 +207,10 @@ describe('Web-aligned mobile home data', () => {
     expect(css).toContain('overflow: clip');
     expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
     expect(css).toContain('aspect-ratio: 1.72 / 1');
+    expect(css).toContain('.home-carousel__content {\n  position: absolute;\n  right: 18px;\n  bottom: 52px;');
+    expect(css).toContain('width: 44px;\n  min-width: 44px;\n  height: 44px;\n  min-height: 44px;');
+    expect(css).toContain('.home-carousel__dots button::before');
+    expect(css).toContain('.home-carousel__dots button:focus-visible');
     expect(base).toContain('padding-bottom: calc(74px + env(safe-area-inset-bottom))');
   });
 });
