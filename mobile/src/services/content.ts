@@ -10,10 +10,16 @@ export async function fetchContent(path: 'recommend' | 'manga'): Promise<Content
 }
 
 export async function fetchContentDetail(category: 'anime' | 'manga' | 'banner', slot: number): Promise<ContentItem> {
+  if (!Number.isInteger(slot) || slot < 0 || slot > 999 || !['anime', 'manga', 'banner'].includes(category)) {
+    throw new ApiError('INVALID_RESPONSE', 'Invalid detail route');
+  }
   const query = new URLSearchParams({ category, slot: String(slot) });
   const payload = await fetchJson(`${apiOrigin()}/api/detail?${query}`);
   if (!isContentItem(payload) || payload.category !== category || payload.slot_index !== slot) {
     throw new ApiError('INVALID_RESPONSE', '详情格式无效');
+  }
+  if (category !== 'banner' && !selectCanonicalContent([payload], category).length) {
+    throw new ApiError('NOT_FOUND', 'Content is unavailable');
   }
   return payload;
 }

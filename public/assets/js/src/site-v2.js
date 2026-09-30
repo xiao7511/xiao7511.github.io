@@ -212,7 +212,8 @@ function formatCompactCount(value) {
 }
 
 function applyLikeState(image, count, liked) {
-  const normalizedCount = Number(count) || 0;
+  const parsedCount = Number(count);
+  const normalizedCount = Number.isFinite(parsedCount) && parsedCount >= 0 ? Math.floor(parsedCount) : 0;
   image.dataset.likeCount = String(normalizedCount);
   image.dataset.liked = String(Boolean(liked));
   const button = getImageLikeButton(image);
@@ -259,6 +260,8 @@ async function toggleImageLike(image, button) {
   } catch (_) {
     button.dataset.error = '点赞暂时不可用';
     button.setAttribute('aria-label', '点赞暂时不可用，请稍后重试');
+    const label = button.querySelector('[data-image-like-label]');
+    if (label) label.textContent = '点赞失败';
   } finally {
     button.disabled = false;
   }

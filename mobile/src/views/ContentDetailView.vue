@@ -36,7 +36,11 @@ const detailTargets = computed(() => (item.value ? contentDetailLikeTargets(item
 const detailEntries = computed(() =>
   (item.value?.detail_urls ?? []).flatMap((url, index) => {
     if (!isDisplayableImageUrl(url)) return [];
-    return [{ url, index, target: detailTargets.value.find((target) => target.index === index) ?? null }];
+    const target = detailTargets.value.find((entry) => entry.index === index) ?? null;
+    return [{ url, index, target }];
+  }).filter((entry, _index, entries) => {
+    const key = entry.target?.imageKey || entry.url;
+    return entries.findIndex((candidate) => (candidate.target?.imageKey || candidate.url) === key) === _index;
   })
 );
 const detailImages = computed(() => detailEntries.value.map((entry) => entry.url));
@@ -49,12 +53,14 @@ const related = computed(() => {
 const readerPage = ref(1);
 const nightReading = ref(true);
 const comfortableReading = ref(false);
+let loadSequence = 0;
 function goToPage(page: number): void {
   readerPage.value = Math.min(Math.max(1, page), detailImages.value.length || 1);
   globalThis.document?.getElementById(`reader-page-${readerPage.value}`)?.scrollIntoView({ behavior: 'smooth' });
 }
 
 async function load(): Promise<void> {
+  const sequence = ++loadSequence;
   loading.value = true;
   error.value = null;
   try {
@@ -62,6 +68,7 @@ async function load(): Promise<void> {
       const slot = Number(route.params.slot);
       if (!Number.isInteger(slot) || slot < 0) throw new Error('NOT_FOUND');
       const banner = await fetchContentDetail('banner', slot);
+      if (sequence !== loadSequence) return;
       if (banner.id !== String(route.params.id)) throw new Error('NOT_FOUND');
       item.value = banner;
       await imageLikes
@@ -73,9 +80,13 @@ async function load(): Promise<void> {
     }
     const store = category.value === 'anime' ? anime : manga;
     if (!store.items.length) await store.load();
+    if (sequence !== loadSequence) return;
     const summary = store.items.find((entry) => entry.id === String(route.params.id));
     if (!summary) throw new Error('NOT_FOUND');
-    item.value = await fetchContentDetail(category.value, summary.slot_index);
+    const detail = await fetchContentDetail(category.value, summary.slot_index);
+    if (sequence !== loadSequence) return;
+    if (detail.id !== summary.id || detail.category !== category.value || detail.is_active === false) throw new Error('NOT_FOUND');
+    item.value = detail;
     await imageLikes
       .loadTargets(
         [contentCoverLikeTarget(item.value), ...contentDetailLikeTargets(item.value)].filter(
@@ -84,10 +95,11 @@ async function load(): Promise<void> {
       )
       .catch(() => undefined);
   } catch {
+    if (sequence !== loadSequence) return;
     item.value = null;
     error.value = '作品详情加载失败或已不存在。';
   } finally {
-    loading.value = false;
+    if (sequence === loadSequence) loading.value = false;
   }
 }
 
@@ -226,6 +238,14 @@ watch(() => route.fullPath, load);
               <span aria-hidden="true">{{ imageLikes.getTarget(entry.target).liked ? '♥' : '♡' }}</span>
               {{ imageLikes.getTarget(entry.target).count }}
             </button>
+          </div>
+        </div>
+      </section>
+      <section v-else class="detail-gallery page" aria-live="polite">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">GALLERY</span>
+            <h2>暂无详情图片</h2>
           </div>
         </div>
       </section>

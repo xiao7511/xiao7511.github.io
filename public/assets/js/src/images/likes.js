@@ -33,7 +33,18 @@ export function imageTargetKey(target) {
 }
 
 export function mapImageLikeSummaries(rows = []) {
-  return new Map(rows.map((row) => [row.image_key, { count: Number(row.like_count) || 0, liked: Boolean(row.liked) }]));
+  return new Map(
+    rows.flatMap((row) => {
+      if (!row || typeof row.image_key !== 'string') return [];
+      const count = Number(row.like_count);
+      return [
+        [
+          row.image_key,
+          { count: Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0, liked: row.liked === true }
+        ]
+      ];
+    })
+  );
 }
 
 export function sumImageLikeCounts(summaries, imageKeys = []) {

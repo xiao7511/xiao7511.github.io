@@ -2150,6 +2150,25 @@ main {
   gap: 1rem;
 }
 
+.detail-cover-section {
+  max-width: 34rem;
+  margin: 0 auto 1.5rem;
+}
+
+.detail-cover-section h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.detail-cover-item img {
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.detail-year:empty {
+  display: none;
+}
+
 .gallery-item {
   position: relative;
   overflow: hidden;

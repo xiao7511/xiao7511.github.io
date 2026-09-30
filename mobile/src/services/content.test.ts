@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { fetchContent } from './content';
+import { fetchContent, fetchContentDetail } from './content';
 
 function item(id: string, category: string, slot: number, changes = {}) {
   return { id, category, slot_index: slot, title: `${category} ${id}`, is_active: true, ...changes };
@@ -28,5 +28,26 @@ describe('content library API normalization', () => {
       { id: 'a', category, slot_index: 0 },
       { id: 'z', category, slot_index: 1 }
     ]);
+  });
+
+  test.each([
+    ['anime', 4, item('anime-id', 'anime', 4)],
+    ['manga', 2, item('manga-id', 'manga', 2)]
+  ] as const)('resolves canonical %s detail at the routed slot', async (category, slot, payload) => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    ));
+    await expect(fetchContentDetail(category, slot)).resolves.toMatchObject({ id: payload.id, category, slot_index: slot });
+  });
+
+  test('rejects inactive or malformed detail routes instead of returning another record', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(item('off', 'anime', 0, { is_active: false })), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    ));
+    await expect(fetchContentDetail('anime', 0)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(fetchContentDetail('manga', -1)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 });
