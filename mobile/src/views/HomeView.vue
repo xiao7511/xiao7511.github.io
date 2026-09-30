@@ -16,9 +16,12 @@ import AppAvatar from '../components/AppAvatar.vue';
 import SocialIcon from '../components/SocialIcon.vue';
 import { useAuthStore } from '../stores/auth';
 import { useImageLikesStore } from '../stores/image-likes';
+import { useToastStore } from '../stores/toast';
+import { openSocialLink } from '../services/social-navigation';
 
 const auth = useAuthStore();
 const imageLikes = useImageLikesStore();
+const toast = useToastStore();
 const data = ref<HomeData | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -36,6 +39,10 @@ async function load(): Promise<void> {
   } finally {
     loading.value = false;
   }
+}
+
+function openSocial(link: HomeData['socialLinks'][number]): void {
+  if (!openSocialLink(link.href, link.key)) toast.show('无法打开社交链接，请稍后重试', 'error');
 }
 
 function formatDate(timestamp: number): string {
@@ -178,6 +185,7 @@ onMounted(load);
           :title="link.label"
           target="_blank"
           rel="noopener noreferrer"
+          @click.prevent="openSocial(link)"
           ><SocialIcon :name="link.key"
         /></a>
       </nav>

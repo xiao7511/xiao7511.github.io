@@ -186,11 +186,28 @@ body {
   gap: 12px;
 }
 
-.social-config-grid label {
+.social-config-grid .social-config-item {
+  display: grid;
+  gap: 4px;
+}
+
+.social-config-grid .social-config-item > label {
   display: grid;
   gap: 5px;
   color: var(--admin-muted);
   font-size: 0.8rem;
+}
+
+.social-config-grid .social-config-enabled {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.social-config-grid .social-config-enabled input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--admin-primary);
 }
 
 .admin-form-actions {

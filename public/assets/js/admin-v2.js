@@ -1,7 +1,8 @@
-import { isValidSocialUrl } from './src/config/social.js';
+import { isValidSocialUrl, parseSocialSettings, serializeSocialSettings } from './src/config/social.js';
 import { createCanonicalContentEditor, disableLegacyAdminWrites } from './src/admin/content-editor.js';
 
-let loadedSocialConfig = {};
+let loadedSocialSettings = parseSocialSettings({});
+let socialConfigLoaded = false;
 
 function setText(id, value) {
   const node = document.getElementById(id);
@@ -62,18 +63,16 @@ async function loadStats(client) {
 }
 
 async function loadSocialConfig(client) {
-  const { data } = await client.from('site_config').select('url').eq('section', 'social_links').maybeSingle();
-  let config = {};
-  try {
-    config = data?.url ? (typeof data.url === 'string' ? JSON.parse(data.url) : data.url) : {};
-  } catch (_) {
-    config = {};
-  }
-  loadedSocialConfig = config;
-  ['xiaohongshu', 'weibo', 'twitter', 'instagram'].forEach((key) => {
+  const { data, error } = await client.from('site_config').select('url').eq('section', 'social_links').maybeSingle();
+  socialConfigLoaded = !error;
+  loadedSocialSettings = parseSocialSettings(error ? {} : data?.url);
+  loadedSocialSettings.forEach(({ key, url, enabled }) => {
     const input = document.getElementById(`social-${key}`);
-    if (input) input.value = config[key] || '';
+    const enabledInput = document.getElementById(`social-${key}-enabled`);
+    if (input) input.value = url;
+    if (enabledInput) enabledInput.checked = enabled;
   });
+  if (error) document.getElementById('social-config-feedback').textContent = '社交链接加载失败，刷新后重试再保存。';
 }
 
 function initSocialForm(client) {
@@ -82,31 +81,37 @@ function initSocialForm(client) {
   if (!form) return;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const config = {
-      _enabled:
-        loadedSocialConfig._enabled && typeof loadedSocialConfig._enabled === 'object'
-          ? loadedSocialConfig._enabled
-          : {},
-      _order: Array.isArray(loadedSocialConfig._order)
-        ? loadedSocialConfig._order
-        : ['xiaohongshu', 'weibo', 'twitter', 'instagram']
-    };
-    for (const key of ['xiaohongshu', 'weibo', 'twitter', 'instagram']) {
-      const value = document.getElementById(`social-${key}`).value.trim();
-      if (!isValidSocialUrl(value)) {
-        feedback.textContent = `${document.querySelector(`label[for="social-${key}"]`).textContent.trim()}格式无效，请输入 http:// 或 https:// 链接。`;
-        document.getElementById(`social-${key}`).focus();
+    if (!socialConfigLoaded) {
+      feedback.textContent = '社交链接尚未加载，请刷新后重试。';
+      return;
+    }
+    for (const item of loadedSocialSettings) {
+      const input = document.getElementById(`social-${item.key}`);
+      const enabledInput = document.getElementById(`social-${item.key}-enabled`);
+      const value = input.value.trim();
+      if (!isValidSocialUrl(value, item.key)) {
+        feedback.textContent = `${item.label}链接无效，请输入对应平台的有效网址。`;
+        input.focus();
         return;
       }
-      config[key] = value;
+      item.url = value;
+      item.enabled = enabledInput.checked;
     }
     const submit = form.querySelector('button[type="submit"]');
     submit.disabled = true;
     feedback.textContent = '正在保存社交链接…';
-    const { error } = await client.from('site_config').upsert({ section: 'social_links', url: JSON.stringify(config) });
-    submit.disabled = false;
-    if (!error) loadedSocialConfig = config;
-    feedback.textContent = error ? `保存失败：${error.message}` : '社交链接已保存，前台刷新后生效。';
+    try {
+      const { error } = await client.from('site_config').upsert({
+        section: 'social_links',
+        url: serializeSocialSettings(loadedSocialSettings)
+      });
+      if (error) throw error;
+      feedback.textContent = '社交链接已保存，前台刷新后生效。';
+    } catch {
+      feedback.textContent = '社交链接保存失败，请稍后重试。';
+    } finally {
+      submit.disabled = false;
+    }
   });
 }
 

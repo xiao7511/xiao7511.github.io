@@ -4,13 +4,13 @@ import { useRouter } from 'vue-router';
 import AppError from '../components/AppError.vue';
 import AppLoading from '../components/AppLoading.vue';
 import { fetchAdminSocialLinks, saveAdminSocialLinks } from '../services/admin';
-import { isValidSocialUrl, type SocialSetting } from '../services/social-links';
+import { isValidSocialUrl, type SocialSettings } from '../services/social-links';
 import { getSupabase } from '../services/supabase';
 import { useToastStore } from '../stores/toast';
 
 const router = useRouter();
 const toast = useToastStore();
-const settings = ref<SocialSetting[]>([]);
+const settings = ref<SocialSettings>([] as SocialSettings);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -35,7 +35,7 @@ function move(index: number, direction: -1 | 1): void {
 }
 
 async function save(): Promise<void> {
-  const invalid = settings.value.find((item) => !isValidSocialUrl(item.url));
+  const invalid = settings.value.find((item) => !isValidSocialUrl(item.url, item.key));
   if (invalid) {
     toast.show(`${invalid.label} URL 格式无效`, 'error');
     return;

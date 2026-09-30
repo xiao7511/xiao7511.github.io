@@ -70,7 +70,7 @@ describe('Phase 4.5.2 UI integration', () => {
     expect(home).toContain('rel="noopener noreferrer"');
     expect(home).not.toContain('<span>{{ link.label }}</span>');
     expect(data).toContain('parseSocialSettings(value)');
-    expect(data).toContain('if (!item.enabled || !item.url) return []');
+    expect(data).toContain('if (!item.enabled || !item.url || !isValidSocialUrl(item.url, item.key)) return []');
     const paths = (value: string) => [...value.matchAll(/<path\s+d="([^"]+)"/g)].map((match) => match[1]);
     expect(paths(mobileIcons)).toEqual(paths(webIcons).slice(0, 4));
     for (const value of ['#ffd600', '#ff7a00', '#ff0169', '#d300c5']) {

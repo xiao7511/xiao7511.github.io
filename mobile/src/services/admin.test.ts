@@ -5,10 +5,13 @@ import {
   fetchAdminHomeContent,
   fetchAdminStatus,
   reviewReport,
+  fetchAdminSocialLinks,
+  saveAdminSocialLinks,
   saveAdminHomeContent,
   setAdminState
 } from './admin';
 import type { ContentItem } from '../types/content';
+import { parseSocialSettings } from './social-links';
 
 describe('mobile admin security services', () => {
   test('gets administrator state from is_admin RPC', async () => {
@@ -89,5 +92,40 @@ describe('mobile admin security services', () => {
     expect(order).toHaveBeenCalledWith('slot_index');
     expect(deleteIdEq).toHaveBeenCalledWith('id', 'a');
     expect(deleteCategoryEq).toHaveBeenCalledWith('category', 'anime');
+  });
+
+  test('uses the shared site_config social_links contract and preserves unrelated settings', async () => {
+    const configured = {
+      twitter: 'https://twitter.com/nobi',
+      _enabled: { twitter: true, custom: 'preserved' },
+      _order: ['twitter'],
+      another_setting: { keep: true }
+    };
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { url: configured }, error: null });
+    const eq = vi.fn(() => ({ maybeSingle }));
+    const upsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    const from = vi.fn(() => ({ select: vi.fn(() => ({ eq })), upsert }));
+    const client = { from } as unknown as SupabaseClient;
+    const settings = await fetchAdminSocialLinks(client);
+    expect(settings.find((item) => item.key === 'x')?.url).toBe(configured.twitter);
+    await saveAdminSocialLinks(client, settings);
+    expect(from).toHaveBeenCalledWith('site_config');
+    expect(eq).toHaveBeenCalledWith('section', 'social_links');
+    const [payload, options] = upsert.mock.calls[0] as [Record<string, unknown>, Record<string, unknown>];
+    expect(options).toEqual({ onConflict: 'section' });
+    expect(payload.section).toBe('social_links');
+    const saved = JSON.parse(payload.url as string);
+    expect(saved.x).toBe(configured.twitter);
+    expect(saved._enabled.custom).toBe('preserved');
+    expect(saved.another_setting).toEqual({ keep: true });
+    expect(parseSocialSettings(saved).find((item) => item.key === 'x')?.url).toBe(configured.twitter);
+  });
+
+  test('rejects unsafe social URLs before persisting', async () => {
+    const upsert = vi.fn();
+    const settings = parseSocialSettings({ x: 'javascript:alert(1)' });
+    await expect(saveAdminSocialLinks({ from: vi.fn(() => ({ upsert })) } as unknown as SupabaseClient, settings))
+      .rejects.toThrow('INVALID_SOCIAL_URL');
+    expect(upsert).not.toHaveBeenCalled();
   });
 });

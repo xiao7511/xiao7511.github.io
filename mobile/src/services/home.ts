@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
 import { isContentItem, type ContentItem } from '../types/content';
-import { parseSocialSettings, type SocialKey } from './social-links';
+import { isValidSocialUrl, parseSocialSettings, type SocialKey } from './social-links';
 
 export const WEB_HOME_BANNER_SLOTS = 3;
 export const MOBILE_HOME_SECTION_LIMIT = 4;
@@ -150,7 +150,7 @@ export function mapWebBanners(rows: unknown): ContentItem[] {
 
 export function mapSocialLinks(value: unknown): SocialLink[] {
   return parseSocialSettings(value).flatMap((item) => {
-    if (!item.enabled || !item.url) return [];
+    if (!item.enabled || !item.url || !isValidSocialUrl(item.url, item.key)) return [];
     try {
       const url = new URL(item.url);
       return ['https:', 'http:'].includes(url.protocol) ? [{ key: item.key, label: item.label, href: url.href }] : [];
@@ -227,6 +227,9 @@ export async function fetchItemLikeCounts(rows: ContentItem[], client?: Supabase
 
 export async function fetchHomeData(client?: SupabaseClient): Promise<HomeData> {
   const supabase = client ?? (await getSupabase());
+  const socialRequest = Promise.resolve()
+    .then(() => supabase.from('site_config').select('url').eq('section', 'social_links').maybeSingle())
+    .catch((error: unknown) => ({ data: null, error }));
   const [bannerResult, catalogResult, socialResult] = await Promise.all([
     supabase
       .from('content_management')
@@ -234,7 +237,7 @@ export async function fetchHomeData(client?: SupabaseClient): Promise<HomeData> 
       .eq('category', 'banner')
       .order('slot_index', { ascending: true }),
     supabase.from('content_management').select('*'),
-    supabase.from('site_config').select('url').eq('section', 'social_links').maybeSingle()
+    socialRequest
   ]);
   if (bannerResult.error) throw bannerResult.error;
   if (catalogResult.error) throw catalogResult.error;

@@ -139,6 +139,16 @@ describe('Web-aligned mobile home data', () => {
     expect(links.map((link) => link.key)).toEqual(['instagram']);
   });
 
+  test('keeps the canonical platform order and excludes one malformed social URL safely', () => {
+    const links = mapSocialLinks({
+      instagram: 'https://instagram.com/nobi',
+      weibo: 'https://evil.example/nobi',
+      x: 'https://x.com/nobi',
+      xiaohongshu: 'https://www.xiaohongshu.com/user/nobi'
+    });
+    expect(links.map((link) => link.key)).toEqual(['xiaohongshu', 'x', 'instagram']);
+  });
+
   test('queries the same content tables on every load', async () => {
     const bannerOrder = vi.fn().mockResolvedValue({ data: banners, error: null });
     const bannerQuery: { eq: ReturnType<typeof vi.fn>; order: typeof bannerOrder } = {
@@ -166,6 +176,29 @@ describe('Web-aligned mobile home data', () => {
     expect(bannerQuery.eq).not.toHaveBeenCalledWith('is_active', true);
     expect(bannerOrder).toHaveBeenCalledWith('slot_index', { ascending: true });
     expect(from).toHaveBeenCalledWith('site_config');
+  });
+
+  test('a social configuration request failure does not fail Home content', async () => {
+    const bannerQuery = {
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: banners, error: null })
+    };
+    const socialSingle = vi.fn().mockRejectedValue(new Error('social unavailable'));
+    const socialEq = vi.fn(() => ({ maybeSingle: socialSingle }));
+    let contentCall = 0;
+    const from = vi.fn((table: string) => ({
+      select: vi.fn(() => {
+        if (table === 'site_config') return { eq: socialEq };
+        contentCall += 1;
+        return contentCall === 1
+          ? bannerQuery
+          : Promise.resolve({ data: [item('anime', 0, 'Home survives')], error: null });
+      })
+    }));
+    const client = { from, rpc: vi.fn().mockResolvedValue({ data: [], error: null }) } as unknown as SupabaseClient;
+    const result = await fetchHomeData(client);
+    expect(result.popular[0]?.title).toBe('Home survives');
+    expect(result.socialLinks).toEqual([]);
   });
 
   test('keeps the 393px layout constrained above the fixed tab bar', async () => {

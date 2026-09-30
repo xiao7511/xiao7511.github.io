@@ -436,13 +436,11 @@ test('home hero aligns with the content rail and configured social icons render 
   await expect(page.locator('.footer-social-slot .footer-social')).toHaveCount(1);
   await expect(social.locator('[data-social-platform="xiaohongshu"]')).toHaveCSS('color', 'rgb(255, 36, 66)');
   await expect(social.locator('[data-social-platform="weibo"]')).toHaveCSS('color', 'rgb(230, 22, 45)');
-  await expect(social.locator('[data-social-platform="twitter"]')).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(social.locator('[data-social-platform="x"]')).toHaveCSS('color', 'rgb(255, 255, 255)');
   await expect(social.locator('[data-social-platform="instagram"]')).toHaveCSS('color', 'rgb(225, 48, 108)');
-  expect(
-    await social
-      .locator('[data-social-platform="instagram"] svg path')
-      .evaluate((icon) => getComputedStyle(icon).fill.includes('url'))
-  ).toBe(true);
+  expect(await social.locator('[data-social-platform="instagram"] svg path').getAttribute('fill')).toContain(
+    'url("#nobi-instagram-gradient")'
+  );
   expect(await social.evaluate((node) => getComputedStyle(node).position)).toBe('static');
   expect(await social.evaluate((node) => getComputedStyle(node).flexDirection)).toBe('row');
   expect(

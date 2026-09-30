@@ -438,10 +438,10 @@
         <h2 id="social-title">社交媒体配置</h2>
         <form id="social-config-form" novalidate>
           <div class="social-config-grid">
-            <label for="social-xiaohongshu">小红书 URL<input id="social-xiaohongshu" type="url" inputmode="url" placeholder="https://www.xiaohongshu.com/…" /></label>
-            <label for="social-weibo">微博 URL<input id="social-weibo" type="url" inputmode="url" placeholder="https://weibo.com/…" /></label>
-            <label for="social-twitter">X / Twitter URL<input id="social-twitter" type="url" inputmode="url" placeholder="https://x.com/…" /></label>
-            <label for="social-instagram">Instagram URL<input id="social-instagram" type="url" inputmode="url" placeholder="https://www.instagram.com/…" /></label>
+            <div class="social-config-item"><label for="social-xiaohongshu">小红书 URL<input id="social-xiaohongshu" type="url" inputmode="url" placeholder="https://www.xiaohongshu.com/…" /></label><label class="social-config-enabled"><input id="social-xiaohongshu-enabled" type="checkbox" />启用</label></div>
+            <div class="social-config-item"><label for="social-weibo">微博 URL<input id="social-weibo" type="url" inputmode="url" placeholder="https://weibo.com/…" /></label><label class="social-config-enabled"><input id="social-weibo-enabled" type="checkbox" />启用</label></div>
+            <div class="social-config-item"><label for="social-x">X URL<input id="social-x" type="url" inputmode="url" placeholder="https://x.com/…" /></label><label class="social-config-enabled"><input id="social-x-enabled" type="checkbox" />启用</label></div>
+            <div class="social-config-item"><label for="social-instagram">Instagram URL<input id="social-instagram" type="url" inputmode="url" placeholder="https://www.instagram.com/…" /></label><label class="social-config-enabled"><input id="social-instagram-enabled" type="checkbox" />启用</label></div>
           </div>
           <div class="admin-form-actions"><span id="social-config-feedback" class="admin-feedback" role="status"></span><button class="action-btn" type="submit">保存社交链接</button></div>
         </form>

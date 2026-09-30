@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ContentItem } from '../types/content';
-import { isValidSocialUrl, parseSocialSettings, serializeSocialSettings, type SocialSetting } from './social-links';
+import {
+  isValidSocialUrl,
+  parseSocialSettings,
+  serializeSocialSettings,
+  type SocialSettings
+} from './social-links';
 
 export interface AdminUser {
   id: string;
@@ -155,14 +160,14 @@ export async function deleteAdminHomeContent(
   if (result.error) throw result.error;
 }
 
-export async function fetchAdminSocialLinks(client: SupabaseClient): Promise<SocialSetting[]> {
+export async function fetchAdminSocialLinks(client: SupabaseClient): Promise<SocialSettings> {
   const result = await client.from('site_config').select('url').eq('section', 'social_links').maybeSingle();
   if (result.error) throw result.error;
   return parseSocialSettings(result.data?.url);
 }
 
-export async function saveAdminSocialLinks(client: SupabaseClient, settings: SocialSetting[]): Promise<void> {
-  if (settings.some((item) => !isValidSocialUrl(item.url))) throw new Error('INVALID_SOCIAL_URL');
+export async function saveAdminSocialLinks(client: SupabaseClient, settings: SocialSettings): Promise<void> {
+  if (settings.some((item) => !isValidSocialUrl(item.url, item.key))) throw new Error('INVALID_SOCIAL_URL');
   const result = await client.from('site_config').upsert(
     {
       section: 'social_links',
