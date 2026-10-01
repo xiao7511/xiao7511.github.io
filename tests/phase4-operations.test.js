@@ -51,11 +51,25 @@ describe('AASA preparation', () => {
         details: [
           {
             appIDs: ['A1B2C3D4E5.com.nobistudio.app'],
-            components: [{ '/': '/anime/*' }, { '/': '/manga/*' }, { '/': '/community/*' }]
+            components: [
+              { '/': '/anime/????????-????-????-????-????????????' },
+              { '/': '/manga/????????-????-????-????-????????????' },
+              { '/': '/community/?*' }
+            ]
           }
         ]
       }
     });
+  });
+
+  test('wires only the NOBI Universal Links domain into both Xcode configurations', async () => {
+    const project = await readFile(new URL('../mobile/ios/App/App.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
+    const entitlements = await readFile(new URL('../mobile/ios/App/App/App.entitlements', import.meta.url), 'utf8');
+    expect(project.match(/CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/g)).toHaveLength(2);
+    expect(entitlements).toContain('<key>com.apple.developer.associated-domains</key>');
+    expect(entitlements).toContain('<string>applinks:www.nobistudio.com</string>');
+    expect(entitlements).not.toContain('push');
+    expect(entitlements).not.toContain('icloud');
   });
 });
 
