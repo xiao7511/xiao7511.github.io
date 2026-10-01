@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
               }
               window.supabaseClient.auth.updateUser({ password: newPassword }).then(({ error }) => {
-                if (error) alert("重置密码失败: " + error.message);
+                if (error) alert('密码重置失败，请稍后重试。');
                 else alert("🎉 密码重置成功！请使用新密码重新登录异世界。");
               });
             }
@@ -835,7 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('📬 密码重置链接已发送！请登录邮箱点击链接以重新设定密码。');
         if (typeof closeModal === 'function') closeModal();
       } catch (err) {
-        alert(`发送失败: ${err.message}`);
+        alert('重置邮件发送失败，请稍后重试。');
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -939,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 刷新页面，让表单状态和页面完全复位
             window.location.reload();
           } catch (err) {
-            alert(`修改失败：${err.message}`);
+            alert('密码修改失败，请稍后重试。');
             submitBtn.disabled = false;
             submitBtn.textContent = '确认修改密码';
           }
