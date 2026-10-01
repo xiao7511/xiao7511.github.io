@@ -7,13 +7,15 @@ function avatarClient(profileError: unknown = null) {
   const remove = vi.fn().mockResolvedValue({ error: null });
   const publicUrl = 'https://project.supabase.co/storage/v1/object/public/avatars/user-a/new.png';
   const bucket = { upload, remove, getPublicUrl: vi.fn(() => ({ data: { publicUrl } })) };
-  const eq = vi.fn().mockResolvedValue({ error: profileError });
+  const maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'user-a' }, error: profileError });
+  const select = vi.fn(() => ({ maybeSingle }));
+  const eq = vi.fn(() => ({ select }));
   const update = vi.fn(() => ({ eq }));
   const client = {
     storage: { from: vi.fn(() => bucket) },
     from: vi.fn(() => ({ update }))
   } as unknown as SupabaseClient;
-  return { client, upload, remove, update, eq, publicUrl };
+  return { client, upload, remove, update, eq, select, maybeSingle, publicUrl };
 }
 
 describe('avatar service', () => {
@@ -33,12 +35,22 @@ describe('avatar service', () => {
     expect(state.upload).toHaveBeenCalledWith(expect.any(String), file, expect.objectContaining({ upsert: false }));
     expect(state.update).toHaveBeenCalledWith({ avatar_url: state.publicUrl });
     expect(state.eq).toHaveBeenCalledWith('id', 'user-a');
+    expect(state.select).toHaveBeenCalledWith('id');
   });
 
   test('removes the new object when profile update fails', async () => {
     const state = avatarClient(new Error('profile failed'));
     await expect(updateAvatar(state.client, 'user-a', null, { type: 'image/jpeg', size: 100 } as File)).rejects.toThrow(
       'profile failed'
+    );
+    expect(state.remove).toHaveBeenCalledWith([expect.stringMatching(/^user-a\/[0-9a-f-]+\.jpg$/)]);
+  });
+
+  test('treats a missing provisioned profile as failure and removes the uploaded object', async () => {
+    const state = avatarClient();
+    state.maybeSingle.mockResolvedValue({ data: null, error: null });
+    await expect(updateAvatar(state.client, 'user-a', null, { type: 'image/jpeg', size: 100 } as File)).rejects.toThrow(
+      'PROFILE_NOT_PROVISIONED'
     );
     expect(state.remove).toHaveBeenCalledWith([expect.stringMatching(/^user-a\/[0-9a-f-]+\.jpg$/)]);
   });

@@ -57,15 +57,23 @@ function chooseAvatar(event: Event): void {
 
 async function saveAvatar(): Promise<void> {
   if (!auth.user || !selectedFile.value || savingAvatar.value) return;
+  const userId = auth.user.id;
+  const file = selectedFile.value;
+  const previousUrl = auth.profile?.id === userId ? auth.profile.avatar_url : null;
   savingAvatar.value = true;
   try {
     const client = await getSupabase();
-    const publicUrl = await updateAvatar(client, auth.user.id, auth.profile?.avatar_url, selectedFile.value);
-    auth.setProfileAvatar(avatarDisplayUrl(publicUrl));
+    const publicUrl = await updateAvatar(client, userId, previousUrl, file);
+    auth.setProfileAvatar(avatarDisplayUrl(publicUrl), userId);
     resetAvatarSelection();
     toast.show('头像已更新', 'success');
-  } catch {
-    toast.show('头像保存失败，已保留原头像，请稍后重试', 'error');
+  } catch (error) {
+    toast.show(
+      error instanceof Error && error.message === 'PROFILE_NOT_PROVISIONED'
+        ? '账户资料尚未初始化，头像暂无法保存。'
+        : '头像保存失败，已保留原头像，请稍后重试',
+      'error'
+    );
   } finally {
     savingAvatar.value = false;
   }
@@ -79,6 +87,14 @@ async function logout(): Promise<void> {
     await router.replace('/');
   } catch {
     toast.show(auth.error || '退出失败', 'error');
+  }
+}
+
+async function retryProfile(): Promise<void> {
+  try {
+    await auth.loadProfile();
+  } catch {
+    // The store exposes a safe profile status for a subsequent retry.
   }
 }
 </script>
@@ -103,6 +119,10 @@ async function logout(): Promise<void> {
       <button class="profile-avatar-label" type="button" @click="pickerOpen = true">修改头像</button>
       <h2>{{ auth.profile?.nickname || auth.user.email?.split('@')[0] }}</h2>
       <p class="profile-email">{{ auth.user.email }}</p>
+      <div v-if="auth.profileStatus === 'missing' || auth.profileStatus === 'error'" class="form-error" role="status">
+        <p>{{ auth.profileStatus === 'missing' ? '账户资料尚未初始化，稍后可重试。' : '资料暂时无法加载，请检查网络后重试。' }}</p>
+        <button type="button" class="text-button" @click="retryProfile">重新加载资料</button>
+      </div>
       <dl>
         <div>
           <dt>UID</dt>

@@ -12,30 +12,51 @@ export const useAuthStore = defineStore('auth', () => {
   const session = ref<Session | null>(null);
   const user = ref<User | null>(null);
   const profile = ref<Profile | null>(null);
+  const profileStatus = ref<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle');
   const isAdmin = ref(false);
   const error = ref<string | null>(null);
   let initializePromise: Promise<void> | null = null;
   let listening = false;
+  let sessionVersion = 0;
+  let profileRequestVersion = 0;
 
-  async function loadProfile(): Promise<void> {
-    if (!user.value) {
-      profile.value = null;
+  async function loadProfile(expectedSessionVersion = sessionVersion, expectedUserId = user.value?.id): Promise<void> {
+    const requestVersion = ++profileRequestVersion;
+    if (!expectedUserId) {
+      if (expectedSessionVersion === sessionVersion) {
+        profile.value = null;
+        profileStatus.value = 'idle';
+      }
       return;
     }
-    const client = await getSupabase();
-    const result = await client
-      .from('profiles')
-      .select('id,nickname,avatar_url,created_at')
-      .eq('id', user.value.id)
-      .maybeSingle();
-    if (result.error) throw result.error;
-    profile.value = result.data as Profile | null;
+    if (expectedSessionVersion === sessionVersion && expectedUserId === user.value?.id) profileStatus.value = 'loading';
+    try {
+      const client = await getSupabase();
+      const result = await client
+        .from('profiles')
+        .select('id,nickname,avatar_url,created_at')
+        .eq('id', expectedUserId)
+        .maybeSingle();
+      if (expectedSessionVersion !== sessionVersion || expectedUserId !== user.value?.id || requestVersion !== profileRequestVersion) {
+        return;
+      }
+      if (result.error) throw result.error;
+      profile.value = result.data as Profile | null;
+      profileStatus.value = result.data ? 'ready' : 'missing';
+    } catch (cause) {
+      if (expectedSessionVersion !== sessionVersion || expectedUserId !== user.value?.id || requestVersion !== profileRequestVersion) {
+        return;
+      }
+      profile.value = null;
+      profileStatus.value = 'error';
+      throw cause;
+    }
   }
 
-  function setProfileAvatar(avatarUrl: string): void {
-    if (!user.value) return;
+  function setProfileAvatar(avatarUrl: string, expectedUserId = user.value?.id): void {
+    if (!expectedUserId || user.value?.id !== expectedUserId || profile.value?.id !== expectedUserId) return;
     profile.value = {
-      id: user.value.id,
+      id: expectedUserId,
       nickname: profile.value?.nickname ?? null,
       created_at: profile.value?.created_at,
       avatar_url: avatarUrl
@@ -43,16 +64,25 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function applySession(next: Session | null, loadUserProfile = true): Promise<void> {
+    const version = ++sessionVersion;
+    profileRequestVersion++;
+    const nextUserId = next?.user?.id ?? null;
+    if (user.value?.id !== nextUserId || !nextUserId || !loadUserProfile) profile.value = null;
+    profileStatus.value = nextUserId && loadUserProfile ? 'loading' : 'idle';
+    isAdmin.value = false;
     session.value = next;
     user.value = next?.user ?? null;
     if (!next) {
       profile.value = null;
-      isAdmin.value = false;
     } else if (loadUserProfile) {
-      isAdmin.value = false;
       const client = await getSupabase();
-      const [profileResult, adminResult] = await Promise.allSettled([loadProfile(), fetchAdminStatus(client)]);
-      if (profileResult.status === 'rejected') throw profileResult.reason;
+      if (version !== sessionVersion || user.value?.id !== nextUserId) return;
+      const [profileResult, adminResult] = await Promise.allSettled([
+        loadProfile(version, nextUserId),
+        fetchAdminStatus(client)
+      ]);
+      if (version !== sessionVersion || user.value?.id !== nextUserId) return;
+      if (profileResult.status === 'rejected') profileStatus.value = 'error';
       isAdmin.value = adminResult.status === 'fulfilled' ? adminResult.value : false;
     }
   }
@@ -61,7 +91,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await applySession(next);
     } catch {
-      profile.value = null;
+      // applySession clears user-specific state before loading; a stale failure
+      // must not clear a profile belonging to a newer session.
     }
   }
 
@@ -166,6 +197,7 @@ export const useAuthStore = defineStore('auth', () => {
     session,
     user,
     profile,
+    profileStatus,
     isAdmin,
     error,
     initialize,

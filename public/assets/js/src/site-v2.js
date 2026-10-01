@@ -24,6 +24,7 @@ const SOCIAL_ICONS = {
 let client;
 let features = { analytics: false, imageLikes: false };
 let currentUser = null;
+let accountSyncGeneration = 0;
 let likeRefreshTimer;
 let lastLikeTargetSignature = '';
 
@@ -149,10 +150,20 @@ function renderAccountControl(user, profile) {
 }
 
 async function syncAccount() {
+  const generation = ++accountSyncGeneration;
   const { data } = await client.auth.getSession();
+  if (generation !== accountSyncGeneration) return;
   const user = data.session?.user || null;
   currentUser = user;
-  renderAccountControl(user, await fetchProfile(user));
+  renderAccountControl(user, null);
+  if (!user) return;
+  let profile = null;
+  try {
+    profile = await fetchProfile(user);
+  } catch (_) {
+    // Account chrome stays usable with the email and local avatar fallback.
+  }
+  if (generation === accountSyncGeneration && currentUser?.id === user.id) renderAccountControl(user, profile);
 }
 
 function recordPageView() {

@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const REDIRECT_URL = `${window.SiteConfig.siteOrigin}/index.html`;
   let selectedAvatar = avatarOptions[0]?.dataset.avatar || '';
+  let activeProfileUserId = null;
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -620,7 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
 
         if (error) {
-          alert(`登录失败: ${error.message}`);
+          alert('登录失败，请检查邮箱和密码后重试。');
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
           submitBtn.style.opacity = '1';
@@ -691,7 +692,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         if (!accountCreated && !err.accountCreated) {
-          alert(`注册失败: ${err.message}`);
+          alert('注册失败，请检查邮箱和密码后重试。');
         } else if (err.code === 'PROFILE_NOT_PROVISIONED') {
           alert('账户已创建，但资料尚未完成初始化（PROFILE_NOT_PROVISIONED）。请稍后登录重试。');
         } else if (err.code === 'NICKNAME_UPDATE_FAILED') {
@@ -785,7 +786,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof closeModal === 'function') closeModal();
         window.location.reload();
       } catch (err) {
-        alert(`更换头像遇到异常: ${err.message}`);
+        alert(
+          err?.code === 'PROFILE_NOT_PROVISIONED'
+            ? '账户资料尚未初始化，请稍后重试。'
+            : '头像保存失败，请稍后重试。'
+        );
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -1553,6 +1558,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🌟 3. 增强型用户 UI 状态更新与完全非阻塞异步鉴权函数
   function updateUserUI(user) {
+    activeProfileUserId = user?.id || null;
     if (!userButton) return;
 
     // 获取后台控制入口按钮元素（兼容代码中出现的两种 ID 命名）
@@ -1577,7 +1583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .eq('id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          if (!data || !userButton.classList.contains('is-authenticated')) return;
+          if (!data || activeProfileUserId !== user.id || !userButton.classList.contains('is-authenticated')) return;
           setImageSource(fallbackAvatar, data.avatar_url, 'images/nobi-avatar.svg');
           accountLabel.textContent = `欢迎回来, ${data.nickname || accountName}`;
         });

@@ -250,4 +250,15 @@ describe('Web/Mobile profile model consistency', () => {
     expect(site).toContain("const DEFAULT_AVATAR = 'images/nobi-avatar.svg'");
     expect(site).toContain('setImageSource(image, profile?.avatar_url, DEFAULT_AVATAR)');
   });
+
+  test('Web account profile responses are ignored after a newer account sync', async () => {
+    const [site, main] = await Promise.all([source(siteUrl), source(mainUrl)]);
+    expect(site).toContain('let accountSyncGeneration = 0');
+    expect(site).toContain('generation === accountSyncGeneration && currentUser?.id === user.id');
+    expect(main).toContain('let activeProfileUserId = null');
+    expect(main).toContain('activeProfileUserId !== user.id');
+    expect(main).toContain("alert('登录失败，请检查邮箱和密码后重试。')");
+    expect(main).toContain("alert('注册失败，请检查邮箱和密码后重试。')");
+    expect(main).toContain("'头像保存失败，请稍后重试。'");
+  });
 });

@@ -62,10 +62,15 @@ export async function updateAvatar(
     throw new Error('MISSING_AVATAR_URL');
   }
 
-  const profileUpdate = await client.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
-  if (profileUpdate.error) {
+  const profileUpdate = await client
+    .from('profiles')
+    .update({ avatar_url: publicUrl })
+    .eq('id', userId)
+    .select('id')
+    .maybeSingle();
+  if (profileUpdate.error || !profileUpdate.data) {
     await bucket.remove([path]).catch(() => undefined);
-    throw profileUpdate.error;
+    throw profileUpdate.error || new Error('PROFILE_NOT_PROVISIONED');
   }
 
   const oldPath = ownedAvatarPath(previousUrl, userId, publicUrl);
