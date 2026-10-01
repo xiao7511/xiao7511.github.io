@@ -68,7 +68,8 @@ function renderSocialLinks(config) {
         title: label
       }
     });
-    const iconSource = new DOMParser().parseFromString(SOCIAL_ICONS[key], 'image/svg+xml').documentElement;
+    const svgMarkup = SOCIAL_ICONS[key].replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+    const iconSource = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml').documentElement;
     const icon = document.importNode(iconSource, true);
     anchor.append(icon);
     if (key === 'instagram') {

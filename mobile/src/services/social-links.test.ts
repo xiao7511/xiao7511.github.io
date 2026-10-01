@@ -35,6 +35,8 @@ describe('shared social link configuration', () => {
     expect(isValidSocialUrl('')).toBe(true);
     expect(isValidSocialUrl(' https://x.com/nobi ', 'x')).toBe(true);
     expect(isValidSocialUrl('https://www.xiaohongshu.com/nobi', 'xiaohongshu')).toBe(true);
+    expect(isValidSocialUrl('https://xhslink.cn/o/2ElEjvQMl69', 'xiaohongshu')).toBe(true);
+    expect(isValidSocialUrl('https://m.xhslink.cn/o/example', 'xiaohongshu')).toBe(true);
     expect(isValidSocialUrl('https://m.weibo.cn/nobi', 'weibo')).toBe(true);
     expect(isValidSocialUrl('https://www.instagram.com/nobi', 'instagram')).toBe(true);
     expect(isValidSocialUrl('http://instagram.com/nobi', 'instagram')).toBe(true);
@@ -44,7 +46,25 @@ describe('shared social link configuration', () => {
     expect(isValidSocialUrl('null', 'x')).toBe(false);
     expect(isValidSocialUrl('undefined', 'x')).toBe(false);
     expect(isValidSocialUrl('https://example.org/attacker', 'x')).toBe(false);
+    expect(isValidSocialUrl('https://xhslink.cn.evil.example/path', 'xiaohongshu')).toBe(false);
+    expect(isValidSocialUrl('https://evil-xhslink.cn/path', 'xiaohongshu')).toBe(false);
+    expect(isValidSocialUrl('https://example.com/xhslink.cn', 'xiaohongshu')).toBe(false);
     expect(isValidSocialUrl('not-a-url', 'weibo')).toBe(false);
+  });
+
+  test('resolves the production-shaped configuration into four canonical links', () => {
+    const settings = parseSocialSettings({
+      xiaohongshu: 'https://xhslink.cn/o/2ElEjvQMl69',
+      weibo: 'http://weibo.com',
+      twitter: 'https://x.com',
+      instagram: 'https://instagram.com'
+    });
+    const links = settings.filter((item) => item.enabled && item.url && isValidSocialUrl(item.url, item.key));
+
+    expect(settings.map((item) => item.key)).toEqual(SOCIAL_KEYS);
+    expect(links.map((item) => item.key)).toEqual(SOCIAL_KEYS);
+    expect(settings.find((item) => item.key === 'x')?.url).toBe('https://x.com');
+    expect(canonicalSocialKey('twitter')).toBe('x');
   });
 
   test('normalizes legacy aliases/order and preserves unrelated config values on save', () => {

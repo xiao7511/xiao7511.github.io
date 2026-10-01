@@ -15,7 +15,7 @@ const ALIASES = {
 };
 
 const HOSTS = {
-  xiaohongshu: ['xiaohongshu.com', 'xhslink.com'],
+  xiaohongshu: ['xiaohongshu.com', 'xhslink.com', 'xhslink.cn'],
   weibo: ['weibo.com', 'weibo.cn'],
   x: ['x.com', 'twitter.com'],
   instagram: ['instagram.com']

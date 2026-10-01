@@ -86,7 +86,7 @@ async function mockRuntime(
                 ? [
                     {
                       section: 'social_links',
-                      url: '{"xiaohongshu":"https://www.xiaohongshu.com/user/profile/nobi","weibo":"https://weibo.com/nobi","twitter":"https://x.com/nobi","instagram":"https://www.instagram.com/nobi"}'
+                      url: '{"xiaohongshu":"https://xhslink.cn/o/2ElEjvQMl69","weibo":"http://weibo.com","twitter":"https://x.com","instagram":"https://instagram.com"}'
                     }
                   ]
                 : [])
@@ -415,7 +415,7 @@ test('home hero keeps single-Banner navigation safe and reports one visible page
   await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
 });
 
-test('home hero aligns with the content rail and configured social icons render in the footer social column', async ({
+test('home hero aligns with the content rail and production social links render visible SVG icons', async ({
   page
 }) => {
   await mockRuntime(page, { socialLinks: true });
@@ -438,6 +438,25 @@ test('home hero aligns with the content rail and configured social icons render 
   await expect(social.locator('[data-social-platform="weibo"]')).toHaveCSS('color', 'rgb(230, 22, 45)');
   await expect(social.locator('[data-social-platform="x"]')).toHaveCSS('color', 'rgb(255, 255, 255)');
   await expect(social.locator('[data-social-platform="instagram"]')).toHaveCSS('color', 'rgb(225, 48, 108)');
+  for (const link of await social.locator('.footer-social__link').all()) {
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    const iconState = await link.locator('svg').evaluate((svg) => {
+      const path = svg.querySelector('path');
+      const bounds = path?.getBBox();
+      return {
+        svgNamespace: svg.namespaceURI,
+        pathNamespace: path?.namespaceURI,
+        iconVisible: Boolean(bounds && bounds.width > 0 && bounds.height > 0),
+        fill: path ? getComputedStyle(path).fill : ''
+      };
+    });
+    expect(iconState.svgNamespace).toBe('http://www.w3.org/2000/svg');
+    expect(iconState.pathNamespace).toBe('http://www.w3.org/2000/svg');
+    expect(iconState.iconVisible).toBe(true);
+    expect(iconState.fill).not.toBe('none');
+  }
   expect(await social.locator('[data-social-platform="instagram"] svg path').getAttribute('fill')).toContain(
     'url("#nobi-instagram-gradient")'
   );

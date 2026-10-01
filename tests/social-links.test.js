@@ -21,6 +21,8 @@ describe('canonical Web social links', () => {
   test.each([
     ['xiaohongshu', 'https://www.xiaohongshu.com/user/profile/nobi'],
     ['xiaohongshu', 'https://xhslink.com/a/nobi'],
+    ['xiaohongshu', 'https://xhslink.cn/o/2ElEjvQMl69'],
+    ['xiaohongshu', 'https://m.xhslink.cn/o/example'],
     ['weibo', 'https://m.weibo.cn/u/123'],
     ['x', 'https://twitter.com/nobi'],
     ['x', 'https://www.x.com/nobi'],
@@ -39,9 +41,26 @@ describe('canonical Web social links', () => {
     'file:///tmp/a',
     'not-a-url',
     'https://evil.example/nobi',
+    'https://xhslink.cn.evil.example/path',
+    'https://evil-xhslink.cn/path',
+    'https://example.com/xhslink.cn',
     'https://xiaohongshu.com@evil.example/nobi'
   ])('rejects unavailable or unsafe URL %s for display', (url) => {
     expect(isValidSocialUrl(url, 'xiaohongshu')).toBe(url.trim() === '');
+  });
+
+  test('resolves the production-shaped configuration into the four canonical links', () => {
+    const settings = parseSocialSettings({
+      xiaohongshu: 'https://xhslink.cn/o/2ElEjvQMl69',
+      weibo: 'http://weibo.com',
+      twitter: 'https://x.com',
+      instagram: 'https://instagram.com'
+    });
+    const links = settings.filter((item) => item.enabled && item.url && isValidSocialUrl(item.url, item.key));
+
+    expect(settings.map((item) => item.key)).toEqual(['xiaohongshu', 'weibo', 'x', 'instagram']);
+    expect(links.map((item) => item.key)).toEqual(['xiaohongshu', 'weibo', 'x', 'instagram']);
+    expect(settings.find((item) => item.key === 'x')?.url).toBe('https://x.com');
   });
 
   test('trims values, honors valid configured order, filters invalid platforms independently', () => {

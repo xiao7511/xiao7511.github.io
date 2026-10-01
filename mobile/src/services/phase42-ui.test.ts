@@ -31,6 +31,11 @@ describe('Phase 4.2 mobile alignment', () => {
     expect(view).toContain(':href="link.href"');
     expect(view).toContain('<SocialIcon :name="link.key"');
     expect(icon).toContain('<svg');
+    expect(icon).toContain("name === 'xiaohongshu'");
+    expect(icon).toContain("name === 'weibo'");
+    expect(icon).toContain("name === 'x'");
+    expect(icon).toContain("'xiaohongshu' | 'weibo' | 'x' | 'instagram'");
+    expect(icon).toContain('nobi-instagram-gradient');
   });
 
   test('keeps three-column libraries and iPhone safe-area spacing', async () => {
