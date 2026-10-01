@@ -95,8 +95,8 @@ async function save(item: ContentItem): Promise<void> {
     }
     banners.value.sort((a, b) => a.slot_index - b.slot_index);
     toast.show('首页 Banner 已保存', 'success');
-  } catch (cause) {
-    toast.show(`Banner 保存失败：${cause instanceof Error ? cause.message : '请稍后重试'}`, 'error');
+  } catch {
+    toast.show('Banner 保存失败，请稍后重试。', 'error');
   } finally {
     pendingId.value = '';
     pendingStage.value = '';

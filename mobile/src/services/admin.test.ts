@@ -4,6 +4,7 @@ import {
   deleteAdminHomeContent,
   fetchAdminHomeContent,
   fetchAdminStatus,
+  fetchAdminUsers,
   reviewReport,
   fetchAdminSocialLinks,
   saveAdminSocialLinks,
@@ -18,6 +19,35 @@ describe('mobile admin security services', () => {
     const rpc = vi.fn().mockResolvedValue({ data: true, error: null });
     await expect(fetchAdminStatus({ rpc } as unknown as SupabaseClient)).resolves.toBe(true);
     expect(rpc).toHaveBeenCalledWith('is_admin');
+  });
+
+  test('loads the user list through the restricted Admin RPC and merges canonical profile fields', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ id: 'user-a', email: 'a@nobi.test', is_admin: true, created_at: '2026-01-01T00:00:00Z' }],
+      error: null
+    });
+    const inQuery = vi.fn().mockResolvedValue({ data: [{ id: 'user-a', nickname: 'A', avatar_url: 'avatar.webp' }], error: null });
+    const select = vi.fn(() => ({ in: inQuery }));
+    const client = { rpc, from: vi.fn(() => ({ select })) } as unknown as SupabaseClient;
+
+    await expect(fetchAdminUsers(client)).resolves.toEqual([
+      {
+        id: 'user-a',
+        email: 'a@nobi.test',
+        is_admin: true,
+        created_at: '2026-01-01T00:00:00Z',
+        nickname: 'A',
+        avatar_url: 'avatar.webp'
+      }
+    ]);
+    expect(rpc).toHaveBeenCalledWith('list_admin_users');
+    expect(client.from).toHaveBeenCalledWith('profiles');
+  });
+
+  test('fails closed when the Admin user-list RPC is rejected', async () => {
+    const error = new Error('Administrator access required');
+    const rpc = vi.fn().mockResolvedValue({ data: null, error });
+    await expect(fetchAdminUsers({ rpc } as unknown as SupabaseClient)).rejects.toBe(error);
   });
 
   test('uses the existing secure admin RPCs for mutations', async () => {

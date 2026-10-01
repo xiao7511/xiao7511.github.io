@@ -39,12 +39,11 @@ export async function fetchAdminStatus(client: SupabaseClient): Promise<boolean>
 }
 
 export async function fetchAdminUsers(client: SupabaseClient): Promise<AdminUser[]> {
-  const usersResult = await client
-    .from('users')
-    .select('id,email,is_admin,created_at')
-    .order('created_at', { ascending: false });
+  const usersResult = await client.rpc('list_admin_users');
   if (usersResult.error) throw usersResult.error;
-  const users = (usersResult.data ?? []) as Array<Omit<AdminUser, 'nickname' | 'avatar_url'>>;
+  const users = (Array.isArray(usersResult.data) ? usersResult.data : []) as Array<
+    Omit<AdminUser, 'nickname' | 'avatar_url'>
+  >;
   if (!users.length) return [];
   const profilesResult = await client
     .from('profiles')

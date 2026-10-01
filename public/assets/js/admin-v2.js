@@ -38,7 +38,7 @@ async function loadStats(client) {
   }
   const { data, error } = await client.rpc('get_admin_dashboard_stats');
   if (error) {
-    if (status) status.textContent = `统计加载失败：${error.message}`;
+    if (status) status.textContent = '统计加载失败，请稍后重试。';
     return;
   }
   const stats = typeof data === 'string' ? JSON.parse(data) : data;
@@ -174,7 +174,7 @@ function initContentTools(client, supabaseUrl) {
       .eq('category', category)
       .eq('slot_index', Number(slot));
     if (error) {
-      alert(`删除失败：${error.message}`);
+      alert('删除失败，请稍后重试。');
       button.disabled = false;
       return;
     }
@@ -199,7 +199,7 @@ window.addEventListener('nobi:admin-ready', async (event) => {
   try {
     await canonicalEditor?.load();
   } catch (error) {
-    if (wrapper) wrapper.textContent = `Canonical 内容管理加载失败：${error.message}`;
+    if (wrapper) wrapper.textContent = 'Canonical 内容管理加载失败，请稍后重试。';
   }
   await Promise.all([loadStats(client), loadSocialConfig(client)]);
   initSocialForm(client);

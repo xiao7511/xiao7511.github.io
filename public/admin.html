@@ -523,14 +523,14 @@
           return null;
         }
 
-        const { data: userPermission, error: dbError } = await window.supabaseClient
-          .from('users')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .maybeSingle();
+        const { data: isAdmin, error: dbError } = await window.supabaseClient.rpc('is_admin');
+        const {
+          data: { session: currentSession },
+          error: sessionError
+        } = await window.supabaseClient.auth.getSession();
 
-        if (dbError || !userPermission || userPermission.is_admin !== true) {
-          alert(`鉴权失败：账号 ${session.user.email} 无控制台访问特权。`);
+        if (dbError || sessionError || isAdmin !== true || currentSession?.user?.id !== session.user.id) {
+          alert('权限验证失败，请使用具有管理权限的账号重试。');
           navigateBackHome();
           return null;
         }

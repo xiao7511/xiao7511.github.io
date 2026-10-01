@@ -23,7 +23,7 @@ async function load(): Promise<void> {
   try {
     users.value = await fetchAdminUsers(await getSupabase());
   } catch {
-    error.value = '用户列表加载失败，请确认生产 users 读取策略。';
+    error.value = '用户列表加载失败，请稍后重试。';
   } finally {
     loading.value = false;
   }

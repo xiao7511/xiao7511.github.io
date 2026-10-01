@@ -92,6 +92,66 @@ describe('authenticated profile lifecycle', () => {
     expect(auth.isAdmin).toBe(false);
   });
 
+  test('a late administrator result cannot authorize a switched non-admin account', async () => {
+    const adminA = deferred<boolean>();
+    vi.mocked(fetchAdminStatus)
+      .mockReturnValueOnce(adminA.promise)
+      .mockResolvedValueOnce(false);
+    const client = profileClient();
+    vi.mocked(getSupabase).mockResolvedValue(client);
+    const auth = useAuthStore();
+
+    const loginA = auth.signIn('user-a@nobi.test', 'password');
+    await vi.waitFor(() => expect(fetchAdminStatus).toHaveBeenCalledTimes(1));
+    await auth.signIn('user-b@nobi.test', 'password');
+    expect(auth.user?.id).toBe('user-b');
+    expect(auth.isAdmin).toBe(false);
+
+    adminA.resolve(true);
+    await loginA;
+    expect(auth.user?.id).toBe('user-b');
+    expect(auth.isAdmin).toBe(false);
+  });
+
+  test('a late non-admin result cannot revoke the switched admin account', async () => {
+    const adminA = deferred<boolean>();
+    vi.mocked(fetchAdminStatus)
+      .mockReturnValueOnce(adminA.promise)
+      .mockResolvedValueOnce(true);
+    const client = profileClient();
+    vi.mocked(getSupabase).mockResolvedValue(client);
+    const auth = useAuthStore();
+
+    const loginA = auth.signIn('user-a@nobi.test', 'password');
+    await vi.waitFor(() => expect(fetchAdminStatus).toHaveBeenCalledTimes(1));
+    await auth.signIn('user-b@nobi.test', 'password');
+    expect(auth.user?.id).toBe('user-b');
+    expect(auth.isAdmin).toBe(true);
+
+    adminA.resolve(false);
+    await loginA;
+    expect(auth.user?.id).toBe('user-b');
+    expect(auth.isAdmin).toBe(true);
+  });
+
+  test('a late administrator result cannot restore authorization after logout', async () => {
+    const adminA = deferred<boolean>();
+    vi.mocked(fetchAdminStatus).mockReturnValueOnce(adminA.promise);
+    const client = profileClient();
+    vi.mocked(getSupabase).mockResolvedValue(client);
+    const auth = useAuthStore();
+
+    const loginA = auth.signIn('user-a@nobi.test', 'password');
+    await vi.waitFor(() => expect(fetchAdminStatus).toHaveBeenCalledTimes(1));
+    await auth.signOut();
+    adminA.resolve(true);
+    await loginA;
+
+    expect(auth.user).toBeNull();
+    expect(auth.profile).toBeNull();
+    expect(auth.isAdmin).toBe(false);
+  });
+
   test('missing database provisioning is distinct while authentication remains usable', async () => {
     const client = {
       auth: { signInWithPassword: vi.fn().mockResolvedValue({ data: { session: session('user-a') }, error: null }) },
@@ -111,3 +171,25 @@ describe('authenticated profile lifecycle', () => {
     expect(auth.error).toBeNull();
   });
 });
+
+function profileClient(): SupabaseClient {
+  return {
+    auth: {
+      signInWithPassword: vi.fn(async ({ email }: { email: string }) => ({
+        data: { session: session(email.split('@')[0]) },
+        error: null
+      })),
+      signOut: vi.fn().mockResolvedValue({ error: null })
+    },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn((_column: string, id: string) => ({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: { id, nickname: id, avatar_url: null },
+            error: null
+          })
+        }))
+      }))
+    }))
+  } as unknown as SupabaseClient;
+}
