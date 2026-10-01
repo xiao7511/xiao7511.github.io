@@ -203,14 +203,16 @@ describe('Web-aligned mobile home data', () => {
 
   test('keeps the 393px layout constrained above the fixed tab bar', async () => {
     const css = await readFile(new URL('../style-home.css', import.meta.url), 'utf8');
+    const normalizedCss = css.replace(/\r\n/g, '\n');
     const base = await readFile(new URL('../style.css', import.meta.url), 'utf8');
-    expect(css).toContain('overflow: clip');
-    expect(css).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
-    expect(css).toContain('aspect-ratio: 1.72 / 1');
-    expect(css).toContain('.home-carousel__content {\n  position: absolute;\n  right: 18px;\n  bottom: 52px;');
-    expect(css).toContain('width: 44px;\n  min-width: 44px;\n  height: 44px;\n  min-height: 44px;');
-    expect(css).toContain('.home-carousel__dots button::before');
-    expect(css).toContain('.home-carousel__dots button:focus-visible');
+    expect(normalizedCss).toContain('overflow: clip');
+    expect(normalizedCss).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
+    expect(normalizedCss).toContain('aspect-ratio: 1.72 / 1');
+    expect(normalizedCss).toContain('.home-carousel__content {\n  position: absolute;\n  right: 18px;\n  bottom: 52px;');
+    expect(normalizedCss).toContain('width: 44px;\n  min-width: 44px;\n  height: 44px;\n  min-height: 44px;');
+    expect(normalizedCss).toContain('.home-carousel__dots button::before {\n  width: 7px;\n  height: 7px;');
+    expect(normalizedCss).toContain('.home-carousel__dots button.is-active::before {\n  width: 20px;');
+    expect(normalizedCss).toContain('.home-carousel__dots button:focus-visible {\n  outline: 2px solid');
     expect(base).toContain('padding-bottom: calc(74px + env(safe-area-inset-bottom))');
   });
 });
