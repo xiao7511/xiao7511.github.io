@@ -12,6 +12,7 @@ import AppLoading from '../components/AppLoading.vue';
 import AppError from '../components/AppError.vue';
 import { getSupabase } from '../services/supabase';
 import { removeReplyImage, uploadReplyImage, validateReplyImage } from '../services/reply-image';
+import { parseRouteInteger } from '../router/safe-navigation';
 const route = useRoute();
 const router = useRouter();
 const community = useCommunityStore();
@@ -28,7 +29,7 @@ const replyImage = ref<BrowserFile | null>(null);
 const replyPreview = ref('');
 const confirmingBlock = ref(false);
 const blocking = ref(false);
-const postId = computed(() => Number(route.params.id));
+const postId = computed(() => parseRouteInteger(route.params.id, 1) ?? Number.NaN);
 const canActOnAuthor = computed(() =>
   Boolean(community.selected?.user_id && community.selected.user_id !== auth.user?.id)
 );

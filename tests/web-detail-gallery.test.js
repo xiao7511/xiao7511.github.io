@@ -31,6 +31,9 @@ describe('Anime and Manga detail contract', () => {
     expect(resolveDetailRecord([item('active', 'anime', 0)], 'anime', '2x')).toBeNull();
     expect(resolveDetailRecord([item('off', 'anime', 0, { is_active: false })], 'anime', 0)).toBeNull();
     expect(resolveDetailRecord([], 'manga', 0)).toBeNull();
+    for (const malformed of [' 1', '01', '+1', '1.0', '1e2', '-1', '1000']) {
+      expect(resolveDetailRecord([item('active', 'anime', 1)], 'anime', malformed)).toBeNull();
+    }
   });
 
   test('normalizes malformed per-image like counts and keeps independent liked states', () => {

@@ -50,7 +50,7 @@ export const useCommunityStore = defineStore('community', () => {
     selected.value = null;
     replies.value = [];
     try {
-      if (!Number.isInteger(id) || id <= 0) throw new Error('INVALID_POST_ID');
+      if (!Number.isSafeInteger(id) || id <= 0) throw new Error('INVALID_POST_ID');
       const result = await fetchCommunityPost(id);
       if (request !== postLoadRequest) return;
       selected.value = result.post;

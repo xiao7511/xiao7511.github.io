@@ -7,13 +7,14 @@ import { useToastStore } from '../stores/toast';
 import type { ReportReason } from '../services/community';
 import AppError from '../components/AppError.vue';
 import AppLoading from '../components/AppLoading.vue';
+import { parseRouteInteger } from '../router/safe-navigation';
 
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const community = useCommunityStore();
 const toast = useToastStore();
-const postId = computed(() => Number(route.params.id));
+const postId = computed(() => parseRouteInteger(route.params.id, 1) ?? Number.NaN);
 const reason = ref<ReportReason>('spam');
 const details = ref('');
 const sending = ref(false);

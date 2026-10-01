@@ -1,3 +1,5 @@
+import { isCanonicalContent } from './content.js';
+
 export const WEB_HOME_BANNER_SLOTS = 3;
 export const BANNER_FALLBACK_URL = 'recommend.html';
 
@@ -6,7 +8,7 @@ function validSlot(value) {
 }
 
 export function createContentDetailUrl(item) {
-  if (!item || !['anime', 'manga'].includes(item.category) || !validSlot(item.slot_index)) return '';
+  if (!item || !['anime', 'manga'].includes(item.category) || !isCanonicalContent(item, item.category)) return '';
   return `detail.html?${new URLSearchParams({
     category: item.category,
     slot: String(item.slot_index)
@@ -48,9 +50,8 @@ export function resolveBannerItems(bannerRows, catalogRows) {
       (item) =>
         item &&
         item.id === banner.linked_content_id &&
-        item.is_active !== false &&
         ['anime', 'manga'].includes(item.category) &&
-        validSlot(item.slot_index)
+        isCanonicalContent(item, item.category)
     );
     const detailUrl = createContentDetailUrl(linkedContent);
     return {

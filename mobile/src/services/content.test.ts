@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { fetchContent, fetchContentDetail } from './content';
+import { readFile } from 'node:fs/promises';
 
 function item(id: string, category: string, slot: number, changes = {}) {
   return { id, category, slot_index: slot, title: `${category} ${id}`, is_active: true, ...changes };
@@ -49,5 +50,15 @@ describe('content library API normalization', () => {
     ));
     await expect(fetchContentDetail('anime', 0)).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(fetchContentDetail('manga', -1)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  });
+
+  test('content detail route watches route identity and ignores stale async results', async () => {
+    const source = await readFile(new URL('../views/ContentDetailView.vue', import.meta.url), 'utf8');
+    expect(source).toContain('let loadSequence = 0');
+    expect(source).toContain('if (sequence !== loadSequence) return');
+    expect(source).toContain('watch(() => route.fullPath, load)');
+    expect(source).toContain('banner.is_active === false');
+    expect(source).toContain('parseRouteInteger(route.params.slot)');
+    expect(source).toContain('slot >= WEB_HOME_BANNER_SLOTS');
   });
 });

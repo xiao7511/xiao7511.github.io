@@ -21,7 +21,7 @@ function banner(id, slot, changes = {}) {
 }
 
 function content(id, category, slot, changes = {}) {
-  return { id, category, slot_index: slot, is_active: true, ...changes };
+  return { id, category, slot_index: slot, title: `Title ${id}`, is_active: true, ...changes };
 }
 
 describe('Web Home canonical Banner behavior', () => {
@@ -59,7 +59,12 @@ describe('Web Home canonical Banner behavior', () => {
   });
 
   test('does not activate a detail CTA for an inactive or unsupported linked target', () => {
-    for (const linked of [content('disabled', 'anime', 1, { is_active: false }), content('unsupported', 'banner', 1)]) {
+    for (const linked of [
+      content('disabled', 'anime', 1, { is_active: false }),
+      content('unsupported', 'banner', 1),
+      content('untitled', 'anime', 1, { title: '  ' }),
+      content('bad-slot', 'manga', -1)
+    ]) {
       const result = resolveBannerItems([banner('hero', 0, { linked_content_id: linked.id })], [linked])[0];
       expect(result.detailUrl).toBe(BANNER_FALLBACK_URL);
       expect(result.linkedContent).toBeUndefined();

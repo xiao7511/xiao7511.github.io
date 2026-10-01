@@ -13,10 +13,11 @@ import ContentImage from '../components/ContentImage.vue';
 import AppLoading from '../components/AppLoading.vue';
 import AppError from '../components/AppError.vue';
 import { isDisplayableImageUrl } from '../services/images';
-import { contentYear } from '../services/home';
+import { contentYear, WEB_HOME_BANNER_SLOTS } from '../services/home';
 import ContentCard from '../components/ContentCard.vue';
 import { useImageLikesStore } from '../stores/image-likes';
 import { contentCoverLikeTarget, contentDetailLikeTargets, type ImageLikeTarget } from '../services/image-likes';
+import { parseRouteInteger } from '../router/safe-navigation';
 
 const route = useRoute();
 const router = useRouter();
@@ -65,11 +66,11 @@ async function load(): Promise<void> {
   error.value = null;
   try {
     if (category.value === 'banner') {
-      const slot = Number(route.params.slot);
-      if (!Number.isInteger(slot) || slot < 0) throw new Error('NOT_FOUND');
+      const slot = parseRouteInteger(route.params.slot);
+      if (slot === null || slot >= WEB_HOME_BANNER_SLOTS) throw new Error('NOT_FOUND');
       const banner = await fetchContentDetail('banner', slot);
       if (sequence !== loadSequence) return;
-      if (banner.id !== String(route.params.id)) throw new Error('NOT_FOUND');
+      if (banner.id !== String(route.params.id) || banner.is_active === false) throw new Error('NOT_FOUND');
       item.value = banner;
       await imageLikes
         .loadTargets(

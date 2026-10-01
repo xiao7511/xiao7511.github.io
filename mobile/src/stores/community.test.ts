@@ -77,6 +77,16 @@ describe('community store request reliability', () => {
     expect(store.loading).toBe(false);
   });
 
+  test('rejects unsafe integer post ids without querying the backend', async () => {
+    const store = useCommunityStore();
+    await store.loadPost(Number.MAX_SAFE_INTEGER + 1);
+
+    expect(fetchCommunityPost).not.toHaveBeenCalled();
+    expect(store.selected).toBeNull();
+    expect(store.loading).toBe(false);
+    expect(store.error).toBeTruthy();
+  });
+
   test('releases the like in-flight guard when Supabase initialization fails', async () => {
     const store = useCommunityStore();
     store.posts = [post(7)];

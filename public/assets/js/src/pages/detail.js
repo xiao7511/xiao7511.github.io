@@ -5,7 +5,7 @@ import { selectCanonicalContent, homeContentYear, normalizeContentTags } from '.
 import { getImageKey } from '../images/likes.js';
 
 export function resolveDetailRecord(rows, category, slot) {
-  if (!['anime', 'manga'].includes(category) || !/^\d{1,3}$/.test(String(slot ?? ''))) return null;
+  if (!['anime', 'manga'].includes(category) || !/^(?:0|[1-9]\d{0,2})$/.test(String(slot ?? ''))) return null;
   return selectCanonicalContent(rows, category).find((item) => item.slot_index === Number(slot)) || null;
 }
 
@@ -48,7 +48,7 @@ export async function initDetailPage() {
   if (!status || !stream) return;
   setLoadingState(stream, { count: 2, variant: 'manga', label: '正在加载作品详情' });
 
-  if (!['anime', 'manga'].includes(category) || !/^\d{1,3}$/.test(slot || '')) {
+  if (!['anime', 'manga'].includes(category) || !/^(?:0|[1-9]\d{0,2})$/.test(slot || '')) {
     status.hidden = true;
     setContentState(stream, { message: '详情链接无效，请返回列表重新选择。', kind: 'error' });
     return;
