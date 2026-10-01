@@ -9,6 +9,7 @@ const existingSecurityMigrationUrl = new URL(
 );
 const adminBootstrapUrl = new URL('../public/admin.html', import.meta.url);
 const adminRuntimeUrl = new URL('../public/assets/js/admin-v2.js', import.meta.url);
+const mainRuntimeUrl = new URL('../public/assets/js/main.js', import.meta.url);
 const mobileBannerUrl = new URL('../mobile/src/views/AdminBannersView.vue', import.meta.url);
 const mobileAdminServiceUrl = new URL('../mobile/src/services/admin.ts', import.meta.url);
 const mobileAdminUsersViewUrl = new URL('../mobile/src/views/AdminUsersView.vue', import.meta.url);
@@ -71,11 +72,23 @@ describe('Admin user-list read boundary', () => {
     expect(authGate).not.toMatch(/profiles\.is_admin/);
   });
 
+  test('Web header Admin access uses the canonical RPC and never persists client authorization flags', async () => {
+    const main = await readFile(mainRuntimeUrl, 'utf8');
+    expect(main).toMatch(/void checkAdminPermission\(session\)/);
+    expect(main).toMatch(/window\.supabaseClient\.rpc\('is_admin'\)/);
+    expect(main).toMatch(/currentSession\?\.user\?\.id\s*!==\s*session\.user\.id/);
+    expect(main).not.toMatch(/\.from\(['"]users['"]\)/);
+    expect(main).not.toMatch(/document\.cookie\s*=\s*["'](?:is_admin|admin_access)=true/);
+  });
+
   test('Mobile Admin reads users through the RPC and keeps role mutation behind set_user_admin', async () => {
     const service = await readFile(mobileAdminServiceUrl, 'utf8');
+    const usersView = await readFile(mobileAdminUsersViewUrl, 'utf8');
     expect(service).toMatch(/client\.rpc\('list_admin_users'\)/);
     expect(service).toMatch(/client\.rpc\('set_user_admin'/);
     expect(service).not.toMatch(/from\(['"]users['"]\)/);
+    expect(usersView).toMatch(/await setAdminState[\s\S]*?await load\(\)/);
+    expect(usersView).not.toMatch(/user\.is_admin\s*=\s*!user\.is_admin/);
   });
 
   test('audited Admin failure feedback does not expose backend error messages', async () => {

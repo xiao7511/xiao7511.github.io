@@ -311,11 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }, 500);
         }
-        if (session && session.user) {
-          updateUserUI(session.user);
-        } else {
-          updateUserUI(null);
-        }
+
+        void checkAdminPermission(session);
+
       });
 
     } catch (e) {
@@ -329,47 +327,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================
   // 🎯 鉴权核心函数
   // =========================================================
+  let adminAuthorizationRequest = 0;
+
   async function checkAdminPermission(session) {
+    const request = ++adminAuthorizationRequest;
     updateUserUI(session?.user || null);
 
     const adminBtn = document.getElementById('admin-entrance-wrapper') || document.getElementById('admin-btn');
-    if (!adminBtn) return;
-
-    if (!session || !session.user) {
-        adminBtn.hidden = true;
-        return;
-    }
-
-    if (typeof window.supabaseClient.from !== 'function') {
-        adminBtn.hidden = true;
-        return;
-    }
+    if (adminBtn) adminBtn.hidden = true;
+    document.getElementById('admin-btn-dynamic')?.remove();
+    if (!session?.user || typeof window.supabaseClient?.rpc !== 'function') return;
 
     try {
-        const { data: userData, error } = await window.supabaseClient
-            .from('users')
-            .select('is_admin')
-            .eq('email', session.user.email)
-            .maybeSingle();
+      const { data: isAdmin, error } = await window.supabaseClient.rpc('is_admin');
+      const {
+        data: { session: currentSession },
+        error: sessionError
+      } = await window.supabaseClient.auth.getSession();
+      if (
+        request !== adminAuthorizationRequest ||
+        error ||
+        sessionError ||
+        isAdmin !== true ||
+        currentSession?.user?.id !== session.user.id
+      ) return;
 
-        if (error) {
-            console.error("Supabase 鉴权发生底层错误:", error.message);
-            adminBtn.hidden = true;
-            return;
-        }
-
-        if (userData && userData.is_admin === true) {
-            adminBtn.hidden = false;
-            console.log(`👑 管理员权限核验通过: [${session.user.email}]`);
-        } else {
-            adminBtn.hidden = true;
-        }
-    } catch (err) {
-        console.error('审查管理员权限时发生异常:', err);
-        adminBtn.hidden = true;
+      if (adminBtn) {
+        adminBtn.hidden = false;
+      } else if (!document.getElementById('admin-btn-dynamic')) {
+        const adminLink = element('a', {
+          className: 'admin-entrance-btn admin-special-btn',
+          text: '管理员后台',
+          attributes: { id: 'admin-btn-dynamic', href: 'admin.html' }
+        });
+        userButton?.after(adminLink);
+      }
+    } catch {
+      if (request === adminAuthorizationRequest && adminBtn) adminBtn.hidden = true;
+      console.warn('Administrator authorization could not be verified.');
     }
   }
-
   function activateAuthStateListener() {
     if (!window.supabaseClient) return;
 
@@ -1598,54 +1595,6 @@ document.addEventListener('DOMContentLoaded', () => {
         postArea.style.display = 'block';
       }
       if (publishBtn) publishBtn.removeAttribute('disabled');
-
-      // (3) 🎯 异步低优先级隔离：将可能引起死锁挂起的 `users` 表鉴权延迟 200ms 执行
-      setTimeout(async () => {
-        if (!window.supabaseClient || typeof window.supabaseClient.from !== 'function') {
-          console.warn("⚠️ 实例尚在复苏，略过本次静默验权。");
-          return;
-        }
-
-        try {
-          console.log("🔍 正在后台静默校验管理员身份凭证...");
-          const { data, error } = await window.supabaseClient
-            .from('users')
-            .select('is_admin')
-            .eq('id', user.id)
-            .maybeSingle(); // 健壮处理，防止无记录时产生致命脚本异常
-
-          if (!error && data && data.is_admin) {
-            console.log("👑 认证成功：当前账号具备最高管理权限，正在呈现控制台入口...");
-
-            // 补写安全通信锁双向 Cookie
-            document.cookie = "is_admin=true; path=/; max-age=86400; SameSite=Lax";
-            document.cookie = "admin_access=true; path=/; max-age=86400; SameSite=Strict";
-
-            // 展现控制台按钮入口
-            if (adminButton) {
-              adminButton.removeAttribute('hidden');
-              adminButton.hidden = false;
-            } else {
-              // 如果 DOM 中没有预设，则动态自动在用户区右侧补上
-              if (!document.getElementById('admin-btn-dynamic')) {
-                const adminLink = element('a', {
-                  className: 'admin-entrance-btn admin-special-btn',
-                  text: '⚙️ 管理后台',
-                  attributes: { id: 'admin-btn-dynamic', href: 'admin.html' }
-                });
-                userButton.after(adminLink);              }
-            }
-          } else {
-            // 如果查出来不是管理员，安全清理所有的残留锁
-            document.cookie = "is_admin=; path=/; max-age=0; SameSite=Lax";
-            document.cookie = "admin_access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-            removeAdminButton();
-          }
-        } catch (authCatch) {
-          console.warn("静默验权通道暂时繁忙，已安全降级跳过:", authCatch);
-        }
-      }, 200);
-
     } else {
       // (4) 用户未登录或退出登录时，全面物理还原界面并封锁论坛发布功能
       clearUserUI();

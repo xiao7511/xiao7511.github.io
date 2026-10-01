@@ -34,7 +34,7 @@ async function toggle(user: AdminUser): Promise<void> {
   pendingId.value = user.id;
   try {
     await setAdminState(await getSupabase(), user.id, !user.is_admin);
-    user.is_admin = !user.is_admin;
+    await load();
     if (user.id === auth.user?.id) await auth.refreshSession();
     toast.show('管理员权限已更新', 'success');
   } catch {
