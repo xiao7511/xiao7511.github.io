@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useCommunityStore } from '../stores/community';
@@ -18,9 +18,9 @@ const reason = ref<ReportReason>('spam');
 const details = ref('');
 const sending = ref(false);
 
-onMounted(() => {
-  if (community.selected?.id !== postId.value) void community.loadPost(postId.value);
-});
+watch(postId, (id) => {
+  if (community.selected?.id !== id) void community.loadPost(id);
+}, { immediate: true });
 
 async function submit(): Promise<void> {
   if (!auth.session || sending.value || !Number.isInteger(postId.value)) return;

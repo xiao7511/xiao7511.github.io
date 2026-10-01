@@ -25,6 +25,7 @@ export const useCommunityStore = defineStore('community', () => {
   const pageSize = 5;
   const total = ref(0);
   const pendingLikes = ref<Record<number, boolean>>({});
+  let postLoadRequest = 0;
   const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)));
 
   async function load(targetPage = page.value): Promise<void> {
@@ -43,18 +44,24 @@ export const useCommunityStore = defineStore('community', () => {
   }
 
   async function loadPost(id: number): Promise<void> {
+    const request = ++postLoadRequest;
     loading.value = true;
     error.value = null;
+    selected.value = null;
+    replies.value = [];
     try {
+      if (!Number.isInteger(id) || id <= 0) throw new Error('INVALID_POST_ID');
       const result = await fetchCommunityPost(id);
+      if (request !== postLoadRequest) return;
       selected.value = result.post;
       replies.value = result.replies;
     } catch {
+      if (request !== postLoadRequest) return;
       selected.value = null;
       replies.value = [];
       error.value = '帖子加载失败或已不存在。';
     } finally {
-      loading.value = false;
+      if (request === postLoadRequest) loading.value = false;
     }
   }
 
@@ -69,8 +76,8 @@ export const useCommunityStore = defineStore('community', () => {
     const item = posts.value.find((post) => post.id === id) ?? (selected.value?.id === id ? selected.value : null);
     if (!item) return;
     pendingLikes.value[id] = true;
-    const client = await getSupabase();
     try {
+      const client = await getSupabase();
       await runOptimisticLike(
         { liked: item.liked, likeCount: item.likeCount },
         (state) => applyLike(id, state),
@@ -86,7 +93,7 @@ export const useCommunityStore = defineStore('community', () => {
 
   async function reply(postId: number, content: string, session: Session, profile: Profile | null, imagePath: string | null = null): Promise<void> {
     await addReply(await getSupabase(), session, profile, postId, content, imagePath);
-    await loadPost(postId);
+    if (selected.value?.id === postId) await loadPost(postId);
   }
 
   async function publish(

@@ -1031,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ]);
 
       if (error) {
-        if (postFeedback) postFeedback.textContent = `发布失败：${error.message}`;
+        if (postFeedback) postFeedback.textContent = '发布失败，请稍后重试。';
         publishBtn.disabled = false;
         publishBtn.textContent = '发布动态';
         return;
@@ -1376,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch(err) {
       console.error("点赞操作失败:", err);
-      alert(`点赞失败，数据库返回: ${err.message} (代码: ${err.code || 'unknown'})`);
+      alert('点赞失败，请稍后重试。');
     } finally {
       button.disabled = false;
     }
@@ -1469,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
       replyButton.textContent = `💬 回复（${replyCount}）`;
     } catch (error) {
       if (error.cleanupError) console.error('回复创建失败，且上传图片清理失败:', error.cleanupError);
-      alert(`回复失败: ${error.message}`);
+      alert('回复发布失败，请稍后重试。');
     } finally {
       delete submitButton.dataset.sending;
       submitButton.disabled = false;

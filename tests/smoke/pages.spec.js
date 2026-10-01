@@ -44,7 +44,8 @@ async function mockRuntime(
     contentChanges = {},
     banners = [bannerRecord(0)],
     sessionUser = null,
-    replyInsertError = false
+    replyInsertError = false,
+    postLikeError = false
   } = {}
 ) {
   const session = sessionUser
@@ -94,6 +95,7 @@ async function mockRuntime(
           })};
           const currentSession = ${JSON.stringify(session)};
           const failReplyInsert = ${JSON.stringify(replyInsertError)};
+          const failPostLike = ${JSON.stringify(postLikeError)};
           let imageLiked = false;
           let postLiked = false;
           window.__replyUploads = [];
@@ -150,6 +152,7 @@ async function mockRuntime(
                     return { data: [{ liked: imageLiked, like_count: imageLiked ? 1 : 0 }], error: null };
                   }
                   if (name === 'toggle_post_like') {
+                    if (failPostLike) return { data: null, error: { message: 'private database detail' } };
                     postLiked = !args.p_remove;
                     return { data: [{ liked: postLiked, like_count: postLiked ? 1 : 0 }], error: null };
                   }
@@ -509,6 +512,33 @@ test('community loads posts and persistent post-like controls without console er
   expect(errors).toEqual([]);
 });
 
+test('community like failures show safe feedback instead of backend details', async ({ page }) => {
+  await mockRuntime(page, {
+    posts: [
+      {
+        id: 42,
+        user_id: '7cc08d1d-7a08-4291-8326-7c07aa9fe56a',
+        created_at: '2026-09-21T01:00:00Z',
+        content: '点赞失败反馈测试',
+        nickname: 'NOBI',
+        avatar_url: null,
+        parent_id: null
+      }
+    ],
+    sessionUser: { id: 'ad132ad0-10f7-4b05-9737-a6bd6ba76670', email: 'local@example.com' },
+    postLikeError: true
+  });
+  await page.goto('/community.html');
+  await expect(page.locator('.like-action-btn').first()).toBeVisible({ timeout: 15_000 });
+  const dialogPromise = page.waitForEvent('dialog');
+  const clickPromise = page.locator('.like-action-btn').first().click();
+  const dialog = await dialogPromise;
+  expect(dialog.message()).toBe('点赞失败，请稍后重试。');
+  expect(dialog.message()).not.toContain('private database detail');
+  await dialog.dismiss();
+  await clickPromise;
+});
+
 test('community likes and replies update the current post without rerendering the list', async ({ page }) => {
   const post = {
     id: 42,
@@ -644,8 +674,15 @@ test('community cleans uploaded reply images after an insert failure', async ({ 
     mimeType: 'image/webp',
     buffer: Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==', 'base64')
   });
-  page.once('dialog', (dialog) => dialog.dismiss());
+  const dialogPromise = page.waitForEvent('dialog').then(async (dialog) => {
+    const message = dialog.message();
+    await dialog.dismiss();
+    return message;
+  });
   await postCard.locator('.reply-submit').click();
+  const message = await dialogPromise;
+  expect(message).toBe('回复发布失败，请稍后重试。');
+  expect(message).not.toContain('mock reply insert failed');
   await expect.poll(() => page.evaluate(() => window.__replyRemovals.length)).toBe(1);
   expect(await page.evaluate(() => window.__replyUploads[0].path)).toBe(
     await page.evaluate(() => window.__replyRemovals[0].paths[0])

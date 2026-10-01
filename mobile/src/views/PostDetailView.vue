@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCommunityStore } from '../stores/community';
 import { useAuthStore } from '../stores/auth';
@@ -32,9 +32,7 @@ const postId = computed(() => Number(route.params.id));
 const canActOnAuthor = computed(() =>
   Boolean(community.selected?.user_id && community.selected.user_id !== auth.user?.id)
 );
-onMounted(() => {
-  if (Number.isInteger(postId.value) && postId.value > 0) void community.loadPost(postId.value);
-});
+watch(postId, (id) => void community.loadPost(id), { immediate: true });
 async function like(): Promise<void> {
   if (!auth.session) {
     await router.push({ name: 'login', query: { redirect: route.fullPath } });
