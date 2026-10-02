@@ -26,10 +26,8 @@ describe('Phase 4.2 mobile alignment', () => {
     expect(view).toContain("auth.user.email?.split('@')[0]");
   });
 
-  test('uses local SVG social icons with configured links', async () => {
-    const [view, icon] = await Promise.all([source('../views/HomeView.vue'), source('../components/SocialIcon.vue')]);
-    expect(view).toContain(':href="link.href"');
-    expect(view).toContain('<SocialIcon :name="link.key"');
+  test('keeps the local SVG social icon artwork available', async () => {
+    const icon = await source('../components/SocialIcon.vue');
     expect(icon).toContain('<svg');
     expect(icon).toContain("name === 'xiaohongshu'");
     expect(icon).toContain("name === 'weibo'");

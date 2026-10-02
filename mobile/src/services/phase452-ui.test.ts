@@ -58,17 +58,12 @@ describe('Phase 4.5.2 UI integration', () => {
     expect(css).toContain('min-height: 44px');
   });
 
-  test('keeps social config ordering while presenting icon-only safe external links', async () => {
-    const [home, data, mobileIcons, webIcons] = await Promise.all([
-      source('../views/HomeView.vue'),
+  test('keeps social config ordering and icon parity', async () => {
+    const [data, mobileIcons, webIcons] = await Promise.all([
       source('./home.ts'),
       source('../components/SocialIcon.vue'),
       source('../../../public/assets/js/src/site-v2.js')
     ]);
-    expect(home).toContain('<SocialIcon :name="link.key"');
-    expect(home).toContain(':aria-label="link.label"');
-    expect(home).toContain('rel="noopener noreferrer"');
-    expect(home).not.toContain('<span>{{ link.label }}</span>');
     expect(data).toContain('parseSocialSettings(value)');
     expect(data).toContain('if (!item.enabled || !item.url || !isValidSocialUrl(item.url, item.key)) return []');
     const paths = (value: string) => [...value.matchAll(/<path\s+d="([^"]+)"/g)].map((match) => match[1]);

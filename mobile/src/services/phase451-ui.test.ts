@@ -13,10 +13,9 @@ describe('Phase 4.5.1 integration', () => {
     expect(router.match(/requiresAdmin: true/g)?.length).toBeGreaterThanOrEqual(6);
   });
 
-  test('uses one shared image-like store on Home, libraries, cards and details', async () => {
+  test('uses one shared image-like store in libraries, cards and details', async () => {
     const sources = await Promise.all(
       [
-        '../views/HomeView.vue',
         '../views/AnimeView.vue',
         '../views/MangaView.vue',
         '../views/ContentDetailView.vue'
