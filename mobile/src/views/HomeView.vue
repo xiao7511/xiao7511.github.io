@@ -32,7 +32,7 @@ async function load(): Promise<void> {
   try {
     data.value = await fetchHomeData();
     await imageLikes
-      .load([...(data.value?.popular ?? []), ...(data.value?.recommendations ?? [])])
+      .load([...(data.value?.banners ?? []), ...(data.value?.popular ?? []), ...(data.value?.recommendations ?? [])])
       .catch(() => undefined);
   } catch {
     error.value = '首页内容加载失败，请检查网络后重试。';

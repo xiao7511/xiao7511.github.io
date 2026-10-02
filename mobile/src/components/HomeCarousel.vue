@@ -4,6 +4,10 @@ import type { ContentItem } from '../types/content';
 import { contentRoute } from '../services/home';
 import ContentImage from './ContentImage.vue';
 import { publicVideoUrl } from '../services/cinematic-media';
+import { contentCoverLikeTarget } from '../services/image-likes';
+import { useImageLikesStore } from '../stores/image-likes';
+import { useToastStore } from '../stores/toast';
+import { useRoute, useRouter } from 'vue-router';
 
 const props = defineProps<{ items: ContentItem[] }>();
 interface SwipeEvent {
@@ -17,6 +21,12 @@ const touchStart = ref<number | null>(null);
 const suppressClick = ref(false);
 let timer: ReturnType<typeof globalThis.setInterval> | undefined;
 const active = computed(() => props.items[activeIndex.value]);
+const likes = useImageLikesStore();
+const toast = useToastStore();
+const route = useRoute();
+const router = useRouter();
+const likeTarget = computed(() => active.value && contentCoverLikeTarget(active.value));
+const likeSummary = computed(() => active.value ? likes.get(active.value) : { count: 0, liked: false });
 const root = ref<globalThis.HTMLElement | null>(null);
 const video = ref<globalThis.HTMLVideoElement | null>(null);
 const videoReady = ref(false);
@@ -44,6 +54,20 @@ function onVisibility(): void {
 }
 
 function toggleMute(): void { muted.value = !muted.value; }
+
+async function toggleLike(): Promise<void> {
+  if (!active.value) return;
+  try {
+    await likes.toggle(active.value);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'AUTH_REQUIRED') {
+      toast.show('登录后即可点赞', 'info');
+      await router.push({ name: 'login', query: { redirect: route.fullPath } });
+      return;
+    }
+    toast.show('点赞失败，请稍后重试', 'error');
+  }
+}
 
 function stop(): void {
   if (timer) globalThis.clearInterval(timer);
@@ -155,6 +179,7 @@ watch(videoUrl, () => {
         <strong class="home-carousel__cta">▶ 立即查看</strong>
       </div>
     </RouterLink>
+    <button v-if="likeTarget" class="home-carousel__like" type="button" :aria-label="`${likeSummary.liked ? '取消点赞' : '点赞'} ${active?.title || '精选作品'}`" :aria-pressed="likeSummary.liked" :disabled="active ? likes.isPending(active) : true" @click="toggleLike">{{ likeSummary.liked ? '♥' : '♡' }} {{ likeSummary.count }}</button>
     <button v-if="videoUrl" class="home-carousel__mute" type="button" :aria-label="muted ? '开启视频声音' : '静音视频'" :aria-pressed="!muted" @click="toggleMute">♪</button>
     <div v-if="items.length > 1" class="home-carousel__dots" aria-label="选择轮播内容">
       <button

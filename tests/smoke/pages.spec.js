@@ -418,6 +418,17 @@ test('home hero keeps single-Banner navigation safe and reports one visible page
   await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
 });
 
+test('home hero exposes canonical Banner likes and keeps signed-out action safe', async ({ page }) => {
+  await mockRuntime(page, { features: true, banners: [bannerRecord(0)] });
+  await page.goto('/index.html');
+  const like = page.locator('.hero__slide.is-active .hero__like');
+  await expect(like).toBeVisible();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await expect(like.locator('[data-image-like-count]')).toHaveText('0');
+  await like.click();
+  await expect(page).toHaveURL(/index\.html\?auth=login$/);
+});
+
 test('home hero aligns with the content rail and production social links render visible SVG icons', async ({
   page
 }) => {

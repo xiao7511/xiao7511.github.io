@@ -245,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgElement = slide.querySelector('img');
         if (imgElement) {
           const record = bannerItems?.[index];
+          slide.querySelector('.hero__like')?.remove();
           if (record) {
             let source = fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg';
             if (record.cover_url) {
@@ -261,6 +262,16 @@ document.addEventListener('DOMContentLoaded', () => {
               imgElement.dataset.imageIndex = '0';
               imgElement.dataset.imageUrl = source;
               imgElement.dataset.previewImage = '';
+              if (getImageKey(record.cover_url)) {
+                slide.append(element('button', {
+                  className: 'hero__like image-like-button',
+                  attributes: { type: 'button', 'data-image-like': '', 'aria-label': `点赞 ${record.title || '精选作品'}`, 'aria-pressed': 'false' }
+                }, [
+                  element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                  element('span', { text: '点赞', attributes: { 'data-image-like-label': '' } }),
+                  element('strong', { text: '0', attributes: { 'data-image-like-count': '' } })
+                ]));
+              }
             }
             const tags = Array.isArray(record?.theme_tags) ? record.theme_tags.filter(Boolean).slice(0, 4) : [];
             const linked = record.linkedContent;
