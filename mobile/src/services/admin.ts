@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ContentItem } from '../types/content';
+import { publicVideoUrl } from './cinematic-media';
 import {
   isValidSocialUrl,
   parseSocialSettings,
@@ -103,8 +104,9 @@ export async function fetchAdminBanners(client: SupabaseClient): Promise<Content
 export async function updateAdminBanner(
   client: SupabaseClient,
   id: string,
-  changes: Pick<ContentItem, 'title' | 'subtitle' | 'slot_index'> & { linked_content_id?: string | null }
+  changes: Pick<ContentItem, 'title' | 'subtitle' | 'slot_index'> & { linked_content_id?: string | null; video_url?: string | null; is_active?: boolean | null }
 ): Promise<void> {
+  if (changes.video_url && !publicVideoUrl(changes.video_url)) throw new Error('INVALID_VIDEO_URL');
   const result = await client.from('content_management').update(changes).eq('id', id).eq('category', 'banner');
   if (result.error) throw result.error;
 }

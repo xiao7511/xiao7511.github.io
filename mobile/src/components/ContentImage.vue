@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { contentImageUrl } from '../services/images';
 
-const props = defineProps<{ src?: string | null; alt: string }>();
+const props = defineProps<{ src?: string | null; alt: string; eager?: boolean }>();
 const failed = ref(false);
 const loaded = ref(false);
 const url = computed(() => contentImageUrl(props.src));
@@ -21,7 +21,7 @@ watch(
       v-if="url && !failed"
       :src="url"
       :alt="alt"
-      loading="lazy"
+      :loading="eager ? 'eager' : 'lazy'"
       decoding="async"
       @load="loaded = true"
       @error="failed = true"

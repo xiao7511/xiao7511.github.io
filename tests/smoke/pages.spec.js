@@ -783,15 +783,16 @@ test('signed-out image likes open the existing login flow without calling the to
 });
 
 for (const viewport of [
-  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6, heroMin: 429, heroMax: 431 },
-  { name: 'desktop-lg', width: 1440, height: 900, columns: 6, heroMin: 402, heroMax: 405 },
-  { name: 'desktop-compact', width: 1280, height: 800, columns: 6, heroMin: 357, heroMax: 360 },
-  { name: 'desktop', width: 1366, height: 768, columns: 6, heroMin: 381, heroMax: 384 },
-  { name: 'laptop', width: 1024, height: 768, columns: 3, heroMin: 347, heroMax: 350 },
-  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 299, heroMax: 302 },
-  { name: 'mobile-wide', width: 430, height: 932, columns: 2, heroMin: 290, heroMax: 293 },
-  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 272, heroMax: 275 },
-  { name: 'mobile-compact', width: 375, height: 812, columns: 2, heroMin: 261, heroMax: 264 }
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 6 },
+  { name: 'desktop-compact', width: 1280, height: 800, columns: 6 },
+  { name: 'desktop', width: 1366, height: 768, columns: 6 },
+  { name: 'laptop', width: 1024, height: 768, columns: 3 },
+  { name: 'tablet', width: 768, height: 1024, columns: 3 },
+  { name: 'mobile-wide', width: 430, height: 932, columns: 2 },
+  { name: 'mobile', width: 390, height: 844, columns: 2 },
+  { name: 'mobile-compact', width: 375, height: 812, columns: 2 },
+  { name: 'mobile-narrow', width: 320, height: 700, columns: 2 }
 ]) {
   test(`home rails stay aligned and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
     await mockRuntime(page, { features: true });
@@ -833,7 +834,9 @@ for (const viewport of [
         controlsInside: controls.top >= hero.top && controls.bottom <= hero.bottom,
         previousControlNearLeft: previousControl.left - hero.left < 48,
         nextControlNearRight: hero.right - nextControl.right < 48,
-        controlsSeparated: nextControl.left - previousControl.right > hero.width * 0.6,
+        controlsSeparated:
+          nextControl.left - previousControl.right >
+          hero.width * (document.documentElement.clientWidth < 375 ? 0.5 : 0.6),
         previousControlClearOfContent:
           document.documentElement.clientWidth <= 768 || previousControl.right <= heroContent.left,
         heroBorderTop: getComputedStyle(heroElement).borderTopWidth,
@@ -860,11 +863,15 @@ for (const viewport of [
     expect(Math.round(layout.viewport - layout.headerRight)).toBe(0);
     expect(Math.round(layout.homeContentLeft)).toBe(expectedGutter);
     expect(Math.round(layout.viewport - layout.homeContentRight)).toBe(expectedGutter);
-    expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
-    expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
+    const expectedHeroHeight =
+      viewport.width < 768
+        ? Math.min(624, Math.max(480, viewport.height * 0.62))
+        : Math.min(896, Math.max(608, viewport.height * 0.78));
+    expect(layout.heroHeight).toBeGreaterThanOrEqual(expectedHeroHeight - 2);
+    expect(layout.heroHeight).toBeLessThanOrEqual(expectedHeroHeight + 2);
     expect(layout.headerPosition).toBe('sticky');
     expect(layout.headerBackground).not.toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerHeroGap).toBeGreaterThanOrEqual(11);
+    expect(layout.headerHeroGap).toBeGreaterThanOrEqual(viewport.width < 768 ? 7 : 11);
     expect(layout.headerHeroGap).toBeLessThanOrEqual(21);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(0.65);
@@ -876,7 +883,7 @@ for (const viewport of [
     expect(layout.previousControlClearOfContent).toBe(true);
     expect(layout.heroBorderTop).toBe('1px');
     expect(layout.heroBorderBottom).toBe('1px');
-    expect(layout.heroBorderColor).toBe('rgba(101, 184, 255, 0.06)');
+    expect(layout.heroBorderColor).toBe('rgba(255, 255, 255, 0.09)');
     expect(layout.heroBoxShadow).not.toBe('none');
     expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
     expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);

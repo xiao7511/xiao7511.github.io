@@ -13,6 +13,7 @@ import './style-phase42.css';
 import './style-phase43.css';
 import './style-phase45.css';
 import './style-phase451.css';
+import './style-phase47.css';
 
 const app = createApp(App);
 const pinia = createPinia();

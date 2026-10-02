@@ -1,3 +1,5 @@
+import { publicVideoUrl } from '../home/media.js';
+
 export const CONTENT_IMAGE_BUCKET = 'images';
 export const CONTENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 export const CONTENT_IMAGE_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
@@ -103,16 +105,29 @@ export async function saveContentGallery(client, item, entries, onStage) {
   }
 }
 
-const editableFields = new Set(['title', 'subtitle', 'theme_tags', 'slot_index', 'is_active', 'linked_content_id']);
+const editableFields = new Set([
+  'title',
+  'subtitle',
+  'theme_tags',
+  'slot_index',
+  'is_active',
+  'linked_content_id',
+  'video_url'
+]);
 
 export async function updateContentFields(client, item, changes) {
   const isolated = Object.fromEntries(Object.entries(changes).filter(([key]) => editableFields.has(key)));
+  if ('video_url' in isolated) {
+    if (item.category !== 'banner') throw new Error('INVALID_VIDEO_CATEGORY');
+    if (isolated.video_url && !publicVideoUrl(isolated.video_url)) throw new Error('INVALID_VIDEO_URL');
+    isolated.video_url = isolated.video_url || null;
+  }
   if (!Object.keys(isolated).length) throw new Error('NO_CONTENT_CHANGES');
   const result = await rowUpdate(
     client,
     item,
     isolated,
-    'id,title,subtitle,theme_tags,slot_index,is_active,linked_content_id'
+    `id,title,subtitle,theme_tags,slot_index,is_active,linked_content_id${'video_url' in isolated ? ',video_url' : ''}`
   );
   if (result.error || !result.data) throw result.error || new Error('CONTENT_ROW_NOT_FOUND');
   return result.data;

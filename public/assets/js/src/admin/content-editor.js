@@ -184,6 +184,15 @@ export function createCanonicalContentEditor(client, wrapper, onStatus = () => {
   }
 
   function renderBannerFields(item, card) {
+    const video = element('input', {
+      attributes: { type: 'url', value: item.video_url || '', placeholder: 'https://…/trailer.mp4', maxlength: '2048' }
+    });
+    const mediaSave = button('保存视频地址', () =>
+      run(`${item.title || 'Banner'}视频`, async () => {
+        const updated = await updateContentFields(client, item, { video_url: video.value.trim() });
+        item.video_url = updated.video_url;
+      })
+    );
     const linked = element('select');
     linked.append(element('option', { text: '未关联主题', attributes: { value: '' } }));
     for (const category of ['anime', 'manga']) {
@@ -221,6 +230,8 @@ export function createCanonicalContentEditor(client, wrapper, onStatus = () => {
       })
     );
     card.append(
+      field('公开 HTTPS MP4 / WebM 视频地址（可选）', video),
+      mediaSave,
       field('关联主题', linked),
       association,
       element('div', { className: 'admin-canonical-state' }, [field('排序', slot), field('启用', active), state])

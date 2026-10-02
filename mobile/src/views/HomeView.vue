@@ -95,6 +95,16 @@ onMounted(load);
       <p v-else class="state-message">暂无热门内容</p>
     </section>
 
+    <section v-if="data?.popular[0]" class="home-spotlight" aria-labelledby="home-spotlight-title">
+      <ContentImage :src="data.popular[0].cover_url" alt="" />
+      <div class="home-spotlight__content">
+        <span>NOBI SPOTLIGHT / 编辑聚焦</span>
+        <h2 id="home-spotlight-title">{{ data.popular[0].title }}</h2>
+        <p>{{ data.popular[0].subtitle || contentLabel(data.popular[0]) }}</p>
+        <RouterLink :to="contentRoute(data.popular[0])">探索作品 ↗</RouterLink>
+      </div>
+    </section>
+
     <section class="content-section">
       <div class="section-heading">
         <h2>新番推荐</h2>
