@@ -43,3 +43,42 @@
   .home-carousel__video { display: none; }
   .home-page .home-card-grid .content-card { transition: none; }
 }
+
+/* Full-bleed mobile companion to the cinematic web stage. */
+.home-page.home-aligned { position: relative; padding-right: 0; padding-left: 0; }
+.home-page .home-header { position: absolute; top: 0; right: 0; left: 0; z-index: 5; min-height: calc(70px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 20px 0; }
+.home-page .brand,
+.home-page .brand small { color: #fff; }
+.home-page .brand { font-size: 25px; letter-spacing: -.03em; }
+.home-page .brand small { font-size: 15px; font-weight: 500; }
+.home-page .header-action { color: #fff; font-size: 29px; text-shadow: 0 2px 8px #000; }
+.home-page .home-account .avatar { border-color: rgba(255, 255, 255, .7); }
+.home-page .home-carousel,
+.home-page .home-carousel--loading { height: calc(100dvh - 66px - env(safe-area-inset-bottom)); min-height: 35rem; width: 100%; border: 0; border-radius: 0; box-shadow: none; background: #071820 url('/nobi-cinematic-hero.png') center / cover no-repeat; }
+.home-page .home-carousel__link .content-image img { object-position: 65% center; }
+.home-page .home-carousel__shade { background: linear-gradient(0deg, rgba(2, 10, 14, .96), rgba(2, 10, 14, .58) 41%, rgba(2, 10, 14, .08) 76%), linear-gradient(90deg, rgba(2, 10, 14, .35), transparent); }
+.home-page .home-carousel__content { right: 22px; bottom: 112px; left: 22px; }
+.home-page .home-carousel__eyebrow { color: #fff; font-size: 14px; font-weight: 500; }
+.home-page .home-carousel__content h1 { margin: 10px 0; font-size: clamp(37px, 10vw, 52px); font-weight: 800; line-height: 1.04; letter-spacing: -.035em; }
+.home-page .home-carousel__content p { margin-bottom: 15px; color: #f1f4f3; font-size: 14px; line-height: 1.4; -webkit-line-clamp: 3; }
+.home-page .home-carousel__tags { margin-bottom: 18px; }
+.home-page .home-carousel__tags span { padding: 4px 8px; border-color: rgba(255, 255, 255, .3); background: rgba(0, 0, 0, .3); color: #fff; font-size: 10px; }
+.home-page .home-carousel__content .home-carousel__cta { min-height: 50px; padding: 0 25px; border-radius: 11px; background: #fff; color: #075531; font-size: 16px; font-weight: 700; }
+.home-page .home-carousel__like { top: calc(80px + env(safe-area-inset-top)); left: 22px; }
+.home-page .home-carousel__mute { top: calc(80px + env(safe-area-inset-top)); right: 22px; }
+.home-page .home-carousel__navigation { position: absolute; right: 22px; bottom: 25px; left: 22px; z-index: 3; display: flex; align-items: center; gap: 8px; }
+.home-page .home-carousel__navigation button { width: 48px; height: 48px; min-width: 48px; padding: 0; border: 1.5px solid #fff; border-radius: 50%; background: rgba(2, 10, 14, .22); color: #fff; font-size: 28px; line-height: 1; }
+.home-page .home-carousel__navigation button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.home-page .home-carousel__progress { display: flex; min-width: 0; flex: 1; align-items: center; gap: 12px; margin-left: 8px; color: #fff; }
+.home-page .home-carousel__progress i { display: block; height: 1px; flex: 1; background: rgba(255, 255, 255, .85); }
+.home-page .home-carousel__progress b { font-size: 16px; }
+.home-page .content-section { padding-inline: max(18px, env(safe-area-inset-left)); }
+.home-page .home-spotlight { margin-right: 18px; margin-left: 18px; }
+
+@media (max-height: 700px) {
+  .home-page .home-carousel__content { bottom: 93px; }
+  .home-page .home-carousel__content h1 { font-size: 35px; }
+  .home-page .home-carousel__content p { -webkit-line-clamp: 2; }
+  .home-page .home-carousel__tags { margin-bottom: 12px; }
+  .home-page .home-carousel__navigation { bottom: 17px; }
+}

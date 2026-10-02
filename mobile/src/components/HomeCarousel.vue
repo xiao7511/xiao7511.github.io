@@ -170,27 +170,22 @@ watch(videoUrl, () => {
       <video v-if="videoUrl" ref="video" class="home-carousel__video" :class="{ 'is-ready': videoReady }" :src="videoUrl" :muted="muted" autoplay loop playsinline preload="metadata" aria-hidden="true" @canplay="videoReady = true; syncVideo()" @error="videoReady = false"></video>
       <div class="home-carousel__shade"></div>
       <div class="home-carousel__content">
+        <span class="home-carousel__eyebrow">#{{ String(activeIndex + 1).padStart(2, '0') }} NOBI SPOTLIGHT</span>
         <h1>{{ active.title || '未命名作品' }}</h1>
         <p v-if="active.subtitle">{{ active.subtitle }}</p>
         <div v-if="active.year || active.theme_tags?.length" class="home-carousel__tags">
           <span v-if="active.year">{{ active.year }}</span>
           <span v-for="tag in (active.theme_tags ?? []).slice(0, 3)" :key="tag">{{ tag }}</span>
         </div>
-        <strong class="home-carousel__cta">▶ 立即查看</strong>
+        <strong class="home-carousel__cta">▷ &nbsp;立即观看</strong>
       </div>
     </RouterLink>
     <button v-if="likeTarget" class="home-carousel__like" type="button" :aria-label="`${likeSummary.liked ? '取消点赞' : '点赞'} ${active?.title || '精选作品'}`" :aria-pressed="likeSummary.liked" :disabled="active ? likes.isPending(active) : true" @click="toggleLike">{{ likeSummary.liked ? '♥' : '♡' }} {{ likeSummary.count }}</button>
     <button v-if="videoUrl" class="home-carousel__mute" type="button" :aria-label="muted ? '开启视频声音' : '静音视频'" :aria-pressed="!muted" @click="toggleMute">♪</button>
-    <div v-if="items.length > 1" class="home-carousel__dots" aria-label="选择轮播内容">
-      <button
-        v-for="(item, index) in items"
-        :key="item.id"
-        type="button"
-        :class="{ 'is-active': index === activeIndex }"
-        :aria-label="`查看第 ${index + 1} 张：${item.title || '未命名作品'}`"
-        :aria-current="index === activeIndex ? 'true' : undefined"
-        @click="select(index)"
-      ></button>
+    <div v-if="items.length > 1" class="home-carousel__navigation" role="group" aria-label="轮播图手动控制">
+      <button type="button" aria-label="上一张轮播图" @click="select(activeIndex - 1)">‹</button>
+      <button type="button" aria-label="下一张轮播图" @click="select(activeIndex + 1)">›</button>
+      <span class="home-carousel__progress" aria-hidden="true"><i></i><b>{{ String(activeIndex + 1).padStart(2, '0') }}</b></span>
     </div>
   </section>
 </template>

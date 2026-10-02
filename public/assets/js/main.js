@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     carouselIndicators.forEach((indicator, i) => indicator.classList.toggle('is-active', i === index));
     if (carouselCounter) {
-      carouselCounter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(carouselSlides.length).padStart(2, '0')}`;
+      carouselCounter.textContent = String(index + 1).padStart(2, '0');
     }
     const activeSlide = carouselSlides[index];
     if (heroEyebrow) heroEyebrow.textContent = activeSlide.dataset.eyebrow || heroFallback.eyebrow;
@@ -197,9 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
-        'images/IMG_4822.jpeg',
-        'images/IMG_4873.webp',
-        'images/IMG_4886.webp'
+        'images/nobi-cinematic-hero.png',
+        'images/nobi-cinematic-hero.png',
+        'images/nobi-cinematic-hero.png'
       ]
     };
 
@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const record = bannerItems?.[index];
           slide.querySelector('.hero__like')?.remove();
           if (record) {
-            let source = fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg';
+            let source = fallbackImages.section_banner[index] || 'images/nobi-cinematic-hero.png';
             if (record.cover_url) {
               // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
               const rawUrl = record.cover_url;
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
               imgElement.removeAttribute('srcset');
               imgElement.removeAttribute('sizes');
             }
-            setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg');
+            setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/nobi-cinematic-hero.png');
             if (record.id) {
               imgElement.dataset.contentId = record.id;
               imgElement.dataset.imageKind = 'banner';

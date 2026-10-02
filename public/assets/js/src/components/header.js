@@ -28,6 +28,15 @@ export function initSiteHeader(root = document) {
     searchToggle.setAttribute('aria-label', open ? '关闭搜索' : '打开搜索');
     if (open) search?.querySelector('input')?.focus();
   });
+  if (document.body.classList.contains('home-page')) {
+    search?.addEventListener('submit', (event) => {
+      const input = search.querySelector('input');
+      if (input && !input.value.trim()) {
+        event.preventDefault();
+        input.focus();
+      }
+    });
+  }
   navigation.addEventListener('click', (event) => {
     if (event.target.closest('a')) setOpen(false);
   });
