@@ -7,6 +7,7 @@ import { initSiteHeader, updateCopyrightYear } from './src/components/header.js'
 import { getImageKey } from './src/images/likes.js';
 import { createModalController } from './src/components/modal.js';
 import { applyBannerCtaTargets, resolveBannerItems } from './src/home/banners.js';
+import { createCardPreviewController, createHeroMediaController, publicVideoUrl } from './src/home/media.js';
 import { createHomeDetailUrl, homeContentLabel, homeContentYear, selectHomeContent } from './src/home/content.js';
 import { updateAvatar, validateAvatar } from './src/auth/avatar.js';
 import { fetchProfile } from './src/auth/profile.js';
@@ -39,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const heroTags = document.querySelector('[data-hero-tags]');
   const heroPrimary = document.querySelector('[data-hero-primary]');
   const heroDetail = document.querySelector('[data-hero-detail]');
+  const heroSection = document.querySelector('.hero');
+  const heroVideo = document.querySelector('.hero__video');
+  const heroMute = document.querySelector('.hero__mute');
+  const heroMedia = heroSection && heroVideo ? createHeroMediaController(heroSection, heroVideo, heroMute) : null;
   const heroFallback = {
     eyebrow: heroEyebrow?.textContent || '',
     title: heroTitle?.textContent || '',
@@ -93,6 +98,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeProfileUserId = null;
   let carouselTimer = null;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!prefersReducedMotion && typeof IntersectionObserver === 'function') {
+    const reveal = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.home-main > .section, .spotlight').forEach((section) => {
+      section.classList.add('will-reveal');
+      reveal.observe(section);
+    });
+  }
 
   let currentSlideIndex = 0;
 
@@ -103,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     carouselIndicators.forEach((indicator, i) => indicator.classList.toggle('is-active', i === index));
     if (carouselCounter) {
-      carouselCounter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(carouselSlides.length).padStart(2, '0')}`;
+      carouselCounter.textContent = String(index + 1).padStart(2, '0');
     }
     const activeSlide = carouselSlides[index];
     if (heroEyebrow) heroEyebrow.textContent = activeSlide.dataset.eyebrow || heroFallback.eyebrow;
@@ -116,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const detailUrl = activeSlide.dataset.detailUrl || 'recommend.html';
     applyBannerCtaTargets([heroPrimary, heroDetail], detailUrl);
+    heroMedia?.setUrl(activeSlide.dataset.videoUrl || '');
     currentSlideIndex = index;
   }
 
@@ -130,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function startCarousel() {
-    if (prefersReducedMotion || carouselSlides.length <= 1) return;
+    if (prefersReducedMotion || document.hidden || carouselSlides.length <= 1) return;
     stopCarousel();
     carouselTimer = setInterval(nextSlide, 5000);
   }
@@ -138,9 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopCarousel() {
     if (carouselTimer) clearInterval(carouselTimer);
   }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopCarousel();
+    else startCarousel();
+  });
 
   // 📱 轮播图区域手势支持
-  const heroSection = document.querySelector('.hero');
   if (heroSection) {
     let touchStartX = 0;
     let touchEndX = 0;
@@ -175,9 +197,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function syncLiveImagesFromDB() {
     const fallbackImages = {
       section_banner: [
-        'images/IMG_4822.jpeg',
-        'images/IMG_4873.webp',
-        'images/IMG_4886.webp'
+        'images/nobi-cinematic-hero.png',
+        'images/nobi-cinematic-hero.png',
+        'images/nobi-cinematic-hero.png'
       ]
     };
 
@@ -223,8 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgElement = slide.querySelector('img');
         if (imgElement) {
           const record = bannerItems?.[index];
+          slide.querySelector('.hero__like')?.remove();
           if (record) {
-            let source = fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg';
+            let source = fallbackImages.section_banner[index] || 'images/nobi-cinematic-hero.png';
             if (record.cover_url) {
               // ⚡ 拼接缓存击穿时间戳，强制浏览器向 Supabase 重新下载新图
               const rawUrl = record.cover_url;
@@ -232,20 +255,35 @@ document.addEventListener('DOMContentLoaded', () => {
               imgElement.removeAttribute('srcset');
               imgElement.removeAttribute('sizes');
             }
-            setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/IMG_4822.jpeg');
+            setImageSource(imgElement, source, fallbackImages.section_banner[index] || 'images/nobi-cinematic-hero.png');
             if (record.id) {
               imgElement.dataset.contentId = record.id;
               imgElement.dataset.imageKind = 'banner';
               imgElement.dataset.imageIndex = '0';
               imgElement.dataset.imageUrl = source;
               imgElement.dataset.previewImage = '';
+              if (getImageKey(record.cover_url)) {
+                slide.append(element('button', {
+                  className: 'hero__like image-like-button',
+                  attributes: { type: 'button', 'data-image-like': '', 'aria-label': `点赞 ${record.title || '精选作品'}`, 'aria-pressed': 'false' }
+                }, [
+                  element('span', { text: '♡', attributes: { 'aria-hidden': 'true' } }),
+                  element('span', { text: '点赞', attributes: { 'data-image-like-label': '' } }),
+                  element('strong', { text: '0', attributes: { 'data-image-like-count': '' } })
+                ]));
+              }
             }
             const tags = Array.isArray(record?.theme_tags) ? record.theme_tags.filter(Boolean).slice(0, 4) : [];
-            slide.dataset.eyebrow = record?.year ? `${record.year} · 新番` : '';
+            const linked = record.linkedContent;
+            const year = homeContentYear(linked || record);
+            slide.dataset.eyebrow = linked
+              ? [year, linked.category === 'manga' ? '漫画' : '动漫'].filter(Boolean).join(' · ')
+              : year || 'NOBI 精选';
             slide.dataset.title = record?.title || '';
             slide.dataset.description = record?.subtitle || '';
             slide.dataset.tags = JSON.stringify(tags);
             slide.dataset.detailUrl = record.detailUrl;
+            slide.dataset.videoUrl = record.video_url || '';
           } else {
             setImageSource(imgElement, fallbackImages.section_banner[index] || imgElement.src);
           }
@@ -1767,6 +1805,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadHomeContent() {
     const ANIME_FALLBACK = 'images/nobi-anime-placeholder.svg';
+    const cardPreview = createCardPreviewController();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) cardPreview.stop();
+    });
     const markImageOrientation = (image) => {
       const update = () => {
         if (!image.naturalWidth || !image.naturalHeight) return;
@@ -1821,8 +1863,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         markImageOrientation(image);
         setImageSource(image, slot.cover_url, ANIME_FALLBACK);
-        container.append(
-          element(
+        const card = element(
             'article',
             {
               className: 'card'
@@ -1834,7 +1875,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   className: 'card__media',
                   attributes: { href: detailUrl, 'aria-label': `查看${slot.title || '未命名作品'}详情` }
                 },
-                [image]
+                [image, element('span', { className: 'card__open', text: '查看作品 ↗' })]
               ),
               element('div', { className: 'card__body' }, [
                 element('h3', { className: 'card__title', text: slot.title || '未命名作品' }),
@@ -1862,8 +1903,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 ])
               ])
             ]
-          )
-        );
+          );
+        const media = card.querySelector('.card__media');
+        if (publicVideoUrl(slot.video_url)) {
+          media.addEventListener('mouseenter', () => cardPreview.request(media, slot.video_url));
+          media.addEventListener('focusin', () => cardPreview.request(media, slot.video_url));
+          media.addEventListener('mouseleave', cardPreview.stop);
+          media.addEventListener('focusout', cardPreview.stop);
+        }
+        container.append(card);
       });
     };
 
@@ -1939,6 +1987,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const animeRecords = selectHomeContent(records, 'anime', Number.MAX_SAFE_INTEGER);
       const mangaRecords = selectHomeContent(records, 'manga', Number.MAX_SAFE_INTEGER);
       const catalogRecords = [...animeRecords, ...mangaRecords];
+      const spotlight = document.querySelector('.spotlight');
+      const spotlightItem = catalogRecords.find((item) => item.cover_url && createDetailUrl(item));
+      if (spotlight && spotlightItem) {
+        const spotlightImage = spotlight.querySelector('.spotlight__image');
+        setImageSource(spotlightImage, spotlightItem.cover_url, ANIME_FALLBACK);
+        spotlight.querySelector('#spotlight-title').textContent = spotlightItem.title;
+        spotlight.querySelector('.spotlight__copy').textContent = spotlightItem.subtitle || getCategoryLabel(spotlightItem);
+        spotlight.querySelector('.spotlight__link').href = createDetailUrl(spotlightItem);
+        spotlight.hidden = false;
+      }
       renderCategory(
         animeContainer,
         animeRecords,

@@ -1,0 +1,58 @@
+/* Mobile homepage: a full-screen Banner with compact discovery links. */
+.app-shell--home { display: flex; height: 100vh; height: 100dvh; min-height: 0; flex-direction: column; overflow: hidden; overscroll-behavior-y: none; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+.app-shell--home > main { height: auto; min-height: 0; flex: 1; }
+.app-startup { display: grid; min-height: calc(100dvh - 66px); place-items: center; color: #d8e3e7; font-size: 14px; }
+.home-page.home-aligned { position: relative; height: 100%; max-width: 780px; overflow: hidden; padding: 0; background: #07141b; }
+.home-stage { position: relative; height: 100%; min-height: 0; overflow: hidden; }
+
+.home-page .home-header { position: absolute; top: 0; right: 0; left: 0; z-index: 5; min-height: calc(70px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 20px 0; }
+.home-page .brand,
+.home-page .brand small { color: #fff; }
+.home-page .brand { font-size: 25px; letter-spacing: -.03em; }
+.home-page .brand small { font-size: 15px; font-weight: 500; }
+.home-page .header-action { color: #fff; font-size: 29px; text-shadow: 0 2px 8px #000; }
+.home-page .home-account .avatar { border-color: rgba(255, 255, 255, .7); }
+
+.home-topline { position: absolute; top: calc(101px + env(safe-area-inset-top)); right: 20px; left: 20px; z-index: 4; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; background: transparent; color: #fff; text-shadow: 0 1px 7px rgba(0, 0, 0, .9); pointer-events: none; }
+.home-topline__section { min-width: 0; padding: 3px 0 3px 11px; border-left: 2px solid rgba(255, 221, 166, .88); }
+.home-topline__section h2 { display: flex; align-items: baseline; gap: 6px; margin: 0 0 5px; color: rgba(255, 255, 255, .78); font-size: 11px; font-weight: 650; line-height: 1.3; white-space: nowrap; }
+.home-topline__section h2 span { color: #ffdda6; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+.home-topline__section a { display: flex; width: 100%; min-height: 26px; align-items: center; gap: 5px; color: #fff; font-size: 15px; line-height: 1.25; pointer-events: auto; }
+.home-topline__section a strong { min-width: 0; overflow: hidden; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.home-topline__section a span { flex: none; color: #ffdda6; font-size: 12px; }
+.home-topline__section small { display: block; min-height: 26px; color: rgba(255, 255, 255, .82); font-size: 13px; line-height: 26px; }
+.home-topline__section a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.home-page .home-carousel,
+.home-page .home-carousel--loading { width: 100%; height: 100%; min-height: 0; overflow: hidden; border: 0; border-radius: 0; background: #071820 url('/nobi-cinematic-hero.png') center / cover no-repeat; box-shadow: none; }
+.home-page .home-carousel__link .content-image img { object-position: 65% center; }
+.home-page .home-carousel__shade { background: linear-gradient(0deg, rgba(2, 10, 14, .96), rgba(2, 10, 14, .54) 39%, rgba(2, 10, 14, .06) 76%), linear-gradient(90deg, rgba(2, 10, 14, .3), transparent 68%); }
+.home-page .home-carousel__content { right: 20px; bottom: clamp(32px, 7dvh, 64px); left: 20px; padding-right: 0; }
+.home-page .home-carousel__content h1 { margin: 0 0 10px; font-size: clamp(34px, 9vw, 48px); font-weight: 800; line-height: 1.04; letter-spacing: -.035em; }
+.home-page .home-carousel__content p { max-width: 26rem; margin-bottom: 15px; color: #f1f4f3; font-size: 14px; line-height: 1.4; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.home-page .home-carousel__tags { margin-bottom: 16px; }
+.home-page .home-carousel__tags span { padding: 4px 8px; border-color: rgba(255, 255, 255, .3); background: rgba(0, 0, 0, .3); color: #fff; font-size: 10px; }
+.home-page .home-carousel__content .home-carousel__cta { display: inline-flex; min-height: 48px; align-items: center; padding: 0 25px; border: 1px solid rgba(255, 255, 255, .9); border-radius: 11px; background: transparent; color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 1px 5px rgba(0, 0, 0, .65); }
+.home-carousel__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 800ms ease; }
+.home-carousel__video.is-ready { opacity: 1; }
+.home-page .home-carousel__mute { position: absolute; top: calc(82px + env(safe-area-inset-top)); right: 20px; z-index: 3; width: 44px; height: 44px; border: 1px solid rgba(255, 255, 255, .55); border-radius: 50%; background: rgba(2, 15, 20, .48); color: #fff; }
+.home-page .home-carousel__mute:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+.home-stage__state { display: grid; height: 100%; place-content: center; gap: 10px; padding: 80px 20px 20px; background: #071820 url('/nobi-cinematic-hero.png') center / cover no-repeat; color: #fff; text-align: center; }
+.home-stage__state button { min-height: 44px; padding: 0 20px; border: 1px solid #fff; border-radius: 10px; background: #fff; color: #075531; }
+
+@media (max-height: 700px) {
+  .home-page .home-carousel__content h1 { font-size: 35px; }
+  .home-page .home-carousel__content p { -webkit-line-clamp: 2; }
+  .home-page .home-carousel__tags { margin-bottom: 12px; }
+}
+@media (max-height: 600px) {
+  .home-page .home-carousel__content { bottom: 30px; }
+  .home-page .home-carousel__content p,
+  .home-page .home-carousel__tags { display: none; }
+  .home-page .home-carousel__content h1 { font-size: 30px; }
+  .home-page .home-carousel__content .home-carousel__cta { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel__video { display: none; }
+}

@@ -14,8 +14,17 @@ describe('iOS universal link route mapping', () => {
 
   test('rejects unknown hosts, schemes and unsupported routes', () => {
     expect(deepLinkRoute('https://evil.example/community/38')).toBeNull();
+    expect(deepLinkRoute('https://www.nobistudio.com.evil.example/community/38')).toBeNull();
     expect(deepLinkRoute('http://www.nobistudio.com/community/38')).toBeNull();
     expect(deepLinkRoute('https://www.nobistudio.com/community/new')).toBeNull();
+    expect(deepLinkRoute('https://www.nobistudio.com/anime/not-a-uuid')).toBeNull();
+    expect(deepLinkRoute('https://www.nobistudio.com/manga/%2Fadmin')).toBeNull();
+    expect(deepLinkRoute('https://www.nobistudio.com/community/0')).toBeNull();
+    expect(deepLinkRoute('https://www.nobistudio.com/community/4/extra')).toBeNull();
     expect(deepLinkRoute('not a URL')).toBeNull();
+  });
+
+  test('query and fragment noise cannot change the mapped route identity', () => {
+    expect(deepLinkRoute('https://www.nobistudio.com/community/38?next=/admin#ignored')).toBe('/community/38');
   });
 });

@@ -5,6 +5,7 @@ export interface ContentItem {
   title: string;
   subtitle?: string | null;
   cover_url?: string | null;
+  video_url?: string | null;
   detail_urls?: string[] | null;
   theme_tags?: string[] | null;
   year?: string | number | null;

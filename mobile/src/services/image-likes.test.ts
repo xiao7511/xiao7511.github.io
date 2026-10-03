@@ -56,6 +56,15 @@ describe('content image likes', () => {
     });
   });
 
+  test('uses the canonical Banner target for Hero likes', () => {
+    expect(contentCoverLikeTarget({ ...item, category: 'banner' })).toEqual({
+      contentId: item.id,
+      imageKey: 'images/nobi.webp',
+      kind: 'banner',
+      index: 0
+    });
+  });
+
   test('allows anonymous summary reads without an anonymous actor id', async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: [{ image_key: 'images/nobi.webp', like_count: 12, liked: false }],

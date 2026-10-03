@@ -370,14 +370,14 @@ test('home hero advances across three active Banners and keeps pagination and CT
   const visibleSlides = page.locator('.hero__slide:not([hidden])');
   await expect(visibleSlides).toHaveCount(3);
   await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(3);
-  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 03');
+  await expect(page.locator('.hero__pagination b')).toHaveText('01');
   await expect(visibleSlides.nth(0)).toHaveClass(/is-active/);
   await expect(page.locator('[data-hero-primary]')).toHaveAttribute('href', 'detail.html?category=anime&slot=0');
 
   await page.locator('.hero__control--next').click();
   await expect(visibleSlides.nth(1)).toHaveClass(/is-active/);
   await expect(visibleSlides.nth(0)).not.toHaveClass(/is-active/);
-  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 03');
+  await expect(page.locator('.hero__pagination b')).toHaveText('02');
   await expect(page.locator('[data-hero-primary]')).toHaveAttribute('href', 'detail.html?category=anime&slot=1');
 });
 
@@ -392,12 +392,12 @@ test('home hero skips a disabled middle Banner instead of navigating a hidden ra
   const visibleSlides = page.locator('.hero__slide:not([hidden])');
   await expect(visibleSlides).toHaveCount(2);
   await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(2);
-  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 02');
+  await expect(page.locator('.hero__pagination b')).toHaveText('01');
   await page.locator('.hero__control--next').click();
   await expect(visibleSlides.nth(1)).toHaveClass(/is-active/);
   await expect(visibleSlides.nth(1).locator('img')).toHaveAttribute('data-content-id', lastActive.id);
   await expect(page.locator('.hero__slide').nth(2)).toBeHidden();
-  await expect(page.locator('.hero__pagination b')).toHaveText('02 / 02');
+  await expect(page.locator('.hero__pagination b')).toHaveText('02');
   await expect(page.locator('[data-hero-detail]')).toHaveAttribute('href', 'detail.html?category=anime&slot=2');
 });
 
@@ -411,16 +411,25 @@ test('home hero keeps single-Banner navigation safe and reports one visible page
   await expect(page.locator('.hero__slide:not([hidden])')).toHaveCount(1);
   await expect(page.locator('.hero__pagination span:not([hidden])')).toHaveCount(1);
   await expect(activeSlide.locator('img')).toHaveAttribute('data-content-id', onlyBanner.id);
-  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
+  await expect(page.locator('.hero__pagination b')).toHaveText('01');
   await page.locator('.hero__control--next').click();
   await expect(activeSlide).toHaveCount(1);
   await expect(activeSlide.locator('img')).toHaveAttribute('data-content-id', onlyBanner.id);
-  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
+  await expect(page.locator('.hero__pagination b')).toHaveText('01');
 });
 
-test('home hero aligns with the content rail and production social links render visible SVG icons', async ({
-  page
-}) => {
+test('home hero exposes canonical Banner likes and keeps signed-out action safe', async ({ page }) => {
+  await mockRuntime(page, { features: true, banners: [bannerRecord(0)] });
+  await page.goto('/index.html');
+  const like = page.locator('.hero__slide.is-active .hero__like');
+  await expect(like).toBeVisible();
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await expect(like.locator('[data-image-like-count]')).toHaveText('0');
+  await like.click();
+  await expect(page).toHaveURL(/index\.html\?auth=login$/);
+});
+
+test('home hero fills the viewport and production social links render visible SVG icons', async ({ page }) => {
   await mockRuntime(page, { socialLinks: true });
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto('/index.html');
@@ -428,10 +437,10 @@ test('home hero aligns with the content rail and production social links render 
     const rect = hero.getBoundingClientRect();
     return { left: rect.left, right: rect.right, viewport: document.documentElement.clientWidth };
   });
-  expect(bounds.left).toBe(32);
-  expect(bounds.right).toBe(1334);
+  expect(bounds.left).toBe(0);
+  expect(bounds.right).toBe(1366);
   await expect(page.locator('.hero__slide:not([hidden])')).toHaveCount(1);
-  await expect(page.locator('.hero__pagination b')).toHaveText('01 / 01');
+  await expect(page.locator('.hero__pagination b')).toHaveText('01');
   const social = page.locator('.footer-social');
   await expect(social.locator('.footer-social__link')).toHaveCount(4);
   await expect(social).toBeVisible();
@@ -783,15 +792,16 @@ test('signed-out image likes open the existing login flow without calling the to
 });
 
 for (const viewport of [
-  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6, heroMin: 429, heroMax: 431 },
-  { name: 'desktop-lg', width: 1440, height: 900, columns: 6, heroMin: 402, heroMax: 405 },
-  { name: 'desktop-compact', width: 1280, height: 800, columns: 6, heroMin: 357, heroMax: 360 },
-  { name: 'desktop', width: 1366, height: 768, columns: 6, heroMin: 381, heroMax: 384 },
-  { name: 'laptop', width: 1024, height: 768, columns: 3, heroMin: 347, heroMax: 350 },
-  { name: 'tablet', width: 768, height: 1024, columns: 3, heroMin: 299, heroMax: 302 },
-  { name: 'mobile-wide', width: 430, height: 932, columns: 2, heroMin: 290, heroMax: 293 },
-  { name: 'mobile', width: 390, height: 844, columns: 2, heroMin: 272, heroMax: 275 },
-  { name: 'mobile-compact', width: 375, height: 812, columns: 2, heroMin: 261, heroMax: 264 }
+  { name: 'desktop-xl', width: 1920, height: 1080, columns: 6 },
+  { name: 'desktop-lg', width: 1440, height: 900, columns: 6 },
+  { name: 'desktop-compact', width: 1280, height: 800, columns: 6 },
+  { name: 'desktop', width: 1366, height: 768, columns: 6 },
+  { name: 'laptop', width: 1024, height: 768, columns: 3 },
+  { name: 'tablet', width: 768, height: 1024, columns: 3 },
+  { name: 'mobile-wide', width: 430, height: 932, columns: 2 },
+  { name: 'mobile', width: 390, height: 844, columns: 2 },
+  { name: 'mobile-compact', width: 375, height: 812, columns: 2 },
+  { name: 'mobile-narrow', width: 320, height: 700, columns: 2 }
 ]) {
   test(`home rails stay aligned and scrollable without visible scrollbars on ${viewport.name}`, async ({ page }) => {
     await mockRuntime(page, { features: true });
@@ -825,17 +835,18 @@ for (const viewport of [
         headerRight: header.right,
         headerPosition: getComputedStyle(headerElement).position,
         headerBackground: getComputedStyle(headerElement).backgroundColor,
-        headerHeroGap: hero.top - header.bottom,
+        headerOverHero: header.top === hero.top && header.bottom > hero.top,
         homeContentLeft: homeContent.left,
         homeContentRight: homeContent.right,
         columns: getComputedStyle(cards).gridTemplateColumns.split(' ').length,
         cardMediaRatio: media ? media.width / media.height : 0,
         controlsInside: controls.top >= hero.top && controls.bottom <= hero.bottom,
-        previousControlNearLeft: previousControl.left - hero.left < 48,
-        nextControlNearRight: hero.right - nextControl.right < 48,
-        controlsSeparated: nextControl.left - previousControl.right > hero.width * 0.6,
-        previousControlClearOfContent:
-          document.documentElement.clientWidth <= 768 || previousControl.right <= heroContent.left,
+        controlsAtBottom: hero.bottom - controls.bottom < 100,
+        controlsTogether: nextControl.left - previousControl.right < 24,
+        previousControlClearOfContent: controls.top > heroContent.top,
+        paginationAtBottom:
+          hero.bottom - document.querySelector('.hero__pagination').getBoundingClientRect().bottom < 110,
+        heroRadius: getComputedStyle(heroElement).borderTopLeftRadius,
         heroBorderTop: getComputedStyle(heroElement).borderTopWidth,
         heroBorderBottom: getComputedStyle(heroElement).borderBottomWidth,
         heroBorderColor: getComputedStyle(heroElement).borderTopColor,
@@ -854,30 +865,30 @@ for (const viewport of [
     });
     expect(layout.overflow).toBeLessThanOrEqual(1);
     const expectedGutter = viewport.width <= 768 ? 16 : Math.max(32, Math.round((viewport.width - 1440) / 2));
-    expect(Math.round(layout.heroLeft)).toBe(expectedGutter);
-    expect(Math.round(layout.viewport - layout.heroRight)).toBe(expectedGutter);
+    expect(Math.round(layout.heroLeft)).toBe(0);
+    expect(Math.round(layout.viewport - layout.heroRight)).toBe(0);
     expect(Math.round(layout.headerLeft)).toBe(0);
     expect(Math.round(layout.viewport - layout.headerRight)).toBe(0);
     expect(Math.round(layout.homeContentLeft)).toBe(expectedGutter);
     expect(Math.round(layout.viewport - layout.homeContentRight)).toBe(expectedGutter);
-    expect(layout.heroHeight).toBeGreaterThanOrEqual(viewport.heroMin);
-    expect(layout.heroHeight).toBeLessThanOrEqual(viewport.heroMax);
-    expect(layout.headerPosition).toBe('sticky');
-    expect(layout.headerBackground).not.toBe('rgba(0, 0, 0, 0)');
-    expect(layout.headerHeroGap).toBeGreaterThanOrEqual(11);
-    expect(layout.headerHeroGap).toBeLessThanOrEqual(21);
+    const expectedHeroHeight = Math.max(viewport.height, viewport.width <= 768 ? 608 : 640);
+    expect(layout.heroHeight).toBeGreaterThanOrEqual(expectedHeroHeight - 2);
+    expect(layout.heroHeight).toBeLessThanOrEqual(expectedHeroHeight + 2);
+    expect(layout.headerPosition).toBe('absolute');
+    expect(layout.headerBackground).toBe('rgba(0, 0, 0, 0)');
+    expect(layout.headerOverHero).toBe(true);
     expect(layout.columns).toBe(viewport.columns);
     expect(layout.cardMediaRatio).toBeGreaterThan(0.65);
     expect(layout.cardMediaRatio).toBeLessThan(0.68);
     expect(layout.controlsInside).toBe(true);
-    expect(layout.previousControlNearLeft).toBe(true);
-    expect(layout.nextControlNearRight).toBe(true);
-    expect(layout.controlsSeparated).toBe(true);
+    expect(layout.controlsAtBottom).toBe(true);
+    expect(layout.controlsTogether).toBe(true);
     expect(layout.previousControlClearOfContent).toBe(true);
-    expect(layout.heroBorderTop).toBe('1px');
-    expect(layout.heroBorderBottom).toBe('1px');
-    expect(layout.heroBorderColor).toBe('rgba(101, 184, 255, 0.06)');
-    expect(layout.heroBoxShadow).not.toBe('none');
+    expect(layout.paginationAtBottom).toBe(true);
+    expect(layout.heroRadius).toBe('0px');
+    expect(layout.heroBorderTop).toBe('0px');
+    expect(layout.heroBorderBottom).toBe('0px');
+    expect(layout.heroBoxShadow).toBe('none');
     expect(layout.footerColumns).toBe(viewport.width > 1120 ? 2 : 1);
     expect(new Set(layout.footerNavTops).size).toBe(viewport.width > 768 ? 1 : 5);
     expect(layout.footerNavTextAlign).toBe('center');

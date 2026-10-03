@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
 import { useAppStore } from './stores/app';
 import TabIcon from './components/TabIcon.vue';
 import AppToast from './components/AppToast.vue';
 
 const app = useAppStore();
+const route = useRoute();
 const tabs = [
   { path: '/', label: '首页', icon: 'home' },
   { path: '/anime', label: '动漫', icon: 'anime' },
@@ -14,9 +16,12 @@ const tabs = [
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'app-shell--home': route.path === '/' }">
     <div v-if="!app.online" class="offline-bar" role="status">当前离线，内容可能无法更新</div>
-    <main id="main-content"><RouterView /></main>
+    <main id="main-content">
+      <div v-if="!route.matched.length" class="app-startup" role="status">正在启动 NOBI…</div>
+      <RouterView />
+    </main>
     <nav class="tab-bar" aria-label="主导航">
       <RouterLink v-for="tab in tabs" :key="tab.path" :to="tab.path" class="tab-bar__item" :aria-label="tab.label">
         <TabIcon :name="tab.icon" /><span>{{ tab.label }}</span>

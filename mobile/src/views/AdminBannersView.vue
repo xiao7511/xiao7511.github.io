@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast';
 import { fetchAdminBanners, fetchAdminLinkableContent, updateAdminBanner } from '../services/admin';
 import { saveAdminContentImage, validateContentImage, type AdminImageSaveStage } from '../services/admin-image';
 import { getSupabase } from '../services/supabase';
+import { publicVideoUrl } from '../services/cinematic-media';
 import type { ContentItem } from '../types/content';
 
 const router = useRouter();
@@ -81,8 +82,11 @@ async function save(item: ContentItem): Promise<void> {
       title: item.title,
       subtitle: item.subtitle,
       slot_index: item.slot_index,
-      linked_content_id: item.linked_content_id || null
+      linked_content_id: item.linked_content_id || null,
+      is_active: item.is_active !== false,
+      ...(item.video_url !== undefined ? { video_url: item.video_url?.trim() || null } : {})
     };
+    if (changes.video_url && !publicVideoUrl(changes.video_url)) throw new Error('INVALID_VIDEO_URL');
     const file = selectedFiles.value[item.id];
     if (file) {
       item.cover_url = await saveAdminContentImage(await getSupabase(), item, file, changes, (stage) => {
@@ -140,7 +144,9 @@ onBeforeUnmount(() => Object.values(previewUrls.value).forEach((url) => globalTh
           <small v-if="selectedFiles[item.id]" class="admin-image-filename">上传前预览：{{ selectedFiles[item.id].name }}</small>
           <label>标题<input v-model.trim="item.title" maxlength="120" /></label>
           <label>副标题<input v-model.trim="item.subtitle" maxlength="180" /></label>
+          <label>公开 HTTPS MP4 / WebM 视频地址<input v-model.trim="item.video_url" type="url" maxlength="2048" placeholder="https://…/trailer.mp4" /></label>
           <label>排序<input v-model.number="item.slot_index" type="number" min="0" max="20" /></label>
+          <label>启用展示<input v-model="item.is_active" type="checkbox" /></label>
         </section>
 
         <section class="admin-editor-section">

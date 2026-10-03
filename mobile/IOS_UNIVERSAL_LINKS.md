@@ -1,56 +1,44 @@
 # NOBI iOS Universal Links preparation
 
-Status: **CLIENT READY / SERVER DEPLOYMENT REQUIRED**.
+Status: **CLIENT CONFIGURED / SERVER DEPLOYMENT REQUIRED**.
 
-The mobile client maps these HTTPS links to Vue routes through Capacitor `appUrlOpen` and cold-start `getLaunchUrl()` handling:
+The mobile client maps these HTTPS URLs through Capacitor `appUrlOpen` and cold-start `getLaunchUrl()` handling, then uses the existing strict Vue route mapper:
 
 - `https://www.nobistudio.com/anime/<uuid>` → `/anime/<uuid>`
 - `https://www.nobistudio.com/manga/<uuid>` → `/manga/<uuid>`
 - `https://www.nobistudio.com/community/<positive integer>` → `/community/<id>`
 
-Only `https://nobistudio.com` and `https://www.nobistudio.com` are accepted. Unknown hosts, HTTP URLs, malformed identifiers and unsupported paths are ignored.
+Only the NOBI root and `www` HTTPS hosts are accepted by the JavaScript mapper. Unknown/lookalike hosts, HTTP links, malformed IDs and unsupported paths are ignored.
 
-## Server requirement
+## Native entitlement
 
-Publish an unsigned JSON response at:
+The App target references `App/App.entitlements` for Debug and Release. It contains only `Associated Domains` with `applinks:www.nobistudio.com`. The Bundle ID is `com.nobistudio.app`.
+
+## AASA server requirement
+
+Publish an extensionless JSON response at:
 
 `https://www.nobistudio.com/.well-known/apple-app-site-association`
 
-It must be served directly over HTTPS with `application/json`, without a redirect. A future deployment should use this shape after the real Apple Team ID is known:
+Serve it directly over valid HTTPS with `Content-Type: application/json` and no redirects. The generator emits the real Team ID plus `com.nobistudio.app`, and only these path patterns:
 
-```json
-{
-  "applinks": {
-    "details": [
-      {
-        "appIDs": ["<APPLE_TEAM_ID>.com.nobistudio.app"],
-        "components": [{ "/": "/anime/*" }, { "/": "/manga/*" }, { "/": "/community/*" }]
-      }
-    ]
-  }
-}
-```
+- `/anime/????????-????-????-????-????????????`
+- `/manga/????????-????-????-????-????????????`
+- `/community/?*`
 
-`APPLE_TEAM_ID` is intentionally unresolved. Do not publish the placeholder.
+The app performs final UUID and positive-integer validation. `?` matches one path character and `*` matches a path substring.
 
-After obtaining the real Team ID, generate the deployable file from the repository root:
+`APPLE_TEAM_ID` is intentionally unresolved. Do not use a placeholder or publish a generated file until the real 10-character Apple Team ID is known. From the repository root, generate it with:
 
 ```sh
-APPLE_TEAM_ID=A1B2C3D4E5 node scripts/generate-aasa.mjs
+APPLE_TEAM_ID=<real-apple-team-id> node scripts/generate-aasa.mjs
 ```
 
-The generator rejects missing or malformed Team IDs and writes `public/.well-known/apple-app-site-association`. Review the generated app ID before committing and deploying it. No placeholder AASA file is published by Phase 4.
+The output defaults to `public/.well-known/apple-app-site-association`; generation does not deploy it.
 
-## Xcode requirement
+## Mac verification
 
-On the signing Mac, add the Associated Domains capability to the App target and add:
-
-```text
-applinks:www.nobistudio.com
-applinks:nobistudio.com
-```
-
-Test with an installed, signed build by opening a link from Notes or Messages. Safari address-bar navigation alone is not a complete Universal Links test.
+On the signing Mac, confirm the App target retains `applinks:www.nobistudio.com`, select the real Development Team, and verify the served AASA URL, MIME type, TLS and absence of redirects. Test a signed, installed build by opening each supported link from Notes or Messages; Safari address-bar navigation alone is not a complete Universal Links test.
 
 ## Swipe-back note
 
