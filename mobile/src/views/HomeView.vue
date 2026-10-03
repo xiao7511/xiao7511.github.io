@@ -50,16 +50,16 @@ onMounted(load);
 
       <div class="home-topline" aria-label="首页更新与排行">
         <section class="home-topline__section" aria-labelledby="home-updates-title">
-          <h2 id="home-updates-title">最近更新 <span>NEW</span></h2>
+          <h2 id="home-updates-title">最新更新 <span>NEW</span></h2>
           <RouterLink v-if="data?.updates[0]" :to="contentRoute(data.updates[0])">
-            {{ data.updates[0].title || '未命名作品' }}
+            <strong>{{ data.updates[0].title || '未命名作品' }}</strong><span aria-hidden="true">↗</span>
           </RouterLink>
           <small v-else>{{ loading ? '正在加载…' : '暂无更新' }}</small>
         </section>
         <section class="home-topline__section" aria-labelledby="home-ranking-title">
           <h2 id="home-ranking-title">人气排行 <span>TOP 01</span></h2>
           <RouterLink v-if="data?.ranking[0]" :to="contentRoute(data.ranking[0])">
-            {{ data.ranking[0].title || '未命名作品' }}
+            <strong>{{ data.ranking[0].title || '未命名作品' }}</strong><span aria-hidden="true">↗</span>
           </RouterLink>
           <small v-else>{{ loading ? '正在加载…' : '暂无排行' }}</small>
         </section>
