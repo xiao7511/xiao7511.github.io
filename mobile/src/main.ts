@@ -21,16 +21,7 @@ app.use(pinia);
 app.use(router);
 const auth = useAuthStore(pinia);
 
-void auth
-  .initialize()
-  .finally(() => router.isReady())
-  .then(async () => {
-    app.mount('#app');
-    try {
-      await initNative(router, auth);
-    } catch {
-      /* The web UI remains usable if a native plugin is unavailable. */
-    } finally {
-      await hideSplash().catch(() => undefined);
-    }
-  });
+app.mount('#app');
+void hideSplash().catch(() => undefined);
+void auth.initialize().catch(() => undefined);
+void initNative(router, auth).catch(() => undefined);

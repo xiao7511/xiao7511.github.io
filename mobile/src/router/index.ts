@@ -88,6 +88,10 @@ export const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore();
+  if (!to.meta.requiresAuth && !to.meta.requiresAdmin) {
+    void auth.initialize().catch(() => undefined);
+    return true;
+  }
   await auth.initialize();
   const authResult = authRedirect(to, Boolean(auth.session));
   if (authResult !== true) return authResult;

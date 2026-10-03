@@ -1,7 +1,7 @@
 /* Mobile homepage: a full-screen Banner with compact discovery links. */
-body:has(.home-page) { height: 100dvh; overflow: hidden; overscroll-behavior-y: none; }
-.app-shell:has(.home-page) { display: flex; height: 100dvh; min-height: 0; flex-direction: column; overflow: hidden; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
-.app-shell:has(.home-page) > main { height: auto; min-height: 0; flex: 1; }
+.app-shell--home { display: flex; height: 100vh; height: 100dvh; min-height: 0; flex-direction: column; overflow: hidden; overscroll-behavior-y: none; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+.app-shell--home > main { height: auto; min-height: 0; flex: 1; }
+.app-startup { display: grid; min-height: calc(100dvh - 66px); place-items: center; color: #d8e3e7; font-size: 14px; }
 .home-page.home-aligned { position: relative; height: 100%; max-width: 780px; overflow: hidden; padding: 0; background: #07141b; }
 .home-stage { position: relative; height: 100%; min-height: 0; overflow: hidden; }
 
