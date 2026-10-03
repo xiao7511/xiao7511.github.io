@@ -2,3 +2,14 @@ dist/
 node_modules/
 test-results/
 playwright-report/
+
+# Local worktrees and Apple signing/export artifacts
+.worktrees/
+*.p12
+*.p8
+*.cer
+*.mobileprovision
+*.ipa
+*.xcarchive/
+DerivedData/
+xcuserdata/

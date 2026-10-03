@@ -1,0 +1,79 @@
+workflows:
+  nobi-ios-testflight:
+    name: NOBI iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    # Manual builds only. No push/PR/tag publishing triggers.
+    integrations:
+      app_store_connect: nobi-apple
+    environment:
+      node: 24.19.0
+      xcode: "26.2"
+      groups:
+        - nobi_ios_public
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.nobistudio.app
+      vars:
+        XCODE_PROJECT: mobile/ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+        IOS_MARKETING_VERSION: 1.0.0
+    scripts:
+      - name: Environment and release configuration
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          node --version
+          npm --version
+          xcodebuild -version
+          node scripts/ios-cloud-preflight.mjs
+      - name: Install locked mobile dependencies
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/mobile"
+          npm ci
+          npm ls @capacitor/core @capacitor/cli @capacitor/ios
+      - name: Mobile regression tests and lint
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/mobile"
+          npm test
+          npm run lint
+      - name: Production web build and Capacitor iOS sync
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/mobile"
+          npm run build
+          npx --no-install cap sync ios
+      - name: Resolve native SPM dependencies and verify scheme
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcodebuild -list -project "$XCODE_PROJECT"
+          xcodebuild -resolvePackageDependencies -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME"
+      - name: Apply distribution provisioning profiles
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcode-project use-profiles
+      - name: Set release version and unique cloud build number
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR/mobile/ios/App"
+          BUILD_VERSION=$(node -e 'const n=Number(process.env.PROJECT_BUILD_NUMBER), o=Number(process.env.IOS_BUILD_NUMBER_OFFSET || 0); if(!Number.isSafeInteger(n)||n<1||!Number.isSafeInteger(o)||o<0||n+o>999999999) process.exit(1); console.log(n+o)')
+          agvtool new-marketing-version "$IOS_MARKETING_VERSION"
+          agvtool new-version -all "$BUILD_VERSION"
+      - name: Archive Release and export signed IPA
+        script: |
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME" --config Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/xcarchive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
