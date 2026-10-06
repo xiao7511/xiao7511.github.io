@@ -9,8 +9,6 @@ workflows:
     environment:
       node: 24.19.0
       xcode: "26.2"
-      groups:
-        - nobi_ios_public
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.nobistudio.app
