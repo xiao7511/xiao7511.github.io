@@ -62,4 +62,22 @@ describe('iOS cloud release boundary', () => {
     expect(project).toContain('504EC3031FED79650016851F /* App */');
     expect(scheme).toContain('ArchiveAction buildConfiguration="Release"');
   });
+  it('ships the App target for iPhone only with portrait orientation', () => {
+    const project = readFileSync('mobile/ios/App/App.xcodeproj/project.pbxproj', 'utf8');
+    const info = readFileSync('mobile/ios/App/App/Info.plist', 'utf8');
+    for (const [id, name] of [
+      ['504EC3171FED79650016851F', 'Debug'],
+      ['504EC3181FED79650016851F', 'Release']
+    ]) {
+      const target = project.match(new RegExp(`${id} /\\* ${name} \\*/ = \\{[\\s\\S]*?\\n\\s*\\};`))?.[0];
+      expect(target).toBeDefined();
+      expect(target).toMatch(/TARGETED_DEVICE_FAMILY = 1;/);
+      expect(target).not.toMatch(/TARGETED_DEVICE_FAMILY = ["']?1,2/);
+      expect(target).toContain('PRODUCT_BUNDLE_IDENTIFIER = com.nobistudio.app;');
+    }
+    expect(info).toMatch(
+      /<key>UISupportedInterfaceOrientations<\/key>\s*<array>\s*<string>UIInterfaceOrientationPortrait<\/string>\s*<\/array>/
+    );
+    expect(info).not.toContain('UISupportedInterfaceOrientations~ipad');
+  });
 });
