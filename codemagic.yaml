@@ -65,10 +65,30 @@ workflows:
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR"
-          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME" --config Release
+          archive_log="$CM_BUILD_DIR/xcode-archive.log"
+          if xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --config Release \
+            --verbose \
+            --disable-xcpretty \
+            2>&1 | tee "$archive_log"; then
+            echo "Archive and IPA export completed"
+          else
+            archive_status=$?
+            echo "Archive/IPA export failed with status $archive_status; matching diagnostics:"
+            grep -n -E 'error:|ARCHIVE FAILED|CodeSign|Provisioning|Signing|CompileSwift|CompileAssetCatalog|PhaseScriptExecution' "$archive_log" || true
+            for raw_log in /tmp/xcodebuild_logs/*.log; do
+              [ -f "$raw_log" ] || continue
+              echo "Raw xcodebuild log: $raw_log"
+              cat "$raw_log"
+            done
+            exit "$archive_status"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/xcarchive/*.xcarchive
+      - xcode-archive.log
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
